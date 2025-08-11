@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { Conversation, User } from "@/types";
@@ -8,7 +9,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { SendHorizonal, Search } from "lucide-react";
+import { SendHorizonal, Search, MessageSquare } from "lucide-react";
 import { Textarea } from "../ui/textarea";
 
 interface ChatLayoutProps {
@@ -18,12 +19,12 @@ interface ChatLayoutProps {
 
 export function ChatLayout({ conversations: initialConversations, currentUser }: ChatLayoutProps) {
   const [conversations, setConversations] = useState<Conversation[]>(initialConversations);
-  const [selectedConversation, setSelectedConversation] = useState<Conversation>(conversations[0]);
+  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(initialConversations.length > 0 ? initialConversations[0] : null);
   const [newMessage, setNewMessage] = useState("");
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
-    if (newMessage.trim() === "") return;
+    if (newMessage.trim() === "" || !selectedConversation) return;
 
     const message = {
       id: `m${Date.now()}`,
@@ -58,25 +59,33 @@ export function ChatLayout({ conversations: initialConversations, currentUser }:
             </div>
         </div>
         <ScrollArea className="h-[calc(100%-4.5rem)]">
-          {conversations.map((conv) => (
-            <div
-              key={conv.id}
-              className={cn(
-                "flex items-center gap-4 p-4 cursor-pointer hover:bg-muted/50",
-                selectedConversation.id === conv.id && "bg-muted"
-              )}
-              onClick={() => setSelectedConversation(conv)}
-            >
-              <Avatar>
-                <AvatarImage src={conv.participant.avatarUrl} alt={conv.participant.name} data-ai-hint="person portrait"/>
-                <AvatarFallback>{conv.participant.name.charAt(0)}</AvatarFallback>
-              </Avatar>
-              <div className="flex-1 truncate">
-                <p className="font-semibold">{conv.participant.name}</p>
-                <p className="text-sm text-muted-foreground truncate">{conv.messages[conv.messages.length - 1].text}</p>
+          {conversations.length > 0 ? (
+            conversations.map((conv) => (
+              <div
+                key={conv.id}
+                className={cn(
+                  "flex items-center gap-4 p-4 cursor-pointer hover:bg-muted/50",
+                  selectedConversation?.id === conv.id && "bg-muted"
+                )}
+                onClick={() => setSelectedConversation(conv)}
+              >
+                <Avatar>
+                  <AvatarImage src={conv.participant.avatarUrl} alt={conv.participant.name} data-ai-hint="person portrait"/>
+                  <AvatarFallback>{conv.participant.name.charAt(0)}</AvatarFallback>
+                </Avatar>
+                <div className="flex-1 truncate">
+                  <p className="font-semibold">{conv.participant.name}</p>
+                  <p className="text-sm text-muted-foreground truncate">{conv.messages[conv.messages.length - 1].text}</p>
+                </div>
               </div>
+            ))
+          ) : (
+             <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-4 text-center">
+                <MessageSquare className="h-10 w-10 mb-2" />
+                <p className="font-semibold">No conversations yet</p>
+                <p className="text-sm">Start a new message to see it here.</p>
             </div>
-          ))}
+          )}
         </ScrollArea>
       </div>
       <div className="w-2/3 flex flex-col">
@@ -128,7 +137,11 @@ export function ChatLayout({ conversations: initialConversations, currentUser }:
           </>
         ) : (
           <div className="flex flex-1 items-center justify-center text-muted-foreground">
-            <p>Select a conversation to start chatting</p>
+             <div className="text-center">
+                 <MessageSquare className="h-12 w-12 mx-auto mb-2 text-gray-400" />
+                <p className="font-semibold">Select a conversation</p>
+                <p className="text-sm">Choose a chat from the left to start messaging.</p>
+            </div>
           </div>
         )}
       </div>

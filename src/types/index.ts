@@ -1,10 +1,11 @@
 
+
 export interface User {
   id: string;
+  uid: string;
   name: string;
   avatarUrl: string;
   bio?: string;
-  uid?: string;
 }
 
 export interface Comment {
@@ -18,7 +19,11 @@ export type PostCategory = "General" | "Event" | "For Sale";
 
 export interface Post {
   id: string;
-  user: User;
+  user: {
+    id: string;
+    name: string;
+    avatarUrl: string;
+  };
   category: PostCategory;
   text: string;
   imageUrl?: string;
