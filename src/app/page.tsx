@@ -18,5 +18,14 @@ export default function RootPage() {
     }
   }, [user, loading, router]);
 
+  // While loading, show the splash screen.
+  // After loading, the useEffect will redirect.
+  // This prevents a flash of the login page before redirection.
+  if (loading) {
+    return <Splash />;
+  }
+
+  // This will be shown briefly before redirection if not loading.
+  // It can be a splash screen or a blank page.
   return <Splash />;
 }
