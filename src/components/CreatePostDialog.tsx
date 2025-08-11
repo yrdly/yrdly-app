@@ -15,7 +15,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import {
   Form,
   FormControl,
@@ -31,17 +30,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Image as ImageIcon, MapPin, Smile, User, PenSquare } from "lucide-react";
+import { Image as ImageIcon, MapPin } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import { useAuth } from "@/hooks/use-auth";
+import { useState } from "react";
+import { collection, addDoc, serverTimestamp, doc } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { db, storage } from "@/lib/firebase";
+import { useToast } from "@/hooks/use-toast";
 
 const formSchema = z.object({
   text: z.string().min(1, "Post can't be empty.").max(500),
   category: z.enum(["General", "Event", "For Sale"]),
   location: z.string().optional(),
-  image: z.any().optional(),
+  image: z.instanceof(File).optional(),
 });
 
 export function CreatePostDialog() {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -51,18 +61,51 @@ export function CreatePostDialog() {
     },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    console.log(values);
-    // Here you would typically call an API to create the post
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    if (!user) {
+        toast({ variant: 'destructive', title: 'Not authenticated', description: 'You must be logged in to create a post.' });
+        return;
+    }
+    setLoading(true);
+
+    try {
+        let imageUrl = "";
+        if (values.image) {
+            const storageRef = ref(storage, `posts/${user.uid}/${Date.now()}_${values.image.name}`);
+            const snapshot = await uploadBytes(storageRef, values.image);
+            imageUrl = await getDownloadURL(snapshot.ref);
+        }
+
+        await addDoc(collection(db, "posts"), {
+            text: values.text,
+            category: values.category,
+            location: values.location,
+            imageUrl: imageUrl,
+            timestamp: serverTimestamp(),
+            likes: 0,
+            comments: [],
+            userRef: doc(db, 'users', user.uid),
+        });
+
+        toast({ title: 'Post created!', description: 'Your post is now live.' });
+        form.reset();
+        setOpen(false);
+
+    } catch(error) {
+        console.error("Error creating post:", error);
+        toast({ variant: 'destructive', title: 'Error', description: 'Failed to create post.' });
+    } finally {
+        setLoading(false);
+    }
   }
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <div className="flex items-center gap-4 w-full">
             <Avatar>
-                <AvatarImage src="https://placehold.co/100x100.png" data-ai-hint="person portrait"/>
-                <AvatarFallback>U</AvatarFallback>
+                <AvatarImage src={user?.photoURL || 'https://placehold.co/100x100.png'} data-ai-hint="person portrait"/>
+                <AvatarFallback>{user?.displayName?.charAt(0) || 'U'}</AvatarFallback>
             </Avatar>
             <div className="flex-1 text-left text-muted-foreground cursor-pointer hover:bg-muted p-2 rounded-md">
                 What's on your mind?
@@ -135,19 +178,24 @@ export function CreatePostDialog() {
              <FormField
                 control={form.control}
                 name="image"
-                render={({ field }) => (
+                render={({ field: { onChange, value, ...rest } }) => (
                     <FormItem>
                         <FormLabel>Add an image</FormLabel>
                         <FormControl>
-                            <Input type="file" accept="image/*" {...field} />
+                            <Input 
+                                type="file" 
+                                accept="image/*" 
+                                onChange={(e) => onChange(e.target.files?.[0])}
+                                {...rest}
+                            />
                         </FormControl>
                     </FormItem>
                 )}
              />
 
             <DialogFooter>
-              <Button type="submit" className="w-full" variant="default">
-                Post
+              <Button type="submit" className="w-full" variant="default" disabled={loading}>
+                {loading ? 'Posting...' : 'Post'}
               </Button>
             </DialogFooter>
           </form>

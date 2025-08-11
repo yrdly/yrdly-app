@@ -13,12 +13,14 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Badge } from '../ui/badge';
+import { useAuth } from '@/hooks/use-auth';
 
 export function AppSidebar() {
   const pathname = usePathname();
+  const { user } = useAuth();
 
   const menuItems = [
-    { href: '/', label: 'Feed', icon: Home },
+    { href: '/home', label: 'Feed', icon: Home },
     { href: '/map', label: 'Map', icon: Map },
     { href: '/messages', label: 'Messages', icon: MessageSquare, badge: '3' },
     { href: '/settings', label: 'Settings', icon: Settings },
@@ -27,7 +29,7 @@ export function AppSidebar() {
   return (
     <Sidebar>
       <SidebarHeader>
-        <Link href="/" className="flex items-center gap-2">
+        <Link href="/home" className="flex items-center gap-2">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 text-primary"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-4-3-5.5s-3.5-2.5-5.5-3.5a7 7 0 0 0-7 7c0 2 1 4 3 5.5s3.5 2.5 5.5 3.5z"/><path d="M12 22v-1.5"/></svg>
             <span className="font-bold text-lg font-headline">Yrdly</span>
         </Link>
@@ -57,11 +59,11 @@ export function AppSidebar() {
             <SidebarMenuButton asChild>
               <Link href="/settings">
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src="https://placehold.co/100x100.png" data-ai-hint="person portrait"/>
-                  <AvatarFallback>AJ</AvatarFallback>
+                  <AvatarImage src={user?.photoURL || `https://placehold.co/100x100.png`} data-ai-hint="person portrait"/>
+                  <AvatarFallback>{user?.displayName?.charAt(0) || 'U'}</AvatarFallback>
                 </Avatar>
                 <div className="flex flex-col text-left">
-                  <span className="text-sm font-medium">Alice Johnson</span>
+                  <span className="text-sm font-medium">{user?.displayName}</span>
                   <span className="text-xs text-muted-foreground">View Profile</span>
                 </div>
               </Link>

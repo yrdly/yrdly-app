@@ -1,27 +1,54 @@
 "use client";
 
 import type { Post } from "@/types";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Heart, MessageCircle, Share2, MapPin } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
+import { doc, updateDoc, arrayUnion, arrayRemove, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+
 
 interface PostCardProps {
   post: Post;
 }
 
 export function PostCard({ post }: PostCardProps) {
-  const [likes, setLikes] = useState(post.likes);
+  const { user } = useAuth();
+  const [likes, setLikes] = useState(post.likes || 0);
   const [isLiked, setIsLiked] = useState(false);
 
-  const handleLike = () => {
+  useEffect(() => {
+    if (user && post.id) {
+        const postRef = doc(db, "posts", post.id);
+        getDoc(postRef).then(docSnap => {
+            if(docSnap.exists()) {
+                const postData = docSnap.data();
+                setLikes(postData.likedBy?.length || 0);
+                setIsLiked(postData.likedBy?.includes(user.uid));
+            }
+        })
+    }
+  }, [user, post.id]);
+
+  const handleLike = async () => {
+    if (!user || !post.id) return;
+    const postRef = doc(db, "posts", post.id);
+
     if (isLiked) {
-      setLikes(likes - 1);
+      await updateDoc(postRef, {
+        likedBy: arrayRemove(user.uid)
+      });
+      setLikes(prev => prev - 1);
     } else {
-      setLikes(likes + 1);
+      await updateDoc(postRef, {
+        likedBy: arrayUnion(user.uid)
+      });
+      setLikes(prev => prev + 1);
     }
     setIsLiked(!isLiked);
   };
@@ -42,11 +69,11 @@ export function PostCard({ post }: PostCardProps) {
     <Card className="overflow-hidden">
       <CardHeader className="flex flex-row items-center gap-4 p-4">
         <Avatar>
-          <AvatarImage src={post.user.avatarUrl} alt={post.user.name} data-ai-hint="person portrait" />
-          <AvatarFallback>{post.user.name.charAt(0)}</AvatarFallback>
+          <AvatarImage src={post.user?.avatarUrl} alt={post.user?.name} data-ai-hint="person portrait" />
+          <AvatarFallback>{post.user?.name?.charAt(0)}</AvatarFallback>
         </Avatar>
         <div className="flex-1">
-          <p className="font-semibold">{post.user.name}</p>
+          <p className="font-semibold">{post.user?.name}</p>
           <p className="text-xs text-muted-foreground">{post.timestamp}</p>
         </div>
         <Badge variant="outline" className={getCategoryColor(post.category)}>{post.category}</Badge>
@@ -61,7 +88,7 @@ export function PostCard({ post }: PostCardProps) {
         )}
       </CardContent>
       {post.imageUrl && (
-        <div className="relative w-full h-64">
+        <div className="relative w-full aspect-video">
           <Image
             src={post.imageUrl}
             alt="Post image"
@@ -79,7 +106,7 @@ export function PostCard({ post }: PostCardProps) {
           </Button>
           <Button variant="ghost" className="flex-1 gap-2">
             <MessageCircle className="h-5 w-5" />
-            <span className="text-sm">{post.comments.length}</span>
+            <span className="text-sm">{post.comments?.length || 0}</span>
           </Button>
           <Button variant="ghost" className="flex-1 gap-2">
             <Share2 className="h-5 w-5" />
