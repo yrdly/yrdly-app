@@ -85,7 +85,11 @@ export function CreatePostDialog() {
             timestamp: serverTimestamp(),
             likes: 0,
             comments: [],
-            userRef: doc(db, 'users', user.uid),
+            user: {
+                id: user.uid,
+                name: user.displayName || 'Anonymous',
+                avatarUrl: user.photoURL || `https://placehold.co/100x100.png?text=${user.displayName?.charAt(0) || 'A'}`,
+            },
         });
 
         toast({ title: 'Post created!', description: 'Your post is now live.' });

@@ -1,6 +1,4 @@
 
-import { DocumentReference } from "firebase/firestore";
-
 export interface User {
   id: string;
   name: string;
@@ -21,7 +19,6 @@ export type PostCategory = "General" | "Event" | "For Sale";
 export interface Post {
   id: string;
   user: User;
-  userRef?: DocumentReference;
   category: PostCategory;
   text: string;
   imageUrl?: string;
