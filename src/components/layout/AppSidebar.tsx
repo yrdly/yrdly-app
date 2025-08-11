@@ -22,7 +22,7 @@ export function AppSidebar() {
   const menuItems = [
     { href: '/home', label: 'Feed', icon: Home },
     { href: '/map', label: 'Map', icon: Map },
-    { href: '/messages', label: 'Messages', icon: MessageSquare, badge: '3' },
+    { href: '/messages', label: 'Messages', icon: MessageSquare },
     { href: '/settings', label: 'Settings', icon: Settings },
   ];
 
