@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Heart, MessageCircle, Share2, MapPin } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { doc, updateDoc, arrayUnion, arrayRemove, getDoc, onSnapshot } from "firebase/firestore";
+import { doc, updateDoc, arrayUnion, arrayRemove, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 
@@ -30,8 +30,8 @@ export function PostCard({ post }: PostCardProps) {
         if(docSnap.exists()) {
             const postData = docSnap.data();
             setLikes(postData.likedBy?.length || 0);
-            if (user) {
-              setIsLiked(postData.likedBy?.includes(user.uid));
+            if (user && postData.likedBy) {
+              setIsLiked(postData.likedBy.includes(user.uid));
             }
         }
     });

@@ -35,7 +35,7 @@ import { Image as ImageIcon, MapPin } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { useAuth } from "@/hooks/use-auth";
 import { useState } from "react";
-import { collection, addDoc, serverTimestamp, doc } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
@@ -84,6 +84,7 @@ export function CreatePostDialog() {
             imageUrl: imageUrl,
             timestamp: serverTimestamp(),
             likes: 0,
+            likedBy: [],
             comments: [],
             user: {
                 id: user.uid,
