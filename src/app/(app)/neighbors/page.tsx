@@ -56,33 +56,25 @@ export default function NeighborsPage() {
 
     const locations = useMemo(() => {
         const uniqueStates = new Set<string>();
-        const uniqueLgas = new Map<string, Set<string>>();
+        const uniqueLgasByState = new Map<string, Set<string>>();
 
         allNeighbors.forEach(neighbor => {
             if (neighbor.location?.state) {
                 uniqueStates.add(neighbor.location.state);
                 if (neighbor.location.lga) {
-                    if (!uniqueLgas.has(neighbor.location.state)) {
-                        uniqueLgas.set(neighbor.location.state, new Set());
+                    if (!uniqueLgasByState.has(neighbor.location.state)) {
+                        uniqueLgasByState.set(neighbor.location.state, new Set());
                     }
-                    uniqueLgas.get(neighbor.location.state)!.add(neighbor.location.lga);
+                    uniqueLgasByState.get(neighbor.location.state)!.add(neighbor.location.lga);
                 }
             }
         });
         return {
             states: ["all", ...Array.from(uniqueStates).sort()],
-            lgas: uniqueLgas
+            lgasByState: uniqueLgasByState,
         };
     }, [allNeighbors]);
 
-    const filteredNeighbors = useMemo(() => {
-        return allNeighbors.filter(neighbor => {
-            const stateMatch = filters.state === 'all' || neighbor.location?.state === filters.state;
-            const lgaMatch = filters.lga === 'all' || neighbor.location?.lga === filters.lga;
-            return stateMatch && lgaMatch;
-        });
-    }, [allNeighbors, filters]);
-    
     const handleFilterChange = (type: 'state' | 'lga', value: string) => {
         setFilters(prev => {
             const newFilters = {...prev, [type]: value};
@@ -92,6 +84,14 @@ export default function NeighborsPage() {
             return newFilters;
         });
     }
+
+    const filteredNeighbors = useMemo(() => {
+        return allNeighbors.filter(neighbor => {
+            const stateMatch = filters.state === 'all' || neighbor.location?.state === filters.state;
+            const lgaMatch = filters.lga === 'all' || neighbor.location?.lga === filters.lga;
+            return stateMatch && lgaMatch;
+        });
+    }, [allNeighbors, filters]);
 
     const handleStartConversation = async (neighbor: User) => {
         if (!currentUser) {
@@ -136,6 +136,13 @@ export default function NeighborsPage() {
         if (!location) return null;
         return [location.city, location.lga, location.state].filter(Boolean).join(', ');
     }
+    
+    const currentLgas = useMemo(() => {
+        if (filters.state === 'all' || !locations.lgasByState.has(filters.state)) {
+            return [];
+        }
+        return Array.from(locations.lgasByState.get(filters.state)!).sort();
+    }, [filters.state, locations.lgasByState]);
 
     return (
         <div className="max-w-4xl mx-auto space-y-6">
@@ -150,9 +157,9 @@ export default function NeighborsPage() {
                             <SelectValue placeholder="Filter by State" />
                         </SelectTrigger>
                         <SelectContent>
-                            {locations.states.map(loc => (
-                                <SelectItem key={loc} value={loc}>
-                                    {loc === 'all' ? 'All States' : loc}
+                            {locations.states.map(state => (
+                                <SelectItem key={state} value={state}>
+                                    {state === 'all' ? 'All States' : state}
                                 </SelectItem>
                             ))}
                         </SelectContent>
@@ -163,7 +170,7 @@ export default function NeighborsPage() {
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">All LGAs</SelectItem>
-                            {filters.state !== 'all' && locations.lgas.get(filters.state)?.forEach(lga => (
+                            {currentLgas.map(lga => (
                                <SelectItem key={lga} value={lga}>{lga}</SelectItem>
                             ))}
                         </SelectContent>

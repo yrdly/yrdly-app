@@ -17,15 +17,7 @@ import { updateProfile } from "firebase/auth";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useToast } from "@/hooks/use-toast";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { Location } from "@/types";
-
-type GeoData = {
-    id: number;
-    name: string;
-    state_id?: number;
-    local_government_id?: number;
-}
 
 export default function SettingsPage() {
     const { user } = useAuth();
@@ -37,11 +29,7 @@ export default function SettingsPage() {
     const [uploading, setUploading] = useState(false);
 
     // Location state
-    const [states, setStates] = useState<GeoData[]>([]);
-    const [lgas, setLgas] = useState<GeoData[]>([]);
-    const [cities, setCities] = useState<GeoData[]>([]);
     const [location, setLocation] = useState<Partial<Location>>({});
-    const [loadingLocation, setLoadingLocation] = useState({ states: false, lgas: false, cities: false });
 
     // Fetch user data
     useEffect(() => {
@@ -67,88 +55,8 @@ export default function SettingsPage() {
       }
     }, [user]);
 
-    // Fetch states
-    useEffect(() => {
-        const fetchStates = async () => {
-            setLoadingLocation(prev => ({ ...prev, states: true }));
-            try {
-                const response = await fetch('/api/geo/states');
-                const data = await response.json();
-                if (data.success) {
-                    setStates(data.data);
-                }
-            } catch (error) {
-                console.error("Failed to fetch states", error);
-            } finally {
-                setLoadingLocation(prev => ({ ...prev, states: false }));
-            }
-        }
-        fetchStates();
-    }, []);
-
-    // Fetch LGAs when state changes
-    useEffect(() => {
-        if (location.stateId) {
-            const fetchLgas = async () => {
-                setLoadingLocation(prev => ({ ...prev, lgas: true }));
-                setLgas([]);
-                setCities([]);
-                try {
-                    const response = await fetch(`/api/geo/lgas/${location.stateId}`);
-                    const data = await response.json();
-                    if (data.success) {
-                        setLgas(data.data);
-                    }
-                } catch (error) {
-                    console.error("Failed to fetch LGAs", error);
-                } finally {
-                    setLoadingLocation(prev => ({ ...prev, lgas: false }));
-                }
-            }
-            fetchLgas();
-        }
-    }, [location.stateId]);
-
-    // Fetch cities when LGA changes
-     useEffect(() => {
-        if (location.lgaId) {
-            const fetchCities = async () => {
-                setLoadingLocation(prev => ({ ...prev, cities: true }));
-                setCities([]);
-                try {
-                    const response = await fetch(`/api/geo/cities/${location.lgaId}`);
-                    const data = await response.json();
-                    if (data.success) {
-                        setCities(data.data);
-                    }
-                } catch (error) {
-                    console.error("Failed to fetch cities", error);
-                } finally {
-                    setLoadingLocation(prev => ({ ...prev, cities: false }));
-                }
-            }
-            fetchCities();
-        }
-    }, [location.lgaId]);
-
-
-    const handleLocationChange = (type: 'state' | 'lga' | 'city', value: string) => {
-        const selectedId = parseInt(value);
-        let selectedName = '';
-        let newState = { ...location };
-
-        if (type === 'state') {
-            selectedName = states.find(s => s.id === selectedId)?.name || '';
-            newState = { state: selectedName, stateId: selectedId, lga: undefined, lgaId: undefined, city: undefined, cityId: undefined };
-        } else if (type === 'lga') {
-            selectedName = lgas.find(l => l.id === selectedId)?.name || '';
-            newState = { ...newState, lga: selectedName, lgaId: selectedId, city: undefined, cityId: undefined };
-        } else if (type === 'city') {
-            selectedName = cities.find(c => c.id === selectedId)?.name || '';
-            newState = { ...newState, city: selectedName, cityId: selectedId };
-        }
-        
-        setLocation(newState);
+    const handleLocationChange = (type: keyof Location, value: string) => {
+        setLocation(prev => ({ ...prev, [type]: value }));
     };
 
     const handleProfilePicChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -236,24 +144,18 @@ export default function SettingsPage() {
                <div className="space-y-2">
                 <Label>Location</Label>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                     <Select onValueChange={(val) => handleLocationChange('state', val)} value={String(location.stateId || '')} disabled={loadingLocation.states}>
-                        <SelectTrigger><SelectValue placeholder={loadingLocation.states ? "Loading..." : "Select State"} /></SelectTrigger>
-                        <SelectContent>
-                            {states.map(s => <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>)}
-                        </SelectContent>
-                     </Select>
-                     <Select onValueChange={(val) => handleLocationChange('lga', val)} value={String(location.lgaId || '')} disabled={!location.stateId || loadingLocation.lgas}>
-                        <SelectTrigger><SelectValue placeholder={loadingLocation.lgas ? "Loading..." : "Select LGA"} /></SelectTrigger>
-                        <SelectContent>
-                            {lgas.map(l => <SelectItem key={l.id} value={String(l.id)}>{l.name}</SelectItem>)}
-                        </SelectContent>
-                     </Select>
-                     <Select onValueChange={(val) => handleLocationChange('city', val)} value={String(location.cityId || '')} disabled={!location.lgaId || loadingLocation.cities}>
-                        <SelectTrigger><SelectValue placeholder={loadingLocation.cities ? "Loading..." : "Select City/Town"} /></SelectTrigger>
-                        <SelectContent>
-                             {cities.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}
-                        </SelectContent>
-                     </Select>
+                     <div className="space-y-1">
+                        <Label htmlFor="state" className="text-xs">State</Label>
+                        <Input id="state" placeholder="e.g. Lagos" value={location.state || ''} onChange={(e) => handleLocationChange('state', e.target.value)} />
+                     </div>
+                     <div className="space-y-1">
+                        <Label htmlFor="lga" className="text-xs">LGA</Label>
+                        <Input id="lga" placeholder="e.g. Ikeja" value={location.lga || ''} onChange={(e) => handleLocationChange('lga', e.target.value)} />
+                     </div>
+                      <div className="space-y-1">
+                        <Label htmlFor="city" className="text-xs">City / Town</Label>
+                        <Input id="city" placeholder="e.g. Opebi" value={location.city || ''} onChange={(e) => handleLocationChange('city', e.target.value)} />
+                     </div>
                 </div>
               </div>
               
