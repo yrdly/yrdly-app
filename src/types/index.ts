@@ -7,6 +7,7 @@ export interface User {
   email?: string;
   avatarUrl: string;
   bio?: string;
+  location?: string;
 }
 
 export interface Comment {

@@ -25,6 +25,7 @@ export default function SettingsPage() {
     const { toast } = useToast();
     const [name, setName] = useState(user?.displayName || '');
     const [bio, setBio] = useState('');
+    const [location, setLocation] = useState('');
     const [profilePic, setProfilePic] = useState<File | null>(null);
     const [uploading, setUploading] = useState(false);
 
@@ -36,6 +37,7 @@ export default function SettingsPage() {
           if (userDocSnap.exists()) {
             const userData = userDocSnap.data();
             setBio(userData.bio || '');
+            setLocation(userData.location || '');
             // Only set name from doc if not already set from auth user object
             if (!user.displayName) {
                 setName(userData.name || '');
@@ -76,6 +78,7 @@ export default function SettingsPage() {
             await setDoc(doc(db, "users", user.uid), {
                 name: name,
                 bio: bio,
+                location: location,
                 avatarUrl: photoURL,
                 email: user.email // Also save email here
             }, { merge: true });
@@ -129,6 +132,10 @@ export default function SettingsPage() {
               <div className="space-y-2">
                 <Label htmlFor="name">Name</Label>
                 <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
+              </div>
+               <div className="space-y-2">
+                <Label htmlFor="location">Location</Label>
+                <Input id="location" placeholder="e.g., Maple Street, Oakwood Estates" value={location} onChange={(e) => setLocation(e.target.value)} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="bio">Bio</Label>

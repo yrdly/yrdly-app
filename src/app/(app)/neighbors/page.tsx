@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { collection, query, where, onSnapshot, getDocs, addDoc, serverTimestamp, limit } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/hooks/use-auth";
@@ -11,8 +11,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { MessageSquare, UserPlus } from "lucide-react";
+import { MessageSquare, UserPlus, MapPin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 
 const NeighborSkeleton = () => (
     <Card>
@@ -32,8 +34,9 @@ export default function NeighborsPage() {
     const { user: currentUser } = useAuth();
     const router = useRouter();
     const { toast } = useToast();
-    const [neighbors, setNeighbors] = useState<User[]>([]);
+    const [allNeighbors, setAllNeighbors] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
+    const [locationFilter, setLocationFilter] = useState("all");
 
     useEffect(() => {
         if (!currentUser) return;
@@ -46,12 +49,25 @@ export default function NeighborsPage() {
                 id: doc.id,
                 ...doc.data()
             } as User));
-            setNeighbors(usersData);
+            setAllNeighbors(usersData);
             setLoading(false);
         });
 
         return () => unsubscribe();
     }, [currentUser]);
+
+    const locations = useMemo(() => {
+        const uniqueLocations = new Set(allNeighbors.map(n => n.location).filter(Boolean));
+        return ["all", ...Array.from(uniqueLocations)];
+    }, [allNeighbors]);
+
+    const filteredNeighbors = useMemo(() => {
+        if (locationFilter === 'all') {
+            return allNeighbors;
+        }
+        return allNeighbors.filter(neighbor => neighbor.location === locationFilter);
+    }, [allNeighbors, locationFilter]);
+
 
     const handleStartConversation = async (neighbor: User) => {
         if (!currentUser) {
@@ -98,9 +114,23 @@ export default function NeighborsPage() {
 
     return (
         <div className="max-w-4xl mx-auto space-y-6">
-            <div>
-                <h1 className="text-2xl md:text-3xl font-bold font-headline">Find Neighbors</h1>
-                <p className="text-muted-foreground">Connect with other members of your community.</p>
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <h1 className="text-2xl md:text-3xl font-bold font-headline">Find Neighbors</h1>
+                    <p className="text-muted-foreground">Connect with other members of your community.</p>
+                </div>
+                <Select onValueChange={setLocationFilter} defaultValue="all">
+                    <SelectTrigger className="w-full md:w-[240px]">
+                        <SelectValue placeholder="Filter by location" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {locations.map(loc => (
+                             <SelectItem key={loc} value={loc}>
+                                {loc === 'all' ? 'All Locations' : loc}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
             </div>
 
             {loading ? (
@@ -109,9 +139,9 @@ export default function NeighborsPage() {
                     <NeighborSkeleton />
                     <NeighborSkeleton />
                 </div>
-            ) : neighbors.length > 0 ? (
+            ) : filteredNeighbors.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {neighbors.map(neighbor => (
+                    {filteredNeighbors.map(neighbor => (
                         <Card key={neighbor.id}>
                             <CardContent className="p-4 flex items-start gap-4">
                                 <Avatar className="h-16 w-16 border">
@@ -120,7 +150,13 @@ export default function NeighborsPage() {
                                 </Avatar>
                                 <div className="flex-1 space-y-1">
                                     <h3 className="font-semibold text-lg">{neighbor.name}</h3>
-                                    <p className="text-sm text-muted-foreground">{neighbor.bio || "No bio yet."}</p>
+                                    {neighbor.location && (
+                                        <div className="flex items-center text-sm text-muted-foreground">
+                                            <MapPin className="h-4 w-4 mr-1"/>
+                                            <span>{neighbor.location}</span>
+                                        </div>
+                                    )}
+                                    <p className="text-sm text-muted-foreground pt-1">{neighbor.bio || "No bio yet."}</p>
                                 </div>
                                 <Button size="sm" onClick={() => handleStartConversation(neighbor)}>
                                     <MessageSquare className="mr-2 h-4 w-4" /> Message
@@ -134,8 +170,13 @@ export default function NeighborsPage() {
                      <div className="flex justify-center mb-4">
                         <UserPlus className="h-12 w-12 text-muted-foreground" />
                     </div>
-                    <h2 className="text-2xl font-bold mb-2">You're the first one here!</h2>
-                    <p className="text-muted-foreground">Check back soon to see other neighbors as they join.</p>
+                    <h2 className="text-2xl font-bold mb-2">No neighbors found</h2>
+                    <p className="text-muted-foreground">
+                        {locationFilter === 'all' 
+                            ? "You're the first one here! Check back soon to see other neighbors as they join."
+                            : "No neighbors found for this location. Try another filter."
+                        }
+                    </p>
                 </Card>
             )}
         </div>
