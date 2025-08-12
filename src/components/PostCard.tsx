@@ -8,11 +8,30 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
-import { Heart, MessageCircle, Share2, MapPin, Briefcase } from "lucide-react";
+import { Heart, MessageCircle, Share2, MapPin, Briefcase, MoreHorizontal, Trash2, Edit } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { doc, updateDoc, arrayUnion, arrayRemove, onSnapshot, getDoc } from "firebase/firestore";
+import { doc, updateDoc, arrayUnion, arrayRemove, onSnapshot, getDoc, deleteDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Skeleton } from "./ui/skeleton";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { CreatePostDialog } from "./CreatePostDialog";
+import { useToast } from "@/hooks/use-toast";
 
 
 interface PostCardProps {
@@ -21,14 +40,15 @@ interface PostCardProps {
 
 export function PostCard({ post }: PostCardProps) {
   const { user: currentUser } = useAuth();
+  const { toast } = useToast();
   const [author, setAuthor] = useState<User | null>(null);
   const [loadingAuthor, setLoadingAuthor] = useState(true);
   const [likes, setLikes] = useState(post.likes || 0);
   const [isLiked, setIsLiked] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
     const fetchAuthor = async () => {
-      // Handle new post format with userId
       if (post.userId) {
         try {
           const userDocRef = doc(db, "users", post.userId);
@@ -37,7 +57,7 @@ export function PostCard({ post }: PostCardProps) {
           if (userDocSnap.exists()) {
               setAuthor({ id: userDocSnap.id, ...userDocSnap.data() } as User);
           } else {
-              // Fallback to stored author info if user doc not found,
+             // Fallback for older posts before user profile sync
               setAuthor({ 
                   id: post.userId, 
                   uid: post.userId,
@@ -52,7 +72,7 @@ export function PostCard({ post }: PostCardProps) {
           setLoadingAuthor(false);
         }
       } else {
-        // Handle old post format (if userId is not present)
+         // Handle old post format (if userId is not present)
          setAuthor({ 
             id: 'unknown',
             uid: 'unknown',
@@ -96,6 +116,17 @@ export function PostCard({ post }: PostCardProps) {
       });
     }
   };
+
+  const handleDelete = async () => {
+    if (!currentUser || !post.id || currentUser.uid !== post.userId) return;
+    try {
+        await deleteDoc(doc(db, "posts", post.id));
+        toast({ title: "Post deleted", description: "Your post has been successfully removed." });
+    } catch (error) {
+        console.error("Error deleting post:", error);
+        toast({ variant: "destructive", title: "Error", description: "Failed to delete post." });
+    }
+  }
 
   const getCategoryBadge = (category: string) => {
     switch (category) {
@@ -145,6 +176,43 @@ export function PostCard({ post }: PostCardProps) {
                     <p className="text-xs text-muted-foreground">{post.timestamp}</p>
                 </div>
             </div>
+        )}
+        {currentUser?.uid === post.userId && (
+            <AlertDialog>
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                            <MoreHorizontal className="h-5 w-5" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                         <CreatePostDialog postToEdit={post} onOpenChange={setIsEditing}>
+                            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                <span>Edit</span>
+                            </DropdownMenuItem>
+                        </CreatePostDialog>
+                        <AlertDialogTrigger asChild>
+                            <DropdownMenuItem className="text-destructive">
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                <span>Delete</span>
+                            </DropdownMenuItem>
+                        </AlertDialogTrigger>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete your post.
+                    </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         )}
       </CardHeader>
       <CardContent className="p-4 pt-0">
