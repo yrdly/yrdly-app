@@ -51,7 +51,7 @@ export function ChatLayout({ conversations: initialConversations, currentUser }:
 
   return (
     <Card className="h-[calc(100vh-10rem)] w-full flex">
-      <div className="w-1/3 border-r">
+      <div className="w-full md:w-1/3 border-r">
         <div className="p-4 border-b">
             <div className="relative">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -88,7 +88,7 @@ export function ChatLayout({ conversations: initialConversations, currentUser }:
           )}
         </ScrollArea>
       </div>
-      <div className="w-2/3 flex flex-col">
+      <div className="hidden md:flex w-2/3 flex-col">
         {selectedConversation ? (
           <>
             <div className="flex items-center gap-4 p-4 border-b">
@@ -128,6 +128,12 @@ export function ChatLayout({ conversations: initialConversations, currentUser }:
                   onChange={(e) => setNewMessage(e.target.value)}
                   className="flex-1 resize-none"
                   rows={1}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendMessage(e);
+                    }
+                  }}
                 />
                 <Button type="submit" size="icon" disabled={!newMessage.trim()}>
                   <SendHorizonal className="h-5 w-5" />
