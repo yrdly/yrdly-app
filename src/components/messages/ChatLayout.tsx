@@ -1,8 +1,8 @@
 
 "use client";
 
-import type { Conversation, User } from "@/types";
-import { useState } from "react";
+import type { Conversation, User, Message } from "@/types";
+import { useState, useEffect } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -11,55 +11,76 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { SendHorizonal, Search, ArrowLeft, Users } from "lucide-react";
 import { Textarea } from "../ui/textarea";
+import { collection, onSnapshot, query, orderBy, doc, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
-interface ChatLayoutProps {
-  conversations: Conversation[];
-  currentUser: User;
-}
-
-function NoFriendsEmptyState() {
+export function NoFriendsEmptyState() {
     return (
         <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-4 text-center bg-gray-50 dark:bg-gray-900/50 rounded-lg">
             <div className="mb-4 rounded-full bg-primary/10 p-4">
                 <Users className="h-10 w-10 text-primary" />
             </div>
             <h3 className="text-xl font-semibold text-foreground mb-1">Find your neighbors</h3>
-            <p className="mb-4 max-w-sm">It looks like you haven't started any conversations yet. Connect with people in your community to get started.</p>
+            <p className="mb-4 max-w-sm">It looks like you haven't started any conversations yet. Once you do, they'll appear here.</p>
             <Button>Find Neighbors</Button>
         </div>
     )
 }
 
+interface ChatLayoutProps {
+  conversations: Conversation[];
+  currentUser: User;
+}
+
 export function ChatLayout({ conversations: initialConversations, currentUser }: ChatLayoutProps) {
   const [conversations, setConversations] = useState<Conversation[]>(initialConversations);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
+
+  useEffect(() => {
+    setConversations(initialConversations);
+  }, [initialConversations]);
+  
+  useEffect(() => {
+    if (!selectedConversation) return;
+
+    const q = query(collection(db, "conversations", selectedConversation.id, "messages"), orderBy("timestamp", "asc"));
+
+    const unsubscribe = onSnapshot(q, async (querySnapshot) => {
+        const msgs: Message[] = [];
+        for (const docSnap of querySnapshot.docs) {
+            const msgData = docSnap.data();
+            let sender = msgData.senderId === currentUser.id ? currentUser : selectedConversation.participant;
+            if (msgData.senderId !== currentUser.id && msgData.senderId !== selectedConversation.participant.id) {
+                const userDoc = await getDoc(doc(db, "users", msgData.senderId));
+                if (userDoc.exists()) {
+                    sender = { id: userDoc.id, ...userDoc.data() } as User;
+                }
+            }
+            
+            msgs.push({
+                id: docSnap.id,
+                text: msgData.text,
+                sender: sender,
+                timestamp: msgData.timestamp?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) || '...',
+                read: msgData.read
+            });
+        }
+        setMessages(msgs);
+    });
+
+    return () => unsubscribe();
+
+  }, [selectedConversation, currentUser]);
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (newMessage.trim() === "" || !selectedConversation) return;
 
-    const message = {
-      id: `m${Date.now()}`,
-      sender: currentUser,
-      text: newMessage,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      read: true,
-    };
-
-    const updatedConversations = conversations.map(conv => {
-        if (conv.id === selectedConversation.id) {
-            const newMessages = [...conv.messages, message];
-            return {
-                ...conv,
-                messages: newMessages
-            };
-        }
-        return conv;
-    });
-
-    setConversations(updatedConversations);
-    setSelectedConversation(prev => prev ? updatedConversations.find(c => c.id === prev.id) || null : null);
+    // TODO: Add logic to save the message to Firestore
+    console.log("Sending message:", newMessage);
+    
     setNewMessage("");
   };
   
@@ -87,7 +108,7 @@ export function ChatLayout({ conversations: initialConversations, currentUser }:
             conversations.map((conv) => (
               <div
                 key={conv.id}
-                className="flex items-center gap-4 p-4 cursor-pointer hover:bg-muted/50"
+                className={cn("flex items-center gap-4 p-4 cursor-pointer hover:bg-muted/50", selectedConversation?.id === conv.id && "bg-muted/50")}
                 onClick={() => handleSelectConversation(conv)}
               >
                 <Avatar>
@@ -96,7 +117,7 @@ export function ChatLayout({ conversations: initialConversations, currentUser }:
                 </Avatar>
                 <div className="flex-1 truncate">
                   <p className="font-semibold">{conv.participant.name}</p>
-                  <p className="text-sm text-muted-foreground truncate">{conv.messages[conv.messages.length - 1].text}</p>
+                  <p className="text-sm text-muted-foreground truncate">{conv.messages[conv.messages.length - 1]?.text}</p>
                 </div>
               </div>
             ))
@@ -128,7 +149,7 @@ export function ChatLayout({ conversations: initialConversations, currentUser }:
             </div>
             <ScrollArea className="flex-1 p-4 bg-gray-50 dark:bg-gray-900">
               <div className="space-y-4">
-                {selectedConversation.messages.map((msg) => (
+                {messages.map((msg) => (
                   <div
                     key={msg.id}
                     className={cn(

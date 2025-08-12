@@ -1,6 +1,9 @@
 
 import type { User, Post, Conversation } from '@/types';
 
+// NOTE: This mock data is not actively used in the app anymore,
+// but is kept for reference or potential future testing purposes.
+
 export const users: User[] = [
   { id: 'u1', uid: 'u1', name: 'Alice Johnson', avatarUrl: 'https://placehold.co/100x100.png', bio: 'Lover of dogs and gardening. Always up for a chat about local plants!' },
   { id: 'u2', uid: 'u2', name: 'Bob Smith', avatarUrl: 'https://placehold.co/100x100.png', bio: 'Local musician and dad. Ask me about my band!' },
