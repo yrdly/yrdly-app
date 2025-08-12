@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, ShoppingCart, Calendar, Briefcase, MessageSquare } from "lucide-react";
+import { Home, ShoppingCart, Users, Briefcase, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function AppBottomNav() {
@@ -12,7 +12,7 @@ export function AppBottomNav() {
   const menuItems = [
     { href: '/home', label: 'Home', icon: Home },
     { href: '/marketplace', label: 'Market', icon: ShoppingCart },
-    { href: '/events', label: 'Events', icon: Calendar },
+    { href: '/neighbors', label: 'Neighbors', icon: Users },
     { href: '/businesses', label: 'Business', icon: Briefcase },
     { href: '/messages', label: 'Messages', icon: MessageSquare },
   ];

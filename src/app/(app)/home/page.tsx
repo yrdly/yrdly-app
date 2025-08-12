@@ -39,7 +39,7 @@ function WelcomeBanner() {
             </div>
             <div className="flex gap-2">
                 <Button asChild variant="default" size="sm"><Link href="/settings">Complete Profile</Link></Button>
-                <Button variant="outline" size="sm">Find Neighbors</Button>
+                <Button asChild variant="outline" size="sm"><Link href="/neighbors">Find Neighbors</Link></Button>
             </div>
           </AlertDescription>
         </Alert>

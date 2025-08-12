@@ -8,7 +8,7 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
 } from '@/components/ui/sidebar';
-import { Home, ShoppingCart, Calendar, Briefcase, MessageSquare, Settings } from 'lucide-react';
+import { Home, ShoppingCart, Calendar, Briefcase, MessageSquare, Settings, Users } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
@@ -23,6 +23,7 @@ export function AppSidebar() {
     { href: '/marketplace', label: 'Marketplace', icon: ShoppingCart },
     { href: '/events', label: 'Events', icon: Calendar },
     { href: '/businesses', label: 'Businesses', icon: Briefcase },
+    { href: '/neighbors', label: 'Neighbors', icon: Users },
     { href: '/messages', label: 'Messages', icon: MessageSquare },
   ];
 

@@ -13,6 +13,7 @@ import { SendHorizonal, Search, ArrowLeft, Users } from "lucide-react";
 import { Textarea } from "../ui/textarea";
 import { collection, onSnapshot, query, orderBy, doc, getDoc, addDoc, serverTimestamp, runTransaction } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import Link from "next/link";
 
 export function NoFriendsEmptyState() {
     return (
@@ -22,7 +23,9 @@ export function NoFriendsEmptyState() {
             </div>
             <h3 className="text-xl font-semibold text-foreground mb-1">Find your neighbors</h3>
             <p className="mb-4 max-w-sm">It looks like you haven't started any conversations yet. Once you do, they'll appear here.</p>
-            <Button>Find Neighbors</Button>
+            <Button asChild>
+                <Link href="/neighbors">Find Neighbors</Link>
+            </Button>
         </div>
     )
 }
