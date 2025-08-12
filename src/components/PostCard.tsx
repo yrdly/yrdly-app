@@ -1,7 +1,7 @@
 
 "use client";
 
-import type { Post } from "@/types";
+import type { Post, User } from "@/types";
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -10,18 +10,43 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Heart, MessageCircle, Share2, MapPin, Briefcase } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { doc, updateDoc, arrayUnion, arrayRemove, onSnapshot } from "firebase/firestore";
+import { doc, updateDoc, arrayUnion, arrayRemove, onSnapshot, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { Skeleton } from "./ui/skeleton";
 
 
 interface PostCardProps {
   post: Post;
 }
 
-export function PostCard({ post }: PostCardProps) {
-  const { user } = useAuth();
+export function PostCard({ post: initialPost }: PostCardProps) {
+  const { user: currentUser } = useAuth();
+  const [post, setPost] = useState(initialPost);
+  const [author, setAuthor] = useState<User | null>(null);
+  const [loadingAuthor, setLoadingAuthor] = useState(true);
   const [likes, setLikes] = useState(post.likes || 0);
   const [isLiked, setIsLiked] = useState(false);
+
+  useEffect(() => {
+    if (!post.userId) {
+        setLoadingAuthor(false);
+        return;
+    };
+
+    const fetchAuthor = async () => {
+        setLoadingAuthor(true);
+        const userDocRef = doc(db, "users", post.userId);
+        const userDocSnap = await getDoc(userDocRef);
+        if (userDocSnap.exists()) {
+            setAuthor(userDocSnap.data() as User);
+        } else {
+            // Handle case where user might have been deleted
+            setAuthor(null);
+        }
+        setLoadingAuthor(false);
+    }
+    fetchAuthor();
+  }, [post.userId]);
 
   useEffect(() => {
     if (!post.id) return;
@@ -30,26 +55,26 @@ export function PostCard({ post }: PostCardProps) {
         if(docSnap.exists()) {
             const postData = docSnap.data();
             setLikes(postData.likedBy?.length || 0);
-            if (user && postData.likedBy) {
-              setIsLiked(postData.likedBy.includes(user.uid));
+            if (currentUser && postData.likedBy) {
+              setIsLiked(postData.likedBy.includes(currentUser.uid));
             }
         }
     });
 
     return () => unsubscribe();
-  }, [post.id, user]);
+  }, [post.id, currentUser]);
 
   const handleLike = async () => {
-    if (!user || !post.id) return;
+    if (!currentUser || !post.id) return;
     const postRef = doc(db, "posts", post.id);
 
     if (isLiked) {
       await updateDoc(postRef, {
-        likedBy: arrayRemove(user.uid)
+        likedBy: arrayRemove(currentUser.uid)
       });
     } else {
       await updateDoc(postRef, {
-        likedBy: arrayUnion(user.uid)
+        likedBy: arrayUnion(currentUser.uid)
       });
     }
   };
@@ -71,15 +96,27 @@ export function PostCard({ post }: PostCardProps) {
   return (
     <Card className="overflow-hidden">
       <CardHeader className="flex flex-row items-center gap-4 p-4">
-        <Avatar>
-          <AvatarImage src={post.user?.avatarUrl} alt={post.user?.name} data-ai-hint="person portrait" />
-          <AvatarFallback>{post.user?.name?.charAt(0)}</AvatarFallback>
-        </Avatar>
-        <div className="flex-1">
-          <p className="font-semibold">{post.user?.name}</p>
-          <p className="text-xs text-muted-foreground">{post.timestamp}</p>
-        </div>
-        {getCategoryBadge(post.category)}
+        {loadingAuthor ? (
+            <div className="flex items-center gap-4 w-full">
+                <Skeleton className="h-10 w-10 rounded-full" />
+                <div className="space-y-2">
+                    <Skeleton className="h-4 w-[150px]" />
+                    <Skeleton className="h-3 w-[100px]" />
+                </div>
+            </div>
+        ) : author ? (
+            <>
+                <Avatar>
+                <AvatarImage src={author.avatarUrl} alt={author.name} data-ai-hint="person portrait" />
+                <AvatarFallback>{author.name?.charAt(0)}</AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                <p className="font-semibold">{author.name}</p>
+                <p className="text-xs text-muted-foreground">{post.timestamp}</p>
+                </div>
+                {getCategoryBadge(post.category)}
+            </>
+        ) : null}
       </CardHeader>
       <CardContent className="p-4 pt-0">
         <p className="whitespace-pre-wrap">{post.text}</p>

@@ -1,6 +1,5 @@
 
 
-
 export interface User {
   id: string;
   uid: string;
@@ -21,11 +20,7 @@ export type PostCategory = "General" | "Event" | "For Sale" | "Business";
 
 export interface Post {
   id: string;
-  user: {
-    id: string;
-    name: string;
-    avatarUrl: string;
-  };
+  userId: string;
   category: PostCategory;
   text: string;
   imageUrl?: string;

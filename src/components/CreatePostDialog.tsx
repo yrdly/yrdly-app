@@ -91,6 +91,7 @@ export function CreatePostDialog({ children, preselectedCategory }: CreatePostDi
         }
 
         await addDoc(collection(db, "posts"), {
+            userId: user.uid,
             text: values.text,
             category: values.category,
             location: values.location,
@@ -99,11 +100,6 @@ export function CreatePostDialog({ children, preselectedCategory }: CreatePostDi
             likes: 0,
             likedBy: [],
             comments: [],
-            user: {
-                id: user.uid,
-                name: user.displayName || 'Anonymous',
-                avatarUrl: user.photoURL || `https://placehold.co/100x100.png?text=${user.displayName?.charAt(0) || 'A'}`,
-            },
         });
 
         toast({ title: 'Post created!', description: 'Your post is now live.' });
