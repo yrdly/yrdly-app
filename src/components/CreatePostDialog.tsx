@@ -34,11 +34,12 @@ import {
 import { Image as ImageIcon, MapPin, PlusCircle } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { useAuth } from "@/hooks/use-auth";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
+import type { PostCategory } from "@/types";
 
 const formSchema = z.object({
   text: z.string().min(1, "Post can't be empty.").max(500),
@@ -48,9 +49,10 @@ const formSchema = z.object({
 
 type CreatePostDialogProps = {
     children?: React.ReactNode;
+    preselectedCategory?: PostCategory;
 }
 
-export function CreatePostDialog({ children }: CreatePostDialogProps) {
+export function CreatePostDialog({ children, preselectedCategory }: CreatePostDialogProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
@@ -61,10 +63,17 @@ export function CreatePostDialog({ children }: CreatePostDialogProps) {
     resolver: zodResolver(formSchema),
     defaultValues: {
       text: "",
-      category: "General",
+      category: preselectedCategory || "General",
       location: "",
     },
   });
+
+  useEffect(() => {
+    if (preselectedCategory) {
+        form.setValue("category", preselectedCategory);
+    }
+  }, [preselectedCategory, form]);
+
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!user) {
@@ -98,7 +107,7 @@ export function CreatePostDialog({ children }: CreatePostDialogProps) {
         });
 
         toast({ title: 'Post created!', description: 'Your post is now live.' });
-        form.reset();
+        form.reset({ text: "", category: preselectedCategory || "General", location: "" });
         setImageFile(null);
         setOpen(false);
 
