@@ -19,7 +19,7 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'yrdly-coyig.firebasestorage.app',
+        hostname: 'firebasestorage.googleapis.com',
         port: '',
         pathname: '/v0/b/yrdly-coyig.appspot.com/o/**',
       }
