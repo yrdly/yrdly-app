@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
-import { Heart, MessageCircle, Share2, MapPin } from "lucide-react";
+import { Heart, MessageCircle, Share2, MapPin, Briefcase } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { doc, updateDoc, arrayUnion, arrayRemove, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -54,15 +54,17 @@ export function PostCard({ post }: PostCardProps) {
     }
   };
 
-  const getCategoryColor = (category: string) => {
+  const getCategoryBadge = (category: string) => {
     switch (category) {
       case "Event":
-        return "bg-accent text-accent-foreground hover:bg-accent/80";
+        return <Badge variant="outline" className="bg-orange-100 text-orange-800 border-orange-200">{category}</Badge>;
       case "For Sale":
-        return "bg-blue-500 text-white hover:bg-blue-500/80";
+        return <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200">{category}</Badge>;
+      case "Business":
+         return <Badge variant="outline" className="bg-purple-100 text-purple-800 border-purple-200 flex items-center gap-1"><Briefcase className="h-3 w-3"/>{category}</Badge>;
       case "General":
       default:
-        return "bg-secondary text-secondary-foreground hover:bg-secondary/80";
+        return <Badge variant="secondary">{category}</Badge>;
     }
   }
 
@@ -77,7 +79,7 @@ export function PostCard({ post }: PostCardProps) {
           <p className="font-semibold">{post.user?.name}</p>
           <p className="text-xs text-muted-foreground">{post.timestamp}</p>
         </div>
-        <Badge variant="outline" className={getCategoryColor(post.category)}>{post.category}</Badge>
+        {getCategoryBadge(post.category)}
       </CardHeader>
       <CardContent className="p-4 pt-0">
         <p className="whitespace-pre-wrap">{post.text}</p>

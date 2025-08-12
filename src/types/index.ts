@@ -15,7 +15,7 @@ export interface Comment {
   timestamp: string;
 }
 
-export type PostCategory = "General" | "Event" | "For Sale";
+export type PostCategory = "General" | "Event" | "For Sale" | "Business";
 
 export interface Post {
   id: string;

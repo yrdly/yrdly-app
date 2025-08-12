@@ -31,7 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Image as ImageIcon, MapPin } from "lucide-react";
+import { Image as ImageIcon, MapPin, PlusCircle } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { useAuth } from "@/hooks/use-auth";
 import { useState } from "react";
@@ -42,11 +42,15 @@ import { useToast } from "@/hooks/use-toast";
 
 const formSchema = z.object({
   text: z.string().min(1, "Post can't be empty.").max(500),
-  category: z.enum(["General", "Event", "For Sale"]),
+  category: z.enum(["General", "Event", "For Sale", "Business"]),
   location: z.string().optional(),
 });
 
-export function CreatePostDialog() {
+type CreatePostDialogProps = {
+    children?: React.ReactNode;
+}
+
+export function CreatePostDialog({ children }: CreatePostDialogProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
@@ -115,16 +119,18 @@ export function CreatePostDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <div className="flex items-center gap-4 w-full">
-            <Avatar>
-                <AvatarImage src={user?.photoURL || 'https://placehold.co/100x100.png'} data-ai-hint="person portrait"/>
-                <AvatarFallback>{user?.displayName?.charAt(0) || 'U'}</AvatarFallback>
-            </Avatar>
-            <div className="flex-1 text-left text-muted-foreground cursor-pointer hover:bg-muted p-2 rounded-md">
-                What's on your mind?
+        { children ? children : (
+            <div className="flex items-center gap-4 w-full">
+                <Avatar>
+                    <AvatarImage src={user?.photoURL || 'https://placehold.co/100x100.png'} data-ai-hint="person portrait"/>
+                    <AvatarFallback>{user?.displayName?.charAt(0) || 'U'}</AvatarFallback>
+                </Avatar>
+                <div className="flex-1 text-left text-muted-foreground cursor-pointer hover:bg-muted p-2 rounded-md border border-dashed">
+                    What's happening in your neighborhood?
+                </div>
+                <Button variant="ghost" size="icon"><PlusCircle className="h-6 w-6 text-primary" /></Button>
             </div>
-            <Button variant="ghost" size="icon"><ImageIcon className="h-5 w-5 text-primary" /></Button>
-        </div>
+        )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[525px]">
         <DialogHeader>
@@ -167,6 +173,7 @@ export function CreatePostDialog() {
                           <SelectItem value="General">General</SelectItem>
                           <SelectItem value="Event">Event</SelectItem>
                           <SelectItem value="For Sale">For Sale</SelectItem>
+                          <SelectItem value="Business">Business</SelectItem>
                         </SelectContent>
                       </Select>
                     </FormItem>

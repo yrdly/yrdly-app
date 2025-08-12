@@ -2,6 +2,7 @@
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/layout/AppSidebar';
 import { AppHeader } from '@/components/layout/AppHeader';
+import { AppBottomNav } from '@/components/layout/AppBottomNav';
 
 export default function AppLayout({
   children,
@@ -13,7 +14,8 @@ export default function AppLayout({
       <AppSidebar />
       <SidebarInset>
         <AppHeader />
-        <main className="p-4 sm:p-6 lg:p-8">{children}</main>
+        <main className="p-4 sm:p-6 lg:p-8 pb-24 md:pb-8">{children}</main>
+        <AppBottomNav />
       </SidebarInset>
     </SidebarProvider>
   );
