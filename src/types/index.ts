@@ -11,7 +11,9 @@ export interface User {
 
 export interface Comment {
   id: string;
-  user: User;
+  userId: string;
+  authorName: string;
+  authorImage: string;
   text: string;
   timestamp: string;
 }
@@ -20,7 +22,7 @@ export type PostCategory = "General" | "Event" | "For Sale" | "Business";
 
 export interface Post {
   id: string;
-  userId?: string; // Made optional for backward compatibility
+  userId?: string; 
   authorName?: string;
   authorImage?: string;
   category: PostCategory;
@@ -29,7 +31,7 @@ export interface Post {
   location?: string;
   likes: number;
   likedBy?: string[];
-  comments: Comment[];
+  commentCount?: number;
   timestamp: string;
 }
 

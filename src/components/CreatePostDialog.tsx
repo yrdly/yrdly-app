@@ -124,7 +124,7 @@ export function CreatePostDialog({ children, preselectedCategory, postToEdit, on
                 timestamp: serverTimestamp(),
                 likes: 0,
                 likedBy: [],
-                comments: [],
+                commentCount: 0,
             });
             toast({ title: 'Post created!', description: 'Your post is now live.' });
         }

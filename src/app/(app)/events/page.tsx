@@ -65,7 +65,7 @@ export default function EventsPage() {
        </div>
         
         {loading ? (
-             <div className="space-y-4">
+             <div className="space-y-4 max-w-2xl mx-auto">
                 <Skeleton className="h-48 w-full" />
                 <Skeleton className="h-48 w-full" />
              </div>

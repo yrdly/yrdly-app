@@ -28,10 +28,15 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { CreatePostDialog } from "./CreatePostDialog";
 import { useToast } from "@/hooks/use-toast";
+import { CommentSection } from "./CommentSection";
 
 
 interface PostCardProps {
@@ -44,11 +49,17 @@ export function PostCard({ post }: PostCardProps) {
   const [author, setAuthor] = useState<User | null>(null);
   const [loadingAuthor, setLoadingAuthor] = useState(true);
   const [likes, setLikes] = useState(post.likes || 0);
+  const [commentCount, setCommentCount] = useState(post.commentCount || 0);
   const [isLiked, setIsLiked] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [isCommentsOpen, setIsCommentsOpen] = useState(false);
 
   useEffect(() => {
+    // This effect handles fetching the author's data.
+    // It's backward-compatible: if `userId` exists (new posts), it fetches the user document.
+    // If not (old posts), it falls back to the `authorName` and `authorImage` stored on the post.
     const fetchAuthor = async () => {
+      setLoadingAuthor(true);
       if (post.userId) {
         try {
           const userDocRef = doc(db, "users", post.userId);
@@ -57,11 +68,11 @@ export function PostCard({ post }: PostCardProps) {
           if (userDocSnap.exists()) {
               setAuthor({ id: userDocSnap.id, ...userDocSnap.data() } as User);
           } else {
-             // Fallback for older posts before user profile sync
+             // If user doc not found, maybe they were deleted. Fallback to stored name.
               setAuthor({ 
                   id: post.userId, 
                   uid: post.userId,
-                  name: post.authorName || 'Anonymous User', 
+                  name: post.authorName || 'Deleted User', 
                   avatarUrl: post.authorImage || 'https://placehold.co/100x100.png'
               });
           }
@@ -72,7 +83,7 @@ export function PostCard({ post }: PostCardProps) {
           setLoadingAuthor(false);
         }
       } else {
-         // Handle old post format (if userId is not present)
+         // Fallback for very old posts without a userId
          setAuthor({ 
             id: 'unknown',
             uid: 'unknown',
@@ -87,12 +98,14 @@ export function PostCard({ post }: PostCardProps) {
   }, [post.userId, post.authorName, post.authorImage]);
 
   useEffect(() => {
+    // This effect listens for real-time updates to the post (likes and comments)
     if (!post.id) return;
     const postRef = doc(db, "posts", post.id);
     const unsubscribe = onSnapshot(postRef, (docSnap) => {
         if(docSnap.exists()) {
             const postData = docSnap.data();
             setLikes(postData.likedBy?.length || 0);
+            setCommentCount(postData.commentCount || 0);
             if (currentUser && postData.likedBy) {
               setIsLiked(postData.likedBy.includes(currentUser.uid));
             }
@@ -178,7 +191,7 @@ export function PostCard({ post }: PostCardProps) {
             </div>
         )}
         {currentUser?.uid === post.userId && (
-            <AlertDialog>
+             <AlertDialog>
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon">
@@ -192,8 +205,8 @@ export function PostCard({ post }: PostCardProps) {
                                 <span>Edit</span>
                             </DropdownMenuItem>
                         </CreatePostDialog>
-                        <AlertDialogTrigger asChild>
-                            <DropdownMenuItem className="text-destructive">
+                         <AlertDialogTrigger asChild>
+                            <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10">
                                 <Trash2 className="mr-2 h-4 w-4" />
                                 <span>Delete</span>
                             </DropdownMenuItem>
@@ -204,7 +217,7 @@ export function PostCard({ post }: PostCardProps) {
                     <AlertDialogHeader>
                     <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                     <AlertDialogDescription>
-                        This action cannot be undone. This will permanently delete your post.
+                        This action cannot be undone. This will permanently delete your post and all its comments.
                     </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -215,42 +228,52 @@ export function PostCard({ post }: PostCardProps) {
             </AlertDialog>
         )}
       </CardHeader>
-      <CardContent className="p-4 pt-0">
-        <p className="whitespace-pre-wrap">{post.text}</p>
-        {post.location && (
-            <div className="flex items-center text-sm text-muted-foreground mt-2">
-                <MapPin className="h-4 w-4 mr-1"/>
-                <span>{post.location}</span>
+
+      <Collapsible open={isCommentsOpen} onOpenChange={setIsCommentsOpen}>
+        <CardContent className="p-4 pt-0">
+            <p className="whitespace-pre-wrap">{post.text}</p>
+            {post.location && (
+                <div className="flex items-center text-sm text-muted-foreground mt-2">
+                    <MapPin className="h-4 w-4 mr-1"/>
+                    <span>{post.location}</span>
+                </div>
+            )}
+        </CardContent>
+        {post.imageUrl && (
+            <div className="relative w-full aspect-video">
+            <Image
+                src={post.imageUrl}
+                alt="Post image"
+                fill
+                className="object-cover"
+                data-ai-hint="neighborhood street"
+            />
             </div>
         )}
-      </CardContent>
-      {post.imageUrl && (
-        <div className="relative w-full aspect-video">
-          <Image
-            src={post.imageUrl}
-            alt="Post image"
-            fill
-            className="object-cover"
-            data-ai-hint="neighborhood street"
-          />
-        </div>
-      )}
-      <CardFooter className="p-2 bg-background/50">
-        <div className="flex justify-around w-full">
-          <Button variant="ghost" className="flex-1 gap-2" onClick={handleLike}>
-            <Heart className={`h-5 w-5 ${isLiked ? "text-red-500 fill-current" : ""}`} />
-            <span className="text-sm">{likes}</span>
-          </Button>
-          <Button variant="ghost" className="flex-1 gap-2">
-            <MessageCircle className="h-5 w-5" />
-            <span className="text-sm">{post.comments?.length || 0}</span>
-          </Button>
-          <Button variant="ghost" className="flex-1 gap-2">
-            <Share2 className="h-5 w-5" />
-            <span className="text-sm">Share</span>
-          </Button>
-        </div>
-      </CardFooter>
+        <CardFooter className="p-2 bg-background/50">
+            <div className="flex justify-around w-full">
+            <Button variant="ghost" className="flex-1 gap-2" onClick={handleLike}>
+                <Heart className={`h-5 w-5 ${isLiked ? "text-red-500 fill-current" : ""}`} />
+                <span className="text-sm">{likes}</span>
+            </Button>
+             <CollapsibleTrigger asChild>
+                 <Button variant="ghost" className="flex-1 gap-2">
+                    <MessageCircle className="h-5 w-5" />
+                    <span className="text-sm">{commentCount}</span>
+                </Button>
+             </CollapsibleTrigger>
+            <Button variant="ghost" className="flex-1 gap-2">
+                <Share2 className="h-5 w-5" />
+                <span className="text-sm">Share</span>
+            </Button>
+            </div>
+        </CardFooter>
+        <CollapsibleContent>
+            <div className="p-4 pt-0">
+                <CommentSection postId={post.id} />
+            </div>
+        </CollapsibleContent>
+      </Collapsible>
     </Card>
   );
 }
