@@ -1,6 +1,6 @@
 "use client";
 
-import type { Post as PostType } from "@/types";
+import type { Post as PostType } from "../types/post";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { MapPin, Calendar, LinkIcon } from "lucide-react";

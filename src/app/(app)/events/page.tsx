@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, CalendarDays } from "lucide-react";
 import { CreateEventDialog } from "@/components/CreateEventDialog";
 import { useState, useEffect } from "react";
-import type { Post as PostType } from "../../../types";
+import type { Post as PostType } from "../../../types/post";
 import { collection, query, where, onSnapshot, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { EventCard } from "@/components/EventCard";

@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useEffect, useState } from "react";
 import { collection, onSnapshot, query, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import type { Post as PostType } from "@/types";
+import type { Post as PostType } from "../../../types/post";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyFeed } from "@/components/EmptyFeed"; // Assuming you extract EmptyFeed to its own component
 import { WelcomeBanner } from "@/components/WelcomeBanner"; // Assuming you extract WelcomeBanner

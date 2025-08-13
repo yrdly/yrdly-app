@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Search, Plus, PackageOpen } from "lucide-react";
 import { CreatePostDialog } from "@/components/CreatePostDialog";
 import { useState, useEffect } from "react";
-import type { Post as PostType } from "@/types";
+import type { Post as PostType } from "../../../types/post";
 import { collection, query, where, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { PostCard } from "@/components/PostCard";

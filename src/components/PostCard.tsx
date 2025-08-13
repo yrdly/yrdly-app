@@ -1,7 +1,8 @@
 
 "use client";
 
-import type { Post, User } from "@/types";
+import type { User } from "@/types";
+import type { Post } from "../types/post";
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
