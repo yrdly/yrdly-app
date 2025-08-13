@@ -16,7 +16,6 @@ import {
 import {
   Sheet,
   SheetContent,
-  SheetDescription,
   SheetFooter,
   SheetHeader,
   SheetTitle,
@@ -47,7 +46,7 @@ import { collection, addDoc, updateDoc, doc, serverTimestamp } from "firebase/fi
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
-import type { Post, PostCategory } from "@/types";
+import type { Post, PostCategory } from "../types";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const formSchema = z.object({
@@ -170,7 +169,7 @@ export function CreatePostDialog({ children, preselectedCategory, postToEdit, on
             <FormItem>
               <FormControl>
                 <Textarea
-                  placeholder="What's happening in the neighborhood?"
+                  placeholder="What&apos;s happening in the neighborhood?"
                   className="resize-none min-h-[120px] border-none shadow-none focus-visible:ring-0"
                   {...field}
                 />

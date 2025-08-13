@@ -5,12 +5,11 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { createUserWithEmailAndPassword, updateProfile, signInWithPopup, getAdditionalUserInfo } from 'firebase/auth';
+import { createUserWithEmailAndPassword, updateProfile, signInWithPopup, getAdditionalUserInfo, AuthProvider, OAuthProvider } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { auth, db, googleProvider, appleProvider } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
 
 import { Button } from "@/components/ui/button";
 import {
@@ -33,7 +32,6 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
-import { Separator } from '@/components/ui/separator';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
@@ -56,7 +54,7 @@ export default function SignupPage() {
     },
   });
 
-  const handleSocialSignIn = async (provider: any) => {
+  const handleSocialSignIn = async (provider: AuthProvider | OAuthProvider) => {
     setLoading(true);
     setError(null);
     try {
@@ -75,12 +73,13 @@ export default function SignupPage() {
             });
         }
         router.push('/home');
-    } catch (error: any) {
-        setError(error.message);
+    } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        setError(errorMessage);
         toast({
             variant: "destructive",
             title: "Sign Up Failed",
-            description: error.message,
+            description: errorMessage,
         });
     } finally {
         setLoading(false);
@@ -106,12 +105,13 @@ export default function SignupPage() {
       });
 
       router.push('/home');
-    } catch (error: any) {
-        setError(error.message);
+    } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        setError(errorMessage);
         toast({
             variant: "destructive",
             title: "Sign Up Failed",
-            description: error.message,
+            description: errorMessage,
         })
     } finally {
         setLoading(false);

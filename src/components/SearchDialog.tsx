@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { User } from '@/types';
+import type { User } from "../types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -89,7 +89,7 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
                     )}
                     {!loading && results.length === 0 && searchTerm.length > 1 && (
                         <div className="text-center text-muted-foreground pt-10">
-                            <p>No results found for "{searchTerm}"</p>
+                            <p>No results found for &quot;{searchTerm}&quot;</p>
                         </div>
                     )}
                 </div>

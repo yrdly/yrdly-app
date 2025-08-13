@@ -7,7 +7,7 @@ import { doc, onSnapshot, collection, query, where, addDoc, serverTimestamp, upd
 import { httpsCallable } from 'firebase/functions';
 import { db, functions } from '@/lib/firebase';
 import { useAuth } from '@/hooks/use-auth';
-import type { User, FriendRequest, Location } from '@/types';
+import type { User, FriendRequest, Location } from '../../../../types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card';

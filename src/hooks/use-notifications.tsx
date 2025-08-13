@@ -14,7 +14,7 @@ export interface Notification {
     relatedId: string;
     message: string;
     isRead: boolean;
-    createdAt: any;
+    createdAt: unknown;
 }
 
 export const useNotifications = () => {

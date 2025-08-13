@@ -36,7 +36,7 @@ export function WelcomeBanner() {
             Welcome to Yrdly, {user?.displayName?.split(' ')[0] || 'Neighbor'}! 👋
           </AlertTitle>
           <AlertDescription className="mt-2">
-            <p className="mb-3">You're now part of your neighborhood network. Here's how to get started:</p>
+            <p className="mb-3">You&apos;re now part of your neighborhood network. Here&apos;s how to get started:</p>
             <div className="flex flex-col sm:flex-row gap-4 mb-4">
                 <div className="flex items-center gap-2"><Heart className="h-5 w-5 text-primary"/> Share community posts</div>
                 <div className="flex items-center gap-2"><Users className="h-5 w-5 text-primary"/> Connect with neighbors</div>

@@ -9,7 +9,7 @@ import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/com
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { NotificationSettings } from '@/types';
+import type { NotificationSettings } from "../../../../types";
 
 export default function NotificationSettingsPage() {
     const { user } = useAuth();
@@ -56,8 +56,6 @@ export default function NotificationSettingsPage() {
             toast({ title: 'Settings updated successfully.' });
         } catch (error) {
             toast({ variant: 'destructive', title: 'Error', description: 'Failed to update settings.' });
-            // Revert optimistic update on error
-            setSettings(settings);
         }
     };
 
@@ -145,7 +143,7 @@ export default function NotificationSettingsPage() {
                 <div className="flex items-center justify-between">
                     <Label htmlFor="eventInvites" className="flex flex-col space-y-1">
                         <span>Event Invitations</span>
-                        <span className="text-sm text-muted-foreground">Notify me when I'm invited to an event.</span>
+                        <span className="text-sm text-muted-foreground">Notify me when I&apos;m invited to an event.</span>
                     </Label>
                     <Switch
                         id="eventInvites"

@@ -16,11 +16,13 @@ import { useNotifications } from "@/hooks/use-notifications";
 import { useRouter } from "next/navigation";
 import { timeAgo } from "@/lib/utils"; // Assuming you have a timeAgo utility
 
+import { Notification } from "@/hooks/use-notifications";
+
 export function NotificationsPanel() {
     const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
     const router = useRouter();
 
-    const handleNotificationClick = (notification: any) => {
+    const handleNotificationClick = (notification: Notification) => {
         markAsRead(notification.id);
         // Navigate to the related content
         switch (notification.type) {

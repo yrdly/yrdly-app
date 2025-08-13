@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { signInWithEmailAndPassword, signInWithPopup, getAdditionalUserInfo } from 'firebase/auth';
+import { signInWithEmailAndPassword, signInWithPopup, getAdditionalUserInfo, AuthProvider, OAuthProvider } from 'firebase/auth';
 import { auth, db, googleProvider, appleProvider } from '@/lib/firebase';
 import { doc, setDoc } from "firebase/firestore";
 import { useRouter } from 'next/navigation';
@@ -22,7 +22,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Form,
   FormControl,
@@ -55,7 +54,7 @@ export default function LoginPage() {
     },
   });
 
-  const handleSocialSignIn = async (provider: any) => {
+  const handleSocialSignIn = async (provider: AuthProvider | OAuthProvider) => {
     setLoading(true);
     setError(null);
     try {
@@ -73,12 +72,13 @@ export default function LoginPage() {
             });
         }
         router.push('/home');
-    } catch (error: any) {
-        setError(error.message);
+    } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        setError(errorMessage);
         toast({
             variant: "destructive",
             title: "Sign In Failed",
-            description: error.message,
+            description: errorMessage,
         });
     } finally {
         setLoading(false);
@@ -91,12 +91,13 @@ export default function LoginPage() {
     try {
       await signInWithEmailAndPassword(auth, values.email, values.password);
       router.push('/home');
-    } catch (error: any) {
-      setError(error.message);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      setError(errorMessage);
       toast({
         variant: "destructive",
         title: "Login Failed",
-        description: error.message,
+        description: errorMessage,
       })
     } finally {
         setLoading(false);
@@ -180,7 +181,7 @@ export default function LoginPage() {
         </CardContent>
         <CardFooter className="flex flex-col gap-4">
           <p className="text-sm text-center text-muted-foreground">
-            Don't have an account?{' '}
+            Don&apos;t have an account?{' '}
             <Link href="/signup" className="font-semibold text-primary hover:underline">
               Create Account
             </Link>
