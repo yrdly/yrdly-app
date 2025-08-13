@@ -274,7 +274,7 @@ export default function NeighborsPage() {
                     {loading ? (
                         <div className="space-y-4"><NeighborSkeleton /><NeighborSkeleton /><NeighborSkeleton /></div>
                     ) : filteredNeighbors.length > 0 ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                             {filteredNeighbors.map((neighbor) => {
                                 const status = getFriendshipStatus(neighbor);
                                 return (
@@ -306,7 +306,7 @@ export default function NeighborsPage() {
                     {loading ? (
                          <div className="space-y-4"><NeighborSkeleton /><NeighborSkeleton /><NeighborSkeleton /></div>
                     ) : friends.length > 0 ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
                             {friends.map((friend) => (
                                 <Card key={friend.id} className="cursor-pointer hover:bg-muted/50" onClick={() => router.push(`/users/${friend.uid}`)}>
                                     <CardContent className="p-4 flex items-start gap-4">
