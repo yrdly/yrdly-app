@@ -156,6 +156,34 @@ export function PostCard({ post }: PostCardProps) {
     }
   }
 
+  const handleShare = async () => {
+    const postUrl = `${window.location.origin}/posts/${post.id}`;
+    const shareData = {
+      title: `Post by ${author?.name || 'a user'} on Yrdly`,
+      text: post.text,
+      url: postUrl,
+    };
+
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+        toast({ title: "Post shared!" });
+      } catch (error) {
+        console.error("Error sharing post:", error);
+        // Don't show an error toast if the user cancels the share dialog
+      }
+    } else {
+      // Fallback for browsers that don't support the Web Share API
+      try {
+        await navigator.clipboard.writeText(postUrl);
+        toast({ title: "Link copied!", description: "The post link has been copied to your clipboard." });
+      } catch (error) {
+        console.error("Error copying link:", error);
+        toast({ variant: "destructive", title: "Error", description: "Could not copy link to clipboard." });
+      }
+    }
+  };
+
   return (
     <Card className="overflow-hidden">
       <CardHeader className="flex flex-row items-center gap-4 p-4">
@@ -263,40 +291,10 @@ export function PostCard({ post }: PostCardProps) {
                     <span className="text-sm">{commentCount}</span>
                 </Button>
              </CollapsibleTrigger>
-            const handleShare = async () => {
-    const postUrl = `${window.location.origin}/posts/${post.id}`;
-    const shareData = {
-      title: `Post by ${author?.name || 'a user'} on Yrdly`,
-      text: post.text,
-      url: postUrl,
-    };
-
-    if (navigator.share) {
-      try {
-        await navigator.share(shareData);
-        toast({ title: "Post shared!" });
-      } catch (error) {
-        console.error("Error sharing post:", error);
-        // Don't show an error toast if the user cancels the share dialog
-      }
-    } else {
-      // Fallback for browsers that don't support the Web Share API
-      try {
-        await navigator.clipboard.writeText(postUrl);
-        toast({ title: "Link copied!", description: "The post link has been copied to your clipboard." });
-      } catch (error) {
-        console.error("Error copying link:", error);
-        toast({ variant: "destructive", title: "Error", description: "Could not copy link to clipboard." });
-      }
-    }
-  };
-
-// ... (inside the return statement)
             <Button variant="ghost" className="flex-1 gap-2" onClick={handleShare}>
                 <Share2 className="h-5 w-5" />
                 <span className="text-sm">Share</span>
             </Button>
-// ... (rest of the component)
             </div>
         </CardFooter>
         <CollapsibleContent>
