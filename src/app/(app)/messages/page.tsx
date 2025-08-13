@@ -4,8 +4,8 @@
 import { ChatLayout, NoFriendsEmptyState } from '@/components/messages/ChatLayout';
 import { useAuth } from '@/hooks/use-auth';
 import { useState, useEffect, useMemo } from 'react';
-import type { Conversation, User, Message } from '@/types';
-import { collection, query, where, onSnapshot, getDoc, doc, Timestamp, getDocs } from 'firebase/firestore';
+import type { Conversation, User } from '@/types';
+import { collection, query, where, onSnapshot, getDoc, doc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
 

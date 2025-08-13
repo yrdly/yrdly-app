@@ -158,14 +158,14 @@ export function PostCard({ post }: PostCardProps) {
       try {
         await navigator.share(shareData);
         toast({ title: "Post shared!" });
-      } catch (error) {
+      } catch {
         // Don't show an error toast if the user cancels the share dialog
       }
     } else {
       try {
         await navigator.clipboard.writeText(postUrl);
         toast({ title: "Link copied!", description: "The post link has been copied to your clipboard." });
-      } catch (error) {
+      } catch {
         toast({ variant: "destructive", title: "Error", description: "Could not copy link to clipboard." });
       }
     }

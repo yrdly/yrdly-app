@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot, orderBy, doc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, orderBy, doc, updateDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from './use-auth';
 import { useToast } from './use-toast';
@@ -14,7 +14,7 @@ export interface Notification {
     relatedId: string;
     message: string;
     isRead: boolean;
-    createdAt: unknown;
+    createdAt: Timestamp;
 }
 
 export const useNotifications = () => {
@@ -41,7 +41,7 @@ export const useNotifications = () => {
         const unsubscribe = onSnapshot(notificationsQuery, (snapshot) => {
             const newNotifications = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification));
             // Sort client-side to ensure descending order without needing a new index
-            newNotifications.sort((a, b) => (b.createdAt as any)?.seconds - (a.createdAt as any)?.seconds);
+            newNotifications.sort((a, b) => b.createdAt?.seconds - a.createdAt?.seconds);
             
             const newUnreadCount = newNotifications.filter(n => !n.isRead).length;
 
