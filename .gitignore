@@ -1,7 +1,7 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
-/node_modules
+node_modules/
 /.pnp
 .pnp.js
 .yarn/install-state.gz
@@ -10,7 +10,7 @@
 /coverage
 
 # next.js
-/.next/
+.next/
 /out/
 
 # production
@@ -36,5 +36,10 @@ pnpm-debug.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# Firebase
+.firebase/
+firebase-debug.log*
+firebase-debug.*.log
+
 # generated
-public/yrdly-logo.png
+# public/yrdly-logo.png

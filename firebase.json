@@ -5,21 +5,5 @@
   },
   "firestore": {
     "rules": "firestore.rules"
-  },
-  "hosting": {
-    "source": ".",
-    "frameworksBackend": {
-      "id": "yrdly-backend"
-    }
-  },
-  "apphosting": {
-    "backendId": "yrdly-backend",
-    "rootDir": "/",
-    "ignore": [
-      "node_modules",
-      ".git",
-      "firebase-debug.log",
-      "firebase-debug.*.log"
-    ]
   }
 }
