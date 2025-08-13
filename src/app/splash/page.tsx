@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
+import Image from 'next/image';
 
 export default function Splash() {
     const { user, loading } = useAuth();
@@ -32,11 +33,7 @@ export default function Splash() {
 
   return (
     <div className="flex items-center justify-center h-screen">
-        import Image from 'next/image';
-
-// ...
-
-<Image src="/yrdly-logo.png" alt="Yrdly Logo" width={128} height={128} className="animate-pulse" />
+        <Image src="/yrdly-logo.png" alt="Yrdly Logo" width={128} height={128} className="animate-pulse" />
     </div>
   );
 }
