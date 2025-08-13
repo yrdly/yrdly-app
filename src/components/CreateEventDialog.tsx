@@ -84,26 +84,26 @@ export function CreateEventDialog({ children, onOpenChange }: CreateEventDialogP
             userId: user.uid,
             authorName: user.displayName || "Anonymous User",
             authorImage: user.photoURL || `https://placehold.co/100x100.png?text=${user.displayName?.charAt(0) || "A"}`,
-            category: "Event", // Explicitly set category to Event
+            category: "Event",
             title: values.title,
-            text: values.description, // Map description to text for consistency with Post type
+            text: values.description,
             location: values.location,
             eventDate: values.eventDate,
             eventTime: values.eventTime,
-            eventLink: values.eventLink || "", // Ensure eventLink is a string
+            eventLink: values.eventLink || "",
             imageUrl: imageUrl,
             timestamp: serverTimestamp(),
             likes: 0,
             likedBy: [],
             commentCount: 0,
-            attendees: [] // Initialize attendees array
+            attendees: []
         };
 
-        await addDoc(collection(db, "posts"), eventData); // Add to posts collection
+        await addDoc(collection(db, "posts"), eventData);
 
         toast({ title: 'Event created!', description: 'Your event is now live.' });
 
-        form.reset({ title: "", description: "", location: "", eventDate: "", eventTime: "", eventLink: "" });
+        form.reset();
         setImageFile(null);
         setOpen(false);
 
@@ -120,9 +120,8 @@ export function CreateEventDialog({ children, onOpenChange }: CreateEventDialogP
     if(onOpenChange) {
         onOpenChange(newOpenState);
     }
-    // Reset form when dialog is closed
     if (!newOpenState) {
-        form.reset({ title: "", description: "", location: "", eventDate: "", eventTime: "", eventLink: "" });
+        form.reset();
         setImageFile(null);
     }
   }
