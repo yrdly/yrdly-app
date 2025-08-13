@@ -13,17 +13,18 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import Image from 'next/image';
+import { Badge } from '@/components/ui/badge';
 
 export function AppSidebar() {
   const pathname = usePathname();
-  const { user } = useAuth();
+  const { pendingRequestCount } = useAuth();
 
   const menuItems = [
     { href: '/home', label: 'Newsfeed', icon: Home },
     { href: '/marketplace', label: 'Marketplace', icon: ShoppingCart },
     { href: '/events', label: 'Events', icon: Calendar },
     { href: '/businesses', label: 'Businesses', icon: Briefcase },
-    { href: '/neighbors', label: 'Neighbors', icon: Users },
+    { href: '/neighbors', label: 'Community', icon: Users, badge: pendingRequestCount > 0 ? pendingRequestCount : null },
     { href: '/messages', label: 'Messages', icon: MessageSquare },
   ];
 
@@ -44,9 +45,12 @@ export function AppSidebar() {
                 isActive={pathname === item.href}
                 tooltip={{ children: item.label, side: 'right' }}
               >
-                <Link href={item.href}>
-                  <item.icon />
-                  <span>{item.label}</span>
+                <Link href={item.href} className="flex justify-between items-center w-full">
+                  <div className="flex items-center gap-3">
+                    <item.icon />
+                    <span>{item.label}</span>
+                  </div>
+                  {item.badge && <Badge className="h-6 w-6 flex items-center justify-center">{item.badge}</Badge>}
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>

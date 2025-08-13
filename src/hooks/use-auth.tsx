@@ -3,26 +3,34 @@
 import { useEffect, useState, createContext, useContext } from 'react';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
-import { doc, getDoc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, collection, query, where } from 'firebase/firestore';
 import { User } from '@/types';
 
 interface AuthContextType {
   user: FirebaseUser | null;
   userDetails: User | null;
   loading: boolean;
+  pendingRequestCount: number;
 }
 
-const AuthContext = createContext<AuthContextType>({ user: null, userDetails: null, loading: true });
+const AuthContext = createContext<AuthContextType>({ 
+  user: null, 
+  userDetails: null, 
+  loading: true,
+  pendingRequestCount: 0 
+});
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [userDetails, setUserDetails] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [pendingRequestCount, setPendingRequestCount] = useState(0);
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       setUser(user);
       if (user) {
+        // User details listener
         const userDocRef = doc(db, 'users', user.uid);
         const unsubscribeSnapshot = onSnapshot(userDocRef, (doc) => {
           if (doc.exists()) {
@@ -32,9 +40,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           }
           setLoading(false);
         });
-        return () => unsubscribeSnapshot();
+
+        // Friend requests listener
+        const requestsQuery = query(
+          collection(db, "friend_requests"),
+          where("toUserId", "==", user.uid),
+          where("status", "==", "pending")
+        );
+        const unsubscribeRequests = onSnapshot(requestsQuery, (snapshot) => {
+          setPendingRequestCount(snapshot.size);
+        });
+
+        return () => {
+          unsubscribeSnapshot();
+          unsubscribeRequests();
+        };
       } else {
         setUserDetails(null);
+        setPendingRequestCount(0);
         setLoading(false);
       }
     });
@@ -43,7 +66,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, userDetails, loading }}>
+    <AuthContext.Provider value={{ user, userDetails, loading, pendingRequestCount }}>
       {children}
     </AuthContext.Provider>
   );

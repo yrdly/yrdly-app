@@ -4,8 +4,8 @@
 import { ChatLayout, NoFriendsEmptyState } from '@/components/messages/ChatLayout';
 import { useAuth } from '@/hooks/use-auth';
 import { useState, useEffect, useMemo } from 'react';
-import type { Conversation, User, Message as MessageType, UserWithFriends } from '@/types';
-import { collection, query, where, onSnapshot, getDoc, doc, DocumentData, Timestamp } from 'firebase/firestore';
+import type { Conversation, User } from '@/types';
+import { collection, query, where, onSnapshot, getDoc, doc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 import { Skeleton } from '../../../components/ui/skeleton';
@@ -39,7 +39,7 @@ const MessagesLoading = () => (
 
 export default function MessagesPage() {
     const { user, userDetails } = useAuth();
-    const [conversations, setConversations] = useState<Conversation[]>([]); // Conversations with accepted friends
+    const [conversations, setConversations] = useState<Conversation[]>([]);
     const [loading, setLoading] = useState(true);
 
     const currentUser = useMemo(() => user ? {
@@ -50,45 +50,55 @@ export default function MessagesPage() {
     } : null, [user]);
 
     useEffect(() => {
-        if (!user || !userDetails?.friends || userDetails.friends.length === 0) {
+        if (!user || !userDetails) {
+            setLoading(false);
+            return;
+        }
+
+        // Ensure friends array exists and is not empty
+        if (!userDetails.friends || userDetails.friends.length === 0) {
             setConversations([]);
             setLoading(false);
             return;
         }
 
-        const friendIds = userDetails.friends.map(f => f.id);
+        const friendUids = userDetails.friends.map(f => f.uid);
+
         const q = query(
             collection(db, 'conversations'),
-            where('participantIds', 'array-contains', user.uid),
-            where('participantIds', 'array-contains-any', friendIds)
+            where('participantIds', 'array-contains', user.uid)
         );
 
         const unsubscribe = onSnapshot(q, async (querySnapshot) => {
-            const convsPromises = querySnapshot.docs.map(async (docSnap) => {
-                const convData = docSnap.data();
-                const otherParticipantId = convData.participantIds.find((id: string) => id !== user.uid);
+            const convsPromises = querySnapshot.docs
+                .map(async (docSnap) => {
+                    const convData = docSnap.data();
+                    const otherParticipantId = convData.participantIds.find((id: string) => id !== user.uid);
 
-                if (!otherParticipantId) return null;
+                    // If the other participant is not in the friends list, skip
+                    if (!otherParticipantId || !friendUids.includes(otherParticipantId)) {
+                        return null;
+                    }
 
-                const userDoc = await getDoc(doc(db, 'users', otherParticipantId));
-                if (!userDoc.exists()) return null;
-                const participant = { id: userDoc.id, ...userDoc.data() } as User;
+                    const userDoc = await getDoc(doc(db, 'users', otherParticipantId));
+                    if (!userDoc.exists()) return null;
+                    const participant = { id: userDoc.id, ...userDoc.data() } as User;
 
-                const lastMessage = convData.lastMessage;
+                    const lastMessage = convData.lastMessage;
 
-                return {
-                    id: docSnap.id,
-                    participant,
-                    messages: lastMessage ? [{
-                        id: 'last',
-                        senderId: lastMessage.senderId,
-                        sender: lastMessage.senderId === currentUser?.id ? currentUser : participant,
-                        text: lastMessage.text,
-                        timestamp: (lastMessage.timestamp as Timestamp)?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) || '...',
-                        read: lastMessage.read,
-                    }] : [],
-                } as Conversation;
-            });
+                    return {
+                        id: docSnap.id,
+                        participant,
+                        messages: lastMessage ? [{
+                            id: 'last',
+                            senderId: lastMessage.senderId,
+                            sender: lastMessage.senderId === currentUser?.id ? currentUser : participant,
+                            text: lastMessage.text,
+                            timestamp: (lastMessage.timestamp as Timestamp)?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) || '...',
+                            read: lastMessage.read,
+                        }] : [],
+                    } as Conversation;
+                });
 
             const resolvedConvs = (await Promise.all(convsPromises)).filter(Boolean) as Conversation[];
             setConversations(resolvedConvs);
@@ -103,7 +113,12 @@ export default function MessagesPage() {
     }
 
     if (!currentUser || !userDetails?.friends || userDetails.friends.length === 0) {
-        return <NoFriendsEmptyState />;
+        return <NoFriendsEmptyState 
+            title="No Friends Yet"
+            description="You haven't added any friends yet. Find neighbors and send them a friend request to start chatting!"
+            buttonText="Find Neighbors"
+            buttonLink="/neighbors"
+        />;
     }
 
     return <ChatLayout conversations={conversations} currentUser={currentUser} />;

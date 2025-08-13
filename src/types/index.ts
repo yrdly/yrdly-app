@@ -18,6 +18,7 @@ export interface User {
   bio?: string;
   location?: Location;
   friends?: User[];
+  blockedUsers?: string[];
 }
 
 export type UserWithFriends = User & {
@@ -69,4 +70,12 @@ export interface Conversation {
   id:string;
   participant: User;
   messages: Message[];
+}
+
+export interface FriendRequest {
+    id: string;
+    fromUserId: string;
+    toUserId: string;
+    status: 'pending' | 'accepted' | 'declined';
+    timestamp: any;
 }

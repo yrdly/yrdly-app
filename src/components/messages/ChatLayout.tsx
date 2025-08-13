@@ -24,21 +24,32 @@ import {
 import { db } from "@/lib/firebase";
 import Link from "next/link";
 
-export function NoFriendsEmptyState() {
+interface NoFriendsEmptyStateProps {
+    title?: string;
+    description?: string;
+    buttonText?: string;
+    buttonLink?: string;
+}
+
+export function NoFriendsEmptyState({
+    title = "Find your neighbors",
+    description = "It looks like you haven't started any conversations yet. Once you do, they'll appear here.",
+    buttonText = "Find Neighbors",
+    buttonLink = "/neighbors",
+}: NoFriendsEmptyStateProps) {
   return (
     <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-4 text-center bg-gray-50 dark:bg-gray-900/50 rounded-lg">
       <div className="mb-4 rounded-full bg-primary/10 p-4">
         <Users className="h-10 w-10 text-primary" />
       </div>
       <h3 className="text-xl font-semibold text-foreground mb-1">
-        Find your neighbors
+        {title}
       </h3>
       <p className="mb-4 max-w-sm">
-        It looks like you haven't started any conversations yet. Once you do,
-        they'll appear here.
+        {description}
       </p>
       <Button asChild>
-        <Link href="/neighbors">Find Neighbors</Link>
+        <Link href={buttonLink}>{buttonText}</Link>
       </Button>
     </div>
   );
@@ -196,7 +207,12 @@ export function ChatLayout({
             ))
           ) : (
             <div className="p-4">
-              <NoFriendsEmptyState />
+              <NoFriendsEmptyState 
+                title="No conversations"
+                description="You don't have any messages yet. Start a conversation with a friend!"
+                buttonText="Find Friends"
+                buttonLink="/neighbors"
+              />
             </div>
           )}
         </ScrollArea>
@@ -311,7 +327,12 @@ export function ChatLayout({
           </>
         ) : (
           <div className="hidden md:flex flex-1 items-center justify-center text-muted-foreground p-8">
-            <NoFriendsEmptyState />
+            <NoFriendsEmptyState 
+                title="Select a conversation"
+                description="Choose one of your existing conversations to see the messages."
+                buttonText="Find Friends"
+                buttonLink="/neighbors"
+            />
           </div>
         )}
       </div>
