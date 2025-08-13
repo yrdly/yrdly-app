@@ -27,7 +27,7 @@ export function SuggestedNeighbors() {
             setLoading(true);
             try {
                 // Fetch users from the same LGA, excluding the current user and existing friends
-                const friendsAndSelf = [...(userDetails.friends?.map(f => f.uid) || []), user.uid];
+                const friendsAndSelf = [...(userDetails.friends?.map(f => f.uid).filter(Boolean) || []), user.uid];
                 
                 const q = query(
                     collection(db, 'users'),

@@ -76,14 +76,13 @@ export default function NeighborsPage() {
         if (!currentUser) return;
 
         const usersQuery = query(
-            collection(db, "users"),
-            where("uid", "!=", currentUser.uid)
+            collection(db, "users")
         );
 
         const unsubscribeUsers = onSnapshot(usersQuery, (querySnapshot) => {
-            const usersData = querySnapshot.docs.map(
-                (doc) => ({ id: doc.id, ...doc.data() } as User)
-            );
+            const usersData = querySnapshot.docs
+                .map(doc => ({ id: doc.id, ...doc.data() } as User))
+                .filter(user => user.uid !== currentUser.uid); // Filter out the current user on the client
             setAllNeighbors(usersData);
             setLoading(false);
         });

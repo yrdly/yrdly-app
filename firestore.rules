@@ -18,7 +18,12 @@ service cloud.firestore {
     // Posts: Logged-in users can read/create. Can only edit/delete their own.
     match /posts/{postId} {
       allow read, create: if request.auth != null;
-      allow update, delete: if request.auth != null && request.auth.uid == resource.data.authorId;
+      // Allow non-authors to update only the 'likedBy' and 'commentCount' fields
+      allow update: if request.auth != null && (
+        (request.auth.uid == resource.data.authorId) ||
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likedBy', 'commentCount']))
+      );
+      allow delete: if request.auth != null && request.auth.uid == resource.data.authorId;
       
       // Comments
       match /comments/{commentId} {
@@ -31,6 +36,12 @@ service cloud.firestore {
     match /events/{eventId} {
       allow read, create: if request.auth != null;
       allow update, delete: if request.auth != null && request.auth.uid == resource.data.authorId;
+    }
+
+    // Businesses
+    match /businesses/{businessId} {
+      allow read, create: if request.auth != null;
+      allow update, delete: if request.auth != null && request.auth.uid == resource.data.ownerId;
     }
 
     // Chats & Messages
