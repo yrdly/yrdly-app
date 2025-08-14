@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Business, Post } from '@/types';
-import { APIProvider, Map, Marker, InfoWindow } from '@vis.gl/react-google-maps';
+import { APIProvider, Map, AdvancedMarker, Pin, InfoWindow } from '@vis.gl/react-google-maps';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
@@ -97,10 +97,16 @@ export default function MapPage() {
                     defaultZoom={10}
                     gestureHandling={'greedy'}
                     disableDefaultUI={true}
-                    mapId="YARDLY_MAP_ID"
+                    mapId="1001e5ec758b37cf"
                 >
                     {markers.map(marker => (
-                        <Marker key={marker.id} position={marker.position} onClick={() => handleMarkerClick(marker)} />
+                         <AdvancedMarker key={marker.id} position={marker.position} onClick={() => handleMarkerClick(marker)}>
+                            <Pin 
+                                background={marker.type === 'business' ? 'hsl(var(--primary))' : 'hsl(var(--destructive))'}
+                                borderColor={'hsl(var(--background))'}
+                                glyphColor={'hsl(var(--primary-foreground))'}
+                            />
+                        </AdvancedMarker>
                     ))}
 
                     {selectedMarker && (
