@@ -13,6 +13,8 @@ import { Send, Smile } from 'lucide-react';
 import { timeAgo, cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { useToast } from '@/hooks/use-toast';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 interface CommentSectionProps {
     postId: string;
@@ -23,6 +25,7 @@ const EMOJI_REACTIONS = ['👍', '❤️', '😂', '😡'];
 export function CommentSection({ postId }: CommentSectionProps) {
     const { user, userDetails } = useAuth();
     const { toast } = useToast();
+    const router = useRouter();
     const [comments, setComments] = useState<Comment[]>([]);
     const [newComment, setNewComment] = useState('');
     const [replyingTo, setReplyingTo] = useState<string | null>(null);
@@ -137,13 +140,17 @@ export function CommentSection({ postId }: CommentSectionProps) {
     const renderComment = (comment: Comment & { replies: Comment[] }, isReply: boolean = false) => (
         <div key={comment.id} className={cn("flex flex-col gap-2", isReply ? "ml-6" : "")}>
             <div className="flex gap-3">
-                <Avatar className="h-8 w-8">
-                    <AvatarImage src={comment.authorImage} />
-                    <AvatarFallback>{comment.authorName?.charAt(0)}</AvatarFallback>
-                </Avatar>
+                <Link href={`/users/${comment.userId}`} className="cursor-pointer">
+                    <Avatar className="h-8 w-8">
+                        <AvatarImage src={comment.authorImage} />
+                        <AvatarFallback>{comment.authorName?.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                </Link>
                 <div className="flex-1 bg-muted/50 rounded-lg p-3">
                     <div className="flex justify-between items-center">
-                        <span className="font-semibold text-sm">{comment.authorName}</span>
+                        <Link href={`/users/${comment.userId}`} className="cursor-pointer">
+                            <span className="font-semibold text-sm hover:underline">{comment.authorName}</span>
+                        </Link>
                         <span className="text-xs text-muted-foreground">{timeAgo(comment.timestamp?.toDate())}</span>
                     </div>
                     <p className="text-sm mt-1">{comment.text}</p>

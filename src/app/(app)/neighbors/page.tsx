@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -46,6 +47,7 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import Link from 'next/link';
 
 
 const NeighborSkeleton = () => (
@@ -131,7 +133,7 @@ export default function NeighborsPage() {
             await addDoc(collection(db, "friend_requests"), {
                 fromUserId: currentUser.uid,
                 toUserId: neighbor.uid,
-                participantIds: [currentUser.uid, neighbor.uid],
+                participantIds: [currentUser.uid, neighbor.uid].sort(),
                 status: "pending",
                 timestamp: serverTimestamp(),
             });
@@ -266,11 +268,17 @@ export default function NeighborsPage() {
                                 return (
                                     <div key={request.id} className="flex items-center justify-between">
                                         <div className="flex items-center gap-3">
-                                            <Avatar className="h-10 w-10">
-                                                <AvatarImage src={fromUser?.avatarUrl} alt={fromUser.name}/>
-                                                <AvatarFallback>{fromUser.name.charAt(0)}</AvatarFallback>
-                                            </Avatar>
-                                            <span className="cursor-pointer" onClick={() => router.push(`/users/${request.fromUserId}`)}><b>{fromUser?.name || "Someone"}</b> wants to be your friend.</span>
+                                            <Link href={`/users/${fromUser.uid}`} className="cursor-pointer">
+                                                <Avatar className="h-10 w-10">
+                                                    <AvatarImage src={fromUser?.avatarUrl} alt={fromUser.name}/>
+                                                    <AvatarFallback>{fromUser.name.charAt(0)}</AvatarFallback>
+                                                </Avatar>
+                                            </Link>
+                                            <div>
+                                                <Link href={`/users/${fromUser.uid}`} className="cursor-pointer hover:underline">
+                                                    <b>{fromUser?.name || "Someone"}</b>
+                                                </Link> wants to be your friend.
+                                            </div>
                                         </div>
                                         <div className="flex gap-2">
                                             <Button size="sm" variant="default" onClick={(e) => handleAcceptRequest(e, request)}><Check className="h-4 w-4" /></Button>

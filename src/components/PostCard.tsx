@@ -39,6 +39,7 @@ import { CreatePostDialog } from "./CreatePostDialog";
 import { useToast } from "@/hooks/use-toast";
 import { CommentSection } from "./CommentSection";
 import { timeAgo } from "@/lib/utils";
+import Link from 'next/link';
 
 
 interface PostCardProps {
@@ -195,13 +196,17 @@ export function PostCard({ post }: PostCardProps) {
             </div>
         ) : author ? (
             <>
-                <Avatar>
-                <AvatarImage src={author.avatarUrl} alt={author.name} data-ai-hint="person portrait" />
-                <AvatarFallback>{author.name?.charAt(0)}</AvatarFallback>
-                </Avatar>
+                <Link href={`/users/${author.uid}`} className="cursor-pointer">
+                    <Avatar>
+                        <AvatarImage src={author.avatarUrl} alt={author.name} data-ai-hint="person portrait" />
+                        <AvatarFallback>{author.name?.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                </Link>
                 <div className="flex-1">
-                <p className="font-semibold">{author.name}</p>
-                <p className="text-xs text-muted-foreground">{timeAgo(post.timestamp?.toDate())}</p>
+                    <Link href={`/users/${author.uid}`} className="cursor-pointer">
+                        <p className="font-semibold hover:underline">{author.name}</p>
+                    </Link>
+                    <p className="text-xs text-muted-foreground">{timeAgo(post.timestamp?.toDate())}</p>
                 </div>
                 {getCategoryBadge(post.category)}
             </>

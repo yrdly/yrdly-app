@@ -63,7 +63,7 @@ type CreatePostDialogProps = {
 }
 
 export function CreatePostDialog({ children, preselectedCategory, postToEdit, onOpenChange }: CreatePostDialogProps) {
-  const { user } = useAuth();
+  const { user, userDetails } = useAuth();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -124,8 +124,8 @@ export function CreatePostDialog({ children, preselectedCategory, postToEdit, on
         } else {
              await addDoc(collection(db, "posts"), {
                 userId: user.uid,
-                authorName: user.displayName || "Anonymous User",
-                authorImage: user.photoURL || `https://placehold.co/100x100.png`,
+                authorName: userDetails?.name || "Anonymous User",
+                authorImage: userDetails?.avatarUrl || `https://placehold.co/100x100.png`,
                 ...postData,
                 timestamp: serverTimestamp(),
                 likedBy: [],
@@ -224,8 +224,8 @@ export function CreatePostDialog({ children, preselectedCategory, postToEdit, on
   const Trigger = () => (
      <div className="flex items-center gap-4 w-full">
         <Avatar>
-            <AvatarImage src={user?.photoURL || 'https://placehold.co/100x100.png'}/>
-            <AvatarFallback>{user?.displayName?.charAt(0) || 'U'}</AvatarFallback>
+            <AvatarImage src={userDetails?.avatarUrl || 'https://placehold.co/100x100.png'}/>
+            <AvatarFallback>{userDetails?.name?.charAt(0) || 'U'}</AvatarFallback>
         </Avatar>
         <div className="flex-1 text-left text-muted-foreground cursor-pointer hover:bg-muted p-2 rounded-md border border-dashed">
             What&apos;s happening in your neighborhood?
@@ -238,7 +238,7 @@ export function CreatePostDialog({ children, preselectedCategory, postToEdit, on
     return (
         <Sheet open={open} onOpenChange={handleOpenChange}>
             <SheetTrigger asChild>
-                { children ? children : <Trigger /> }
+                { children || <Trigger /> }
             </SheetTrigger>
             <SheetContent side="bottom" className="p-0">
                 <SheetHeader className="p-4 border-b">
@@ -260,7 +260,7 @@ export function CreatePostDialog({ children, preselectedCategory, postToEdit, on
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        { children ? children : <Trigger /> }
+        { children || <Trigger /> }
       </DialogTrigger>
       <DialogContent className="sm:max-w-[525px] p-0">
         <DialogHeader className="p-6 pb-0">
