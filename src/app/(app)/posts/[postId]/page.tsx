@@ -9,7 +9,15 @@ import { PostCard } from '@/components/PostCard';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter } from 'next/navigation';
 
-export default function PostPage({ params }: { params: { postId: string } }) {
+interface PostPageProps {
+    params: {
+        postId: string;
+    };
+}
+
+
+
+export default function PostPage({ params }: PostPageProps) {
     const [post, setPost] = useState<PostType | null>(null);
     const [loading, setLoading] = useState(true);
     const router = useRouter();

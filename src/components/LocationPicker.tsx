@@ -1,8 +1,7 @@
-
 "use client";
 
 import { useState, useRef, useEffect } from 'react';
-import { APIProvider, Map, AdvancedMarker, Pin } from '@vis.gl/react-google-maps';
+import { APIProvider, Map, AdvancedMarker, Pin, MapMouseEvent } from '@vis.gl/react-google-maps';
 import { Input } from './ui/input';
 import { Loader2 } from 'lucide-react';
 
@@ -12,7 +11,11 @@ interface LocationPickerProps {
 }
 
 export function LocationPicker({ onLocationSelect, initialLocation }: LocationPickerProps) {
-    const [markerPosition, setMarkerPosition] = useState(initialLocation || { lat: 6.5244, lng: 3.3792 }); // Default to Lagos
+    const [markerPosition, setMarkerPosition] = useState(
+        initialLocation 
+            ? { lat: initialLocation.latitude, lng: initialLocation.longitude } 
+            : { lat: 6.5244, lng: 3.3792 }
+    ); // Default to Lagos
     const [address, setAddress] = useState('');
     const [loading, setLoading] = useState(false);
 
@@ -36,27 +39,28 @@ export function LocationPicker({ onLocationSelect, initialLocation }: LocationPi
         }
     }, [onLocationSelect]);
 
-    const handleMapClick = async (event: google.maps.MapMouseEvent) => {
-        if (event.latLng) {
+    const handleMapClick = (event: MapMouseEvent) => {
+        if (event.detail.latLng) {
             setLoading(true);
-            const lat = event.latLng.lat();
-            const lng = event.latLng.lng();
+            const { lat, lng } = event.detail.latLng;
             setMarkerPosition({ lat, lng });
 
             // Reverse geocode to get the address
             const geocoder = new google.maps.Geocoder();
-            try {
-                const response = await geocoder.geocode({ location: { lat, lng } });
-                if (response.results[0]) {
-                    const formattedAddress = response.results[0].formatted_address;
-                    setAddress(formattedAddress);
-                    onLocationSelect({ address: formattedAddress, latitude: lat, longitude: lng });
-                }
-            } catch (error) {
-                console.error("Error reverse geocoding:", error);
-            } finally {
-                setLoading(false);
-            }
+            geocoder.geocode({ location: { lat, lng } })
+                .then(response => {
+                    if (response.results[0]) {
+                        const formattedAddress = response.results[0].formatted_address;
+                        setAddress(formattedAddress);
+                        onLocationSelect({ address: formattedAddress, latitude: lat, longitude: lng });
+                    }
+                })
+                .catch(error => {
+                    console.error("Error reverse geocoding:", error);
+                })
+                .finally(() => {
+                    setLoading(false);
+                });
         }
     };
 
