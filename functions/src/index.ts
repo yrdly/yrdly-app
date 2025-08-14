@@ -76,7 +76,7 @@ export const onnewmessage = onDocumentCreated("conversations/{conversationId}/me
         const authorDoc = await db.collection('users').doc(senderId).get();
         const authorData = authorDoc.data();
         if (recipientId && authorData) {
-            await sendNotification(recipientId, 'message', senderId, senderId, `${authorData.name}: ${text.substring(0, 50)}...`, 'New Message', `/messages?convId=${senderId}`);
+            await sendNotification(recipientId, 'message', senderId, conversationId, `${authorData.name}: ${text.substring(0, 50)}...`, 'New Message', `/messages/${conversationId}`);
         }
     }
 });

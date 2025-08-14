@@ -204,7 +204,7 @@ export default function NeighborsPage() {
             });
             conversationId = newConvRef.id;
         }
-        router.push(`/messages?convId=${conversationId}`);
+        router.push(`/messages/${conversationId}`);
     };
 
 

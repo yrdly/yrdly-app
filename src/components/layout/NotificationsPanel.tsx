@@ -31,7 +31,7 @@ export function NotificationsPanel() {
                 router.push('/neighbors');
                 break;
             case 'message':
-                router.push(`/messages?convId=${notification.relatedId}`);
+                router.push(`/messages/${notification.relatedId}`);
                 break;
             case 'post_like':
             case 'comment':
