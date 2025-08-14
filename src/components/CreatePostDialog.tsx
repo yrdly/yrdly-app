@@ -80,9 +80,9 @@ export function CreatePostDialog({ children, preselectedCategory, postToEdit, on
     image: z.any().optional(),
   }).superRefine((data, ctx) => {
       const hasNewImage = data.image && data.image.length > 0;
-      const hasExistingImage = isEditMode && postToEdit?.imageUrl;
+      const hasExistingImages = isEditMode && postToEdit?.imageUrls && postToEdit.imageUrls.length > 0;
 
-      if ((data.category === 'Event' || data.category === 'For Sale' || data.category === 'Business') && !hasNewImage && !hasExistingImage) {
+      if ((data.category === 'Event' || data.category === 'For Sale' || data.category === 'Business') && !hasNewImage && !hasExistingImages) {
           ctx.addIssue({
               code: z.ZodIssueCode.custom,
               path: ['image'],
@@ -136,19 +136,32 @@ export function CreatePostDialog({ children, preselectedCategory, postToEdit, on
     setLoading(true);
 
     try {
-        let imageUrl = postToEdit?.imageUrl || "";
-        const imageFile = values.image?.[0];
+        let imageUrls: string[] = postToEdit?.imageUrls || [];
+        const imageFiles = values.image;
 
-        if (imageFile) {
-            const storageRef = ref(storage, `posts/${user.uid}/${Date.now()}_${imageFile.name}`);
-            const snapshot = await uploadBytes(storageRef, imageFile);
-            imageUrl = await getDownloadURL(snapshot.ref);
+        if (imageFiles && imageFiles.length > 0) {
+            if (values.category === 'For Sale') {
+                const uploadedUrls = await Promise.all(
+                    Array.from(imageFiles).map(async (file) => {
+                        const storageRef = ref(storage, `posts/${user.uid}/${Date.now()}_${file.name}`);
+                        await uploadBytes(storageRef, file);
+                        return getDownloadURL(storageRef);
+                    })
+                );
+                imageUrls = [...imageUrls, ...uploadedUrls];
+            } else {
+                const imageFile = imageFiles[0];
+                const storageRef = ref(storage, `posts/${user.uid}/${Date.now()}_${imageFile.name}`);
+                await uploadBytes(storageRef, imageFile);
+                imageUrls = [await getDownloadURL(storageRef)];
+            }
         }
 
         const postData: Partial<Post> = {
             text: values.text,
             category: values.category,
-            imageUrl: imageUrl || "",
+            imageUrls: imageUrls,
+            imageUrl: imageUrls[0] || "", // For backwards compatibility
         };
 
         if(values.category === 'For Sale' && values.price) {
@@ -270,6 +283,7 @@ export function CreatePostDialog({ children, preselectedCategory, postToEdit, on
                         <Input 
                             type="file" 
                             accept="image/*" 
+                            multiple={form.watch('category') === 'For Sale'}
                             {...imageField}
                         />
                     </FormControl>
@@ -277,8 +291,14 @@ export function CreatePostDialog({ children, preselectedCategory, postToEdit, on
                 </FormItem>
               )}
             />
-            {postToEdit?.imageUrl && (
-                <div className="text-sm text-muted-foreground">Current image: <a href={postToEdit.imageUrl} target="_blank" rel="noopener noreferrer" className="underline">view image</a></div>
+            {postToEdit?.imageUrls && postToEdit.imageUrls.length > 0 && (
+                <div className="text-sm text-muted-foreground">
+                    Current images: {postToEdit.imageUrls.map((url, index) => (
+                        <a key={index} href={url} target="_blank" rel="noopener noreferrer" className="underline p-1">
+                            image {index + 1}
+                        </a>
+                    ))}
+                </div>
             )}
         </div>
       </div>

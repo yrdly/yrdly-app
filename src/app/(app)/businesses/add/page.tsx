@@ -17,7 +17,8 @@ import {
 import { useAuth } from "@/hooks/use-auth";
 import { useState } from "react";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
+import { db, storage } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { LocationPicker } from "@/components/LocationPicker";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -27,6 +28,7 @@ const formSchema = z.object({
   name: z.string().min(1, "Business name can't be empty.").max(100),
   category: z.string().min(1, "Category can't be empty.").max(50),
   description: z.string().min(1, "Description can't be empty.").max(1000),
+  image: z.instanceof(FileList).refine((files) => files?.length > 0, "An image is required."),
 });
 
 export default function AddBusinessPage() {
@@ -42,6 +44,7 @@ export default function AddBusinessPage() {
       name: "",
       category: "",
       description: "",
+      image: undefined,
     },
   });
 
@@ -57,12 +60,18 @@ export default function AddBusinessPage() {
     setLoading(true);
 
     try {
+        const imageFile = values.image[0];
+        const storageRef = ref(storage, `businesses/${user.uid}/${Date.now()}_${imageFile.name}`);
+        await uploadBytes(storageRef, imageFile);
+        const imageUrl = await getDownloadURL(storageRef);
+
         const businessData = {
             ownerId: user.uid,
             name: values.name,
             category: values.category,
             description: values.description,
             location: businessLocation,
+            imageUrl: imageUrl,
             createdAt: serverTimestamp(),
         };
 
@@ -125,6 +134,23 @@ export default function AddBusinessPage() {
                           placeholder="Tell everyone about your business..."
                           className="resize-none min-h-[120px]"
                           {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="image"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Business Image</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => field.onChange(e.target.files)}
                         />
                       </FormControl>
                       <FormMessage />

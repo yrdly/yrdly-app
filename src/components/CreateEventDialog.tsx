@@ -60,7 +60,7 @@ export function CreateEventDialog({ children, onOpenChange }: CreateEventDialogP
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imageFiles, setImageFiles] = useState<FileList | null>(null);
   const [eventLocation, setEventLocation] = useState<{ address: string; latitude: number; longitude: number; } | null>(null);
   const isMobile = useIsMobile();
 
@@ -87,11 +87,14 @@ export function CreateEventDialog({ children, onOpenChange }: CreateEventDialogP
     setLoading(true);
 
     try {
-        let imageUrl = "";
-        if (imageFile) {
-            const storageRef = ref(storage, `event_images/${user.uid}/${Date.now()}_${imageFile.name}`);
-            const snapshot = await uploadBytes(storageRef, imageFile);
-            imageUrl = await getDownloadURL(snapshot.ref);
+        const imageUrls: string[] = [];
+        if (imageFiles && imageFiles.length > 0) {
+            for (const file of Array.from(imageFiles)) {
+                const storageRef = ref(storage, `event_images/${user.uid}/${Date.now()}_${file.name}`);
+                const snapshot = await uploadBytes(storageRef, file);
+                const downloadUrl = await getDownloadURL(snapshot.ref);
+                imageUrls.push(downloadUrl);
+            }
         }
 
         const eventData = {
@@ -105,7 +108,7 @@ export function CreateEventDialog({ children, onOpenChange }: CreateEventDialogP
             eventDate: values.eventDate,
             eventTime: values.eventTime,
             eventLink: values.eventLink || "",
-            imageUrl: imageUrl,
+            imageUrls: imageUrls, // Changed from imageUrl to imageUrls
             timestamp: serverTimestamp(),
             likedBy: [],
             commentCount: 0,
@@ -115,7 +118,7 @@ export function CreateEventDialog({ children, onOpenChange }: CreateEventDialogP
         await addDoc(collection(db, "posts"), eventData);
         toast({ title: 'Event created!' });
         form.reset();
-        setImageFile(null);
+        setImageFiles(null);
         setEventLocation(null);
         setOpen(false);
 
@@ -132,13 +135,15 @@ export function CreateEventDialog({ children, onOpenChange }: CreateEventDialogP
     if(onOpenChange) onOpenChange(newOpenState);
     if (!newOpenState) {
         form.reset();
-        setImageFile(null);
+        setImageFiles(null);
         setEventLocation(null);
     }
   }
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files?.[0]) setImageFile(e.target.files[0]);
+    if (e.target.files) {
+        setImageFiles(e.target.files);
+    }
   }
 
   const FormContent = () => (
@@ -207,8 +212,8 @@ export function CreateEventDialog({ children, onOpenChange }: CreateEventDialogP
                 )}
             />
             <FormItem>
-                <FormLabel>Add an image (Optional)</FormLabel>
-                <FormControl><Input type="file" accept="image/*" onChange={handleImageChange} /></FormControl>
+                <FormLabel>Add images (Optional)</FormLabel>
+                <FormControl><Input type="file" accept="image/*" multiple onChange={handleImageChange} /></FormControl>
             </FormItem>
           </form>
         </Form>
