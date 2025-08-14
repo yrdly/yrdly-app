@@ -7,7 +7,6 @@ import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
-  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -205,100 +204,98 @@ export function CreatePostDialog({ children, preselectedCategory, postToEdit, on
   const imageField = form.register('image');
 
   const FormContent = (
-    <>
-      <div className="space-y-4 px-1">
-        <FormField
-          control={form.control}
-          name="text"
-          render={({ field }) => (
-            <FormItem>
-              <FormControl>
-                <Textarea
-                  placeholder="What&apos;s happening in the neighborhood?"
-                  className="resize-none min-h-[120px] border-none shadow-none focus-visible:ring-0 p-4"
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage className="px-4" />
-            </FormItem>
-          )}
-        />
-        <div className="px-4 pb-4 space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-               <FormField
-                  control={form.control}
-                  name="category"
-                  render={({ field }) => (
-                    <FormItem>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a category" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="General">General</SelectItem>
-                          <SelectItem value="Event">Event</SelectItem>
-                          <SelectItem value="For Sale">For Sale</SelectItem>
-                          <SelectItem value="Business">Business</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </FormItem>
-                  )}
-                />
-                
-                {form.watch('category') === 'For Sale' && (
-                    <FormField
-                      control={form.control}
-                      name="price"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormControl>
-                             <div className="relative">
-                                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">$</span>
-                                <Input type="number" placeholder="Price" className="pl-7" {...field} />
-                             </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+    <div className="space-y-4 px-1">
+      <FormField
+        control={form.control}
+        name="text"
+        render={({ field }) => (
+          <FormItem>
+            <FormControl>
+              <Textarea
+                placeholder="What&apos;s happening in the neighborhood?"
+                className="resize-none min-h-[120px] border-none shadow-none focus-visible:ring-0 p-4"
+                {...field}
+              />
+            </FormControl>
+            <FormMessage className="px-4" />
+          </FormItem>
+        )}
+      />
+      <div className="px-4 pb-4 space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+             <FormField
+                control={form.control}
+                name="category"
+                render={({ field }) => (
+                  <FormItem>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a category" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="General">General</SelectItem>
+                        <SelectItem value="Event">Event</SelectItem>
+                        <SelectItem value="For Sale">For Sale</SelectItem>
+                        <SelectItem value="Business">Business</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </FormItem>
                 )}
-            </div>
-            
-            <FormField
-              control={form.control}
-              name="image"
-              render={() => (
-                <FormItem>
-                    <FormLabel>
-                        Add an image
-                        {(form.watch('category') === 'Event' || form.watch('category') === 'For Sale') && <span className="text-destructive">*</span>}
-                    </FormLabel>
-                    <FormControl>
-                        <Input 
-                            type="file" 
-                            accept="image/*" 
-                            multiple={form.watch('category') === 'For Sale'}
-                            {...imageField}
-                        />
-                    </FormControl>
-                    <FormMessage />
-                </FormItem>
+              />
+              
+              {form.watch('category') === 'For Sale' && (
+                  <FormField
+                    control={form.control}
+                    name="price"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                           <div className="relative">
+                              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">$</span>
+                              <Input type="number" placeholder="Price" className="pl-7" {...field} />
+                           </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
               )}
-            />
-            {postToEdit?.imageUrls && postToEdit.imageUrls.length > 0 && (
-                <div className="text-sm text-muted-foreground">
-                    Current images: {postToEdit.imageUrls.map((url, index) => (
-                        <a key={index} href={url} target="_blank" rel="noopener noreferrer" className="underline p-1">
-                            image {index + 1}
-                        </a>
-                    ))}
-                </div>
+          </div>
+          
+          <FormField
+            control={form.control}
+            name="image"
+            render={() => (
+              <FormItem>
+                  <FormLabel>
+                      Add an image
+                      {(form.watch('category') === 'Event' || form.watch('category') === 'For Sale') && <span className="text-destructive">*</span>}
+                  </FormLabel>
+                  <FormControl>
+                      <Input 
+                          type="file" 
+                          accept="image/*" 
+                          multiple={form.watch('category') === 'For Sale'}
+                          {...imageField}
+                      />
+                  </FormControl>
+                  <FormMessage />
+              </FormItem>
             )}
-        </div>
+          />
+          {postToEdit?.imageUrls && postToEdit.imageUrls.length > 0 && (
+              <div className="text-sm text-muted-foreground">
+                  Current images: {postToEdit.imageUrls.map((url, index) => (
+                      <a key={index} href={url} target="_blank" rel="noopener noreferrer" className="underline p-1">
+                          image {index + 1}
+                      </a>
+                  ))}
+              </div>
+          )}
       </div>
-    </>
+    </div>
   );
 
   const Trigger = React.forwardRef<HTMLDivElement>((props, ref) => (
@@ -329,12 +326,12 @@ export function CreatePostDialog({ children, preselectedCategory, postToEdit, on
                     </DialogDescription>
                 </SheetHeader>
                 <Form {...form}>
-                  <form className="flex-1 flex flex-col">
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col">
                     <div className="py-4 flex-1 overflow-y-auto">
                         {FormContent}
                     </div>
                     <SheetFooter className="p-4 border-t mt-auto">
-                        <Button type="button" onClick={form.handleSubmit(onSubmit)} className="w-full" variant="default" disabled={loading}>
+                        <Button type="submit" className="w-full" variant="default" disabled={loading}>
                             {loading ? (isEditMode ? 'Saving...' : 'Posting...') : (isEditMode ? 'Save Changes' : 'Post')}
                         </Button>
                     </SheetFooter>
@@ -352,7 +349,7 @@ export function CreatePostDialog({ children, preselectedCategory, postToEdit, on
       </DialogTrigger>
       <DialogContent className="sm:max-w-[525px] p-0">
         <Form {...form}>
-          <form>
+          <form onSubmit={form.handleSubmit(onSubmit)}>
             <DialogHeader className="p-6 pb-0">
               <DialogTitle>{finalTitle}</DialogTitle>
               <DialogDescription>
@@ -361,7 +358,7 @@ export function CreatePostDialog({ children, preselectedCategory, postToEdit, on
             </DialogHeader>
             {FormContent}
             <DialogFooter className="p-6 pt-0">
-                <Button type="button" onClick={form.handleSubmit(onSubmit)} className="w-full" variant="default" disabled={loading}>
+                <Button type="submit" className="w-full" variant="default" disabled={loading}>
                     {loading ? (isEditMode ? 'Saving...' : 'Posting...') : (isEditMode ? 'Save Changes' : 'Post')}
                 </Button>
             </DialogFooter>
