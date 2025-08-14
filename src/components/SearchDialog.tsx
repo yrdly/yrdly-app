@@ -1,16 +1,18 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
-import { collection, query, where, getDocs, or } from 'firebase/firestore';
+import { useState, useEffect, useCallback } from 'react';
+import { collection, query, where, getDocs, or, doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { User, Post } from "../types";
+import type { User, Post, FriendRequest } from "../types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useRouter } from 'next/navigation';
 import { Loader2, User as UserIcon, Calendar, Map, ShoppingCart, FileText } from 'lucide-react';
 import { UserProfileDialog } from './UserProfileDialog';
+import { useAuth } from '@/hooks/use-auth';
+
 
 type SearchResult = 
     | { type: 'user'; data: User }
@@ -24,13 +26,49 @@ const allPages = [
     { name: 'Community', path: '/neighbors', icon: UserIcon },
 ];
 
+type FriendshipStatus = 'friends' | 'request_sent' | 'request_received' | 'none';
+
+type SelectedUserData = {
+    user: User,
+    status: FriendshipStatus;
+}
 
 export function SearchDialog({ open, onOpenChange }: { open: boolean, onOpenChange: (open: boolean) => void; }) {
     const [searchTerm, setSearchTerm] = useState('');
     const [results, setResults] = useState<SearchResult[]>([]);
     const [loading, setLoading] = useState(false);
     const router = useRouter();
-    const [selectedUser, setSelectedUser] = useState<string | null>(null);
+    const { user: currentUser, userDetails } = useAuth();
+    const [selectedUser, setSelectedUser] = useState<SelectedUserData | null>(null);
+    const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
+
+    useEffect(() => {
+        if (!currentUser) return;
+        const requestsQuery = query(
+            collection(db, "friend_requests"),
+            where("participantIds", "array-contains", currentUser.uid)
+        );
+        const unsubscribe = onSnapshot(requestsQuery, (snapshot) => {
+            setFriendRequests(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FriendRequest)));
+        });
+        return () => unsubscribe();
+    }, [currentUser]);
+
+    const getFriendshipStatus = useCallback((targetUserId: string): FriendshipStatus => {
+        if (!currentUser) return 'none';
+        if (userDetails?.friends?.includes(targetUserId)) return "friends";
+        
+        const request = friendRequests.find(req => 
+            ((req.fromUserId === currentUser?.uid && req.toUserId === targetUserId) ||
+             (req.fromUserId === targetUserId && req.toUserId === currentUser?.uid))
+        );
+
+        if (request && request.status === 'pending') {
+            return request.fromUserId === currentUser?.uid ? 'request_sent' : 'request_received';
+        }
+
+        return "none";
+    }, [userDetails, friendRequests, currentUser]);
 
     useEffect(() => {
         const performSearch = async () => {
@@ -96,7 +134,8 @@ export function SearchDialog({ open, onOpenChange }: { open: boolean, onOpenChan
         setSearchTerm('');
         setResults([]);
         if (result.type === 'user') {
-            setSelectedUser(result.data.uid);
+            const status = getFriendshipStatus(result.data.uid);
+            setSelectedUser({ user: result.data, status });
         } else if (result.type === 'page') {
             router.push(result.data.path);
         } else if (result.type === 'post') {
@@ -136,7 +175,12 @@ export function SearchDialog({ open, onOpenChange }: { open: boolean, onOpenChan
 
     return (
         <>
-        {selectedUser && <UserProfileDialog userId={selectedUser} open={!!selectedUser} onOpenChange={(open) => !open && setSelectedUser(null)} />}
+        {selectedUser && <UserProfileDialog 
+            user={selectedUser.user} 
+            friendshipStatus={selectedUser.status}
+            open={!!selectedUser} 
+            onOpenChange={(open) => !open && setSelectedUser(null)} 
+        />}
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
