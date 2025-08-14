@@ -37,7 +37,7 @@ export function AppHeader() {
          <div className="flex items-center gap-2">
            <Link href="/home" className="flex items-center gap-2 text-xl font-bold text-foreground">
               <Image src="/yrdly-logo.png" alt="Yrdly Logo" width={32} height={32} />
-             <span className="font-headline">Yardly</span>
+             <span className="font-headline">Yrdly</span>
            </Link>
          </div>
         
@@ -80,5 +80,3 @@ export function AppHeader() {
     </>
   );
 }
-
-
