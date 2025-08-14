@@ -3,7 +3,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, PackageOpen } from "lucide-react";
+import { Search, Plus } from "lucide-react";
 import { CreatePostDialog } from "@/components/CreatePostDialog";
 import { useState, useEffect, useMemo } from "react";
 import type { Post as PostType } from "@/types";
