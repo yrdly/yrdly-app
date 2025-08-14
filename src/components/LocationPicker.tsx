@@ -18,12 +18,11 @@ export function LocationPicker({ onLocationSelect, initialLocation }: LocationPi
     const inputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
-        if (inputRef.current) {
+        if (inputRef.current && window.google?.maps?.places) {
             const autocomplete = new google.maps.places.Autocomplete(inputRef.current);
             autocomplete.addListener('place_changed', () => {
                 const place = autocomplete.getPlace();
                 if (place.geometry?.location) {
-                    setSelectedPlace(place);
                     const lat = place.geometry.location.lat();
                     const lng = place.geometry.location.lng();
                     setMarkerPosition({ lat, lng });
