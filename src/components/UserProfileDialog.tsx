@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { doc, onSnapshot, collection, query, where, addDoc, serverTimestamp, updateDoc, arrayUnion, runTransaction, arrayRemove } from 'firebase/firestore';
+import { doc, onSnapshot, collection, query, where, addDoc, serverTimestamp, updateDoc, arrayUnion, runTransaction, arrayRemove, getDocs, writeBatch } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { db, functions } from '@/lib/firebase';
 import { useAuth } from '@/hooks/use-auth';
@@ -201,9 +201,51 @@ export function UserProfileDialog({ userId, open, onOpenChange }: UserProfileDia
         return [location.city, location.lga, location.state].filter(Boolean).join(", ");
     };
 
-    const handleMessageClick = () => {
-        onOpenChange(false);
-        router.push(`/messages?convId=${profileUser?.uid}`);
+    const getOrCreateConversation = async (): Promise<string | null> => {
+        if (!currentUser || !profileUser) return null;
+
+        const sortedIds = [currentUser.uid, profileUser.uid].sort();
+        const conversationQuery = query(
+            collection(db, 'conversations'),
+            where('participantIds', '==', sortedIds)
+        );
+
+        try {
+            const querySnapshot = await getDocs(conversationQuery);
+            if (!querySnapshot.empty) {
+                // Conversation already exists
+                return querySnapshot.docs[0].id;
+            } else {
+                // Create a new conversation
+                const newConversationRef = doc(collection(db, 'conversations'));
+                const batch = writeBatch(db);
+
+                batch.set(newConversationRef, {
+                    participantIds: sortedIds,
+                    lastMessage: null,
+                    // You might want to add other initial fields here
+                });
+
+                // Also update the user docs to reference each other if needed
+                // For example, adding to a 'chats' subcollection or updating a field
+                // This part depends on your data model for quick access
+
+                await batch.commit();
+                return newConversationRef.id;
+            }
+        } catch (error) {
+            console.error("Error getting or creating conversation:", error);
+            toast({ variant: "destructive", title: "Error", description: "Could not start a conversation." });
+            return null;
+        }
+    };
+
+    const handleMessageClick = async () => {
+        const convId = await getOrCreateConversation();
+        if (convId) {
+            onOpenChange(false);
+            router.push(`/messages/${convId}`);
+        }
     }
 
     const renderActionButtons = () => {

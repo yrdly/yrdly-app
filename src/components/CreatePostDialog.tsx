@@ -77,7 +77,7 @@ export function CreatePostDialog({ children, preselectedCategory, postToEdit, on
         (val) => (val === "" ? undefined : Number(val)),
         z.number().positive("Price must be positive.").optional()
     ),
-    image: z.any().optional(),
+    image: z.custom<FileList>((val) => val instanceof FileList, "Invalid file input").optional(),
   }).superRefine((data, ctx) => {
       const hasNewImage = data.image && data.image.length > 0;
       const hasExistingImages = isEditMode && postToEdit?.imageUrls && postToEdit.imageUrls.length > 0;

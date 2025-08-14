@@ -24,7 +24,6 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 
 interface NoFriendsEmptyStateProps {
     title?: string;
@@ -60,41 +59,34 @@ export function NoFriendsEmptyState({
 interface ChatLayoutProps {
   conversations: Conversation[];
   currentUser: User;
+  selectedConversationId?: string;
 }
 
 export function ChatLayout({
   conversations: initialConversations,
   currentUser,
+  selectedConversationId,
 }: ChatLayoutProps) {
   const [conversations, setConversations] = useState<Conversation[]>(initialConversations);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const scrollAreaRef = useRef<HTMLDivElement>(null);
-  const searchParams = useSearchParams();
 
   // Update conversation list when prop changes
   useEffect(() => {
     setConversations(initialConversations);
   }, [initialConversations]);
 
-  // Check for convId in URL to pre-select a conversation
+  // Pre-select a conversation if an ID is passed
   useEffect(() => {
-    const convId = searchParams.get('convId');
-    if (convId && conversations.length > 0) {
-        const conversationToSelect = conversations.find(c => c.participant.uid === convId);
-        if (conversationToSelect) {
-            setSelectedConversation(conversationToSelect);
-        } else if (initialConversations.length > 0) {
-          // If convId from URL is not in list, select first conversation
-          // This can happen if the initial list is not yet populated when the effect runs
-           const firstConv = initialConversations.find(c => c.participant.uid === convId);
-            if (firstConv) {
-                setSelectedConversation(firstConv);
-            }
-        }
+    if (selectedConversationId && conversations.length > 0) {
+      const conversationToSelect = conversations.find(c => c.id === selectedConversationId);
+      if (conversationToSelect) {
+        setSelectedConversation(conversationToSelect);
+      }
     }
-  }, [searchParams, conversations, initialConversations]);
+  }, [selectedConversationId, conversations]);
 
 
   // Listen for messages in the selected conversation

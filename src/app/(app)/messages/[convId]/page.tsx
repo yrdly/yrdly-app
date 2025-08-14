@@ -29,7 +29,7 @@ const MessagesLoading = () => (
 );
 
 
-export default function MessagesPage() {
+export default function MessagesPage({ params }: { params: { convId: string } }) {
     const { user, userDetails } = useAuth();
     const [conversations, setConversations] = useState<Conversation[]>([]);
     const [loading, setLoading] = useState(true);
@@ -105,5 +105,5 @@ export default function MessagesPage() {
         />;
     }
 
-    return <ChatLayout conversations={conversations} currentUser={currentUser} />;
+    return <ChatLayout conversations={conversations} currentUser={currentUser} selectedConversationId={params.convId} />;
 }
