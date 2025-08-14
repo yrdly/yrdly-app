@@ -1,18 +1,36 @@
 
+"use client";
+
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/layout/AppSidebar';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { AppBottomNav } from '@/components/layout/AppBottomNav';
-import { AuthProvider } from '@/hooks/use-auth';
+import { useAuth } from '@/hooks/use-auth';
 import { PushNotificationManager } from '@/components/PushNotificationManager';
+import { Loader2 } from 'lucide-react';
 
-export default function AppLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+function ProtectedLayout({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.replace('/login');
+    }
+  }, [user, loading, router]);
+
+  if (loading || !user) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center">
+        <Loader2 className="h-12 w-12 animate-spin" />
+      </div>
+    );
+  }
+
   return (
-    <AuthProvider>
+    <>
       <PushNotificationManager />
       <SidebarProvider>
         <AppSidebar />
@@ -24,6 +42,19 @@ export default function AppLayout({
           <AppBottomNav />
         </SidebarInset>
       </SidebarProvider>
-    </AuthProvider>
+    </>
+  );
+}
+
+
+export default function AppLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <ProtectedLayout>
+      {children}
+    </ProtectedLayout>
   );
 }
