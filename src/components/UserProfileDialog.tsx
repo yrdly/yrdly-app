@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState } from 'react';
@@ -241,10 +240,10 @@ export function UserProfileDialog({ userId, open, onOpenChange }: UserProfileDia
                 ) : (
                     <>
                         <DialogHeader>
-                            <DialogTitle className="sr-only">User Profile: {profileUser.name}</DialogTitle>
                             <AlertDialogDescription className="sr-only">
-                                View and interact with {profileUser.name}'s profile.
+                            {`View and interact with ${profileUser.name}'s profile.`}
                             </AlertDialogDescription>
+
                         </DialogHeader>
                         <Card className="border-none shadow-none">
                             <CardHeader className="flex flex-col items-center text-center p-6 bg-muted/50 relative">
@@ -286,7 +285,7 @@ export function UserProfileDialog({ userId, open, onOpenChange }: UserProfileDia
                             </CardHeader>
                             <CardContent className="p-6">
                                 <h2 className="font-semibold text-lg mb-2">Bio</h2>
-                                <p className="text-muted-foreground">{profileUser.bio || "This user hasn't written a bio yet."}</p>
+                                <p className="text-muted-foreground">{profileUser.bio || "This user hasn&apos;t written a bio yet."}</p>
                             </CardContent>
                             <CardFooter className="p-6 justify-center">
                                 {renderActionButtons()}
@@ -298,5 +297,3 @@ export function UserProfileDialog({ userId, open, onOpenChange }: UserProfileDia
         </Dialog>
     )
 }
-
-    
