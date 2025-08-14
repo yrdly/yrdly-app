@@ -91,7 +91,7 @@ export default function MapPage() {
                     <Loader2 className="h-12 w-12 animate-spin text-primary" />
                 </div>
             )}
-            <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!}>
+            <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!} libraries={['places']}>
                 <Map
                     defaultCenter={{ lat: 6.5244, lng: 3.3792 }} // Default to Lagos
                     defaultZoom={10}
