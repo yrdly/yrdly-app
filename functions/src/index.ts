@@ -1,3 +1,4 @@
+
 import { onDocumentCreated, onDocumentUpdated } from "firebase-functions/v2/firestore";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
@@ -221,7 +222,7 @@ export const acceptfriendrequest = onCall(async (request) => {
                 friendRequestId, 
                 `${toUserData.name} accepted your friend request.`, 
                 'Friend Request Accepted', 
-                `/users/${friendRequest.toUserId}`
+                `/neighbors`
             );
         }
 

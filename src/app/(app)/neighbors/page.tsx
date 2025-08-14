@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
@@ -132,10 +131,12 @@ export default function NeighborsPage() {
     }, [userDetails, friendRequests, currentUser]);
 
     const filteredNeighbors = useMemo(() => {
+        if (!currentUser) return [];
         const blockedByMe = userDetails?.blockedUsers || [];
         return allNeighbors.filter((neighbor) => {
+            if (neighbor.uid === currentUser.uid) return false;
             if (blockedByMe.includes(neighbor.uid)) return false;
-            if (neighbor.blockedUsers?.includes(currentUser?.uid || '')) return false;
+            if (neighbor.blockedUsers?.includes(currentUser.uid)) return false;
 
             const stateMatch = filters.state === "all" || neighbor.location?.state === filters.state;
             const lgaMatch = filters.lga === "all" || neighbor.location?.lga === filters.lga;
@@ -200,30 +201,39 @@ export default function NeighborsPage() {
         }
     };
     
-    const handleMessage = async (e: React.MouseEvent, neighbor: User) => {
+     const handleMessage = async (e: React.MouseEvent, friendId: string) => {
         e.stopPropagation();
         if (!currentUser) return;
 
-        const conversationQuery = query(
+        const sortedParticipantIds = [currentUser.uid, friendId].sort();
+        
+        const q = query(
             collection(db, "conversations"),
-            where("participantIds", "==", [currentUser.uid, neighbor.uid].sort())
+            where("participantIds", "==", sortedParticipantIds)
         );
 
-        const querySnapshot = await getDocs(conversationQuery);
-        let conversationId: string;
+        try {
+            const querySnapshot = await getDocs(q);
+            let conversationId: string;
 
-        if (!querySnapshot.empty) {
-            // Conversation exists
-            conversationId = querySnapshot.docs[0].id;
-        } else {
-            // Create new conversation
-            const newConvRef = await addDoc(collection(db, "conversations"), {
-                participantIds: [currentUser.uid, neighbor.uid].sort(),
-                lastMessage: null,
-            });
-            conversationId = newConvRef.id;
+            if (querySnapshot.empty) {
+                // Conversation doesn't exist, create it
+                const newConvRef = await addDoc(collection(db, "conversations"), {
+                    participantIds: sortedParticipantIds,
+                    lastMessage: null,
+                    timestamp: serverTimestamp(),
+                });
+                conversationId = newConvRef.id;
+            } else {
+                // Conversation exists
+                conversationId = querySnapshot.docs[0].id;
+            }
+            
+            router.push(`/messages/${conversationId}`);
+        } catch (error) {
+            console.error("Error handling message action:", error);
+            toast({ variant: "destructive", title: "Error", description: "Could not open conversation." });
         }
-        router.push(`/messages/${conversationId}`);
     };
 
 
@@ -344,7 +354,7 @@ export default function NeighborsPage() {
                                             {neighbor.location && (<div className="flex items-center text-xs text-muted-foreground"><MapPin className="h-3 w-3 mr-1" /><span>{displayLocation(neighbor.location)}</span></div>)}
                                             <div className="mt-4">
                                                 {status === "friends" ? (
-                                                    <Button size="sm" onClick={(e) => handleMessage(e, neighbor)}><MessageSquare className="mr-2 h-4 w-4" /> Message</Button>
+                                                    <Button size="sm" onClick={(e) => handleMessage(e, neighbor.uid)}><MessageSquare className="mr-2 h-4 w-4" /> Message</Button>
                                                 ) : status === "request_sent" ? (
                                                     <Button size="sm" disabled onClick={(e) => e.stopPropagation()}>Request Sent</Button>
                                                 ) : (

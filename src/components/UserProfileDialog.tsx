@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from 'react';
@@ -160,29 +161,30 @@ export function UserProfileDialog({ user: profileUser, friendshipStatus: initial
 
     const handleMessageClick = async () => {
         if (!currentUser || !profileUser) return;
-
-        const sortedIds = [currentUser.uid, profileUser.uid].sort();
-        const conversationQuery = query(
-            collection(db, 'conversations'),
-            where('participantIds', '==', sortedIds)
+        
+        const sortedParticipantIds = [currentUser.uid, profileUser.uid].sort();
+        const q = query(
+            collection(db, "conversations"),
+            where("participantIds", "==", sortedParticipantIds)
         );
 
         try {
-            const querySnapshot = await getDocs(conversationQuery);
-            let convId: string;
+            const querySnapshot = await getDocs(q);
+            let conversationId: string;
 
-            if (!querySnapshot.empty) {
-                convId = querySnapshot.docs[0].id;
-            } else {
-                 const newConversationRef = await addDoc(collection(db, 'conversations'), {
-                    participantIds: sortedIds,
+            if (querySnapshot.empty) {
+                const newConvRef = await addDoc(collection(db, "conversations"), {
+                    participantIds: sortedParticipantIds,
                     lastMessage: null,
+                    timestamp: serverTimestamp(),
                 });
-                convId = newConversationRef.id;
+                conversationId = newConvRef.id;
+            } else {
+                conversationId = querySnapshot.docs[0].id;
             }
+            
             onOpenChange(false);
-            router.push(`/messages/${convId}`);
-
+            router.push(`/messages/${conversationId}`);
         } catch (error) {
             console.error("Error handling message click:", error);
             toast({ variant: "destructive", title: "Error", description: "Could not start a conversation." });

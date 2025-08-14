@@ -43,7 +43,7 @@ export default function MessagesPage({ params }: { params?: { convId?: string } 
     } as User : null, [user]);
 
     useEffect(() => {
-        if (!user || !userDetails) {
+        if (!user) {
             setLoading(false);
             return;
         }
@@ -55,56 +55,79 @@ export default function MessagesPage({ params }: { params?: { convId?: string } 
         );
 
         const unsubscribe = onSnapshot(q, async (querySnapshot) => {
-            const friendUids = userDetails?.friends || [];
+            const convsPromises = querySnapshot.docs.map(async (docSnap) => {
+                const convData = docSnap.data();
+                const otherParticipantId = convData.participantIds.find((id: string) => id !== user.uid);
+                
+                if (!otherParticipantId) return null;
 
-            const convsPromises = querySnapshot.docs
-                .map(async (docSnap) => {
-                    const convData = docSnap.data();
-                    const otherParticipantId = convData.participantIds.find((id: string) => id !== user.uid);
-                    
-                    if (!otherParticipantId) return null;
+                const userDoc = await getDoc(doc(db, 'users', otherParticipantId));
+                if (!userDoc.exists()) return null;
+                const participant = { id: userDoc.id, ...userDoc.data() } as User;
 
-                    // If a specific conversation is selected, always include it, even if not a friend yet.
-                    const isSelectedConv = docSnap.id === selectedConversationId;
-                    if (!friendUids.includes(otherParticipantId) && !isSelectedConv) {
-                        return null;
-                    }
+                const lastMessage = convData.lastMessage;
 
-                    const userDoc = await getDoc(doc(db, 'users', otherParticipantId));
-                    if (!userDoc.exists()) return null;
-                    const participant = { id: userDoc.id, ...userDoc.data() } as User;
-
-                    const lastMessage = convData.lastMessage;
-
-                    return {
-                        id: docSnap.id,
-                        participantIds: convData.participantIds,
-                        participant,
-                        lastMessage: lastMessage ? {
-                            id: 'last',
-                            senderId: lastMessage.senderId,
-                            text: lastMessage.text,
-                            timestamp: (lastMessage.timestamp as Timestamp)?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) || '...',
-                        } : undefined,
-                    } as Conversation;
-                });
+                return {
+                    id: docSnap.id,
+                    participantIds: convData.participantIds,
+                    participant,
+                    lastMessage: lastMessage ? {
+                        id: 'last',
+                        senderId: lastMessage.senderId,
+                        text: lastMessage.text,
+                        timestamp: (lastMessage.timestamp as Timestamp)?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) || '...',
+                    } : undefined,
+                } as Conversation;
+            });
 
             const resolvedConvs = (await Promise.all(convsPromises)).filter(Boolean) as Conversation[];
+            
+            // If a specific conversation is selected but not in the list (e.g., brand new), fetch it directly
+            if (selectedConversationId && !resolvedConvs.some(c => c.id === selectedConversationId)) {
+                const convDocRef = doc(db, 'conversations', selectedConversationId);
+                const convDocSnap = await getDoc(convDocRef);
+                if (convDocSnap.exists()) {
+                    const convData = convDocSnap.data();
+                    const otherParticipantId = convData.participantIds.find((id: string) => id !== user.uid);
+                    if (otherParticipantId) {
+                        const userDoc = await getDoc(doc(db, 'users', otherParticipantId));
+                        if(userDoc.exists()){
+                            const participant = { id: userDoc.id, ...userDoc.data() } as User;
+                             resolvedConvs.unshift({ // Add to the top of the list
+                                id: convDocSnap.id,
+                                participantIds: convData.participantIds,
+                                participant,
+                             } as Conversation);
+                        }
+                    }
+                }
+            }
+
+
             setConversations(resolvedConvs);
             setLoading(false);
         });
 
         return () => unsubscribe();
-    }, [user, userDetails, selectedConversationId]);
+    }, [user, selectedConversationId]);
 
     if (loading) {
         return <MessagesLoading />;
     }
 
-    if (!currentUser || !userDetails?.friends || userDetails.friends.length === 0) {
+    if (!currentUser) {
+         return <NoFriendsEmptyState 
+            title="Please log in"
+            description="You need to be logged in to view your messages."
+            buttonText="Login"
+            buttonLink="/login"
+        />;
+    }
+
+    if (conversations.length === 0) {
         return <NoFriendsEmptyState 
-            title="No Friends Yet"
-            description="You haven't added any friends yet. Find neighbors and send them a friend request to start chatting!"
+            title="No Conversations Yet"
+            description="You haven't started any conversations yet. Find neighbors and send them a friend request to start chatting!"
             buttonText="Find Neighbors"
             buttonLink="/neighbors"
         />;
