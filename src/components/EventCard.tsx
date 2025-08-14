@@ -26,19 +26,24 @@ export function EventCard({ event }: EventCardProps) {
   const router = useRouter();
 
   useEffect(() => {
+    if (!event.id) return;
     const eventRef = doc(db, "posts", event.id);
     const unsubscribe = onSnapshot(eventRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
         const currentAttendees = data.attendees || [];
         setAttendeeCount(currentAttendees.length);
-        setIsAttending(currentAttendees.includes(user?.uid || ''));
+        if (user) {
+          setIsAttending(currentAttendees.includes(user.uid));
+        }
       }
     });
     return () => unsubscribe();
-  }, [event.id, user?.uid]);
+  }, [event.id, user]);
 
-  const handleAttendingToggle = async () => {
+  const handleAttendingToggle = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     if (!user) {
       router.push('/login');
       return;
@@ -61,7 +66,7 @@ export function EventCard({ event }: EventCardProps) {
   };
 
   return (
-    <Card className="flex flex-col">
+    <Card className="flex flex-col hover:bg-muted/50 transition-colors">
       {event.imageUrl && (
         <div className="relative w-full h-48 rounded-t-lg overflow-hidden">
           <Image
@@ -102,7 +107,7 @@ export function EventCard({ event }: EventCardProps) {
         {event.eventLink && (
           <div className="flex items-center text-sm">
             <LinkIcon className="mr-2 h-4 w-4 text-muted-foreground" />
-            <a href={event.eventLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline truncate">
+            <a href={event.eventLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline truncate" onClick={(e) => e.stopPropagation()}>
               {event.eventLink}
             </a>
           </div>

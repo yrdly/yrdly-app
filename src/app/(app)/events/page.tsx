@@ -10,6 +10,7 @@ import { collection, query, where, onSnapshot, orderBy } from "firebase/firestor
 import { db } from "@/lib/firebase";
 import { EventCard } from "@/components/EventCard";
 import { Skeleton } from "@/components/ui/skeleton";
+import Link from "next/link";
 
 function EmptyEvents() {
     return (
@@ -71,7 +72,9 @@ export default function EventsPage() {
         ) : posts.length > 0 ? (
             <div className="space-y-4 max-w-2xl mx-auto">
                 {posts.map(event => (
-                    <EventCard key={event.id} event={event} />
+                    <Link key={event.id} href={`/posts/${event.id}`} className="block">
+                        <EventCard event={event} />
+                    </Link>
                 ))}
             </div>
         ) : (
