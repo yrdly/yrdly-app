@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
     collection,
     query,
@@ -63,6 +63,8 @@ const NeighborSkeleton = () => (
     </Card>
 );
 
+type FriendshipStatus = 'friends' | 'request_sent' | 'request_received' | 'none';
+
 export default function NeighborsPage() {
     const { user: currentUser, userDetails } = useAuth();
     const router = useRouter();
@@ -72,19 +74,19 @@ export default function NeighborsPage() {
     const [filters, setFilters] = useState({ state: "all", lga: "all" });
     const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
     const [activeTab, setActiveTab] = useState("all");
-    const [selectedUser, setSelectedUser] = useState<string | null>(null);
+    const [selectedUser, setSelectedUser] = useState<{ user: User, status: FriendshipStatus } | null>(null);
 
     useEffect(() => {
         if (!currentUser) return;
 
         const usersQuery = query(
-            collection(db, "users")
+            collection(db, "users"),
+            where('uid', '!=', currentUser.uid)
         );
 
         const unsubscribeUsers = onSnapshot(usersQuery, (querySnapshot) => {
             const usersData = querySnapshot.docs
-                .map(doc => ({ id: doc.id, ...doc.data() } as User))
-                .filter(user => user.uid !== currentUser.uid); // Filter out the current user on the client
+                .map(doc => ({ id: doc.id, ...doc.data() } as User));
             setAllNeighbors(usersData);
             setLoading(false);
         });
@@ -113,6 +115,21 @@ export default function NeighborsPage() {
             return newFilters;
         });
     };
+    
+    const getFriendshipStatus = useCallback((neighborId: string): FriendshipStatus => {
+        if (userDetails?.friends?.includes(neighborId)) return "friends";
+        
+        const request = friendRequests.find(req => 
+            ((req.fromUserId === currentUser?.uid && req.toUserId === neighborId) ||
+             (req.fromUserId === neighborId && req.toUserId === currentUser?.uid))
+        );
+
+        if (request && request.status === 'pending') {
+            return request.fromUserId === currentUser?.uid ? 'request_sent' : 'request_received';
+        }
+
+        return "none";
+    }, [userDetails, friendRequests, currentUser]);
 
     const filteredNeighbors = useMemo(() => {
         const blockedByMe = userDetails?.blockedUsers || [];
@@ -174,6 +191,8 @@ export default function NeighborsPage() {
                 transaction.update(currentUserRef, { friends: arrayRemove(friendId) });
                 transaction.update(friendUserRef, { friends: arrayRemove(currentUser.uid) });
             });
+            // Optimistically update UI
+            setAllNeighbors(prev => prev.map(n => n.uid === friendId ? { ...n, friends: n.friends?.filter(f => f !== currentUser.uid) } : n));
             toast({ title: "Friend removed." });
         } catch (error) {
             console.error("Error removing friend: ", error);
@@ -208,21 +227,6 @@ export default function NeighborsPage() {
     };
 
 
-    const getFriendshipStatus = (neighborId: string) => {
-        if (userDetails?.friends?.includes(neighborId)) return "friends";
-        
-        const request = friendRequests.find(req => 
-            ((req.fromUserId === currentUser?.uid && req.toUserId === neighborId) ||
-             (req.fromUserId === neighborId && req.toUserId === currentUser?.uid))
-        );
-
-        if (request && request.status === 'pending') {
-            return request.fromUserId === currentUser?.uid ? 'request_sent' : 'request_received';
-        }
-
-        return "none";
-    };
-
     const displayLocation = (location?: User['location']) => {
         if (!location) return null;
         return [location.city, location.lga, location.state].filter(Boolean).join(", ");
@@ -249,10 +253,19 @@ export default function NeighborsPage() {
             !blockedByMe.includes(n.uid)
         );
     }, [allNeighbors, userDetails]);
+    
+    const handleProfileDialogClose = (wasChanged: boolean) => {
+        if (wasChanged) {
+            // Re-evaluate state if user was blocked/unfriended
+            const updatedNeighbors = allNeighbors.filter(n => n.uid !== selectedUser?.user.uid);
+            setAllNeighbors(updatedNeighbors);
+        }
+        setSelectedUser(null)
+    }
 
     return (
         <div className="max-w-4xl mx-auto space-y-6">
-            {selectedUser && <UserProfileDialog userId={selectedUser} open={!!selectedUser} onOpenChange={(open) => !open && setSelectedUser(null)} />}
+            {selectedUser && <UserProfileDialog user={selectedUser.user} friendshipStatus={selectedUser.status} open={!!selectedUser} onOpenChange={handleProfileDialogClose} />}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <h1 className="text-2xl md:text-3xl font-bold font-headline">Community</h1>
@@ -271,14 +284,14 @@ export default function NeighborsPage() {
                                 return (
                                     <div key={request.id} className="flex items-center justify-between">
                                         <div className="flex items-center gap-3">
-                                            <button onClick={() => setSelectedUser(fromUser.uid)} className="cursor-pointer">
+                                            <button onClick={() => setSelectedUser({user: fromUser, status: 'request_received' })} className="cursor-pointer">
                                                 <Avatar className="h-10 w-10">
                                                     <AvatarImage src={fromUser?.avatarUrl} alt={fromUser.name}/>
                                                     <AvatarFallback>{fromUser.name.charAt(0)}</AvatarFallback>
                                                 </Avatar>
                                             </button>
                                             <div>
-                                                <button onClick={() => setSelectedUser(fromUser.uid)} className="cursor-pointer hover:underline">
+                                                <button onClick={() => setSelectedUser({user: fromUser, status: 'request_received' })} className="cursor-pointer hover:underline">
                                                     <b>{fromUser?.name || "Someone"}</b>
                                                 </button> wants to be your friend.
                                             </div>
@@ -324,7 +337,7 @@ export default function NeighborsPage() {
                             {filteredNeighbors.map((neighbor) => {
                                 const status = getFriendshipStatus(neighbor.uid);
                                 return (
-                                    <Card key={neighbor.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedUser(neighbor.uid)}>
+                                    <Card key={neighbor.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedUser({ user: neighbor, status })}>
                                         <CardContent className="p-4 flex flex-col items-center text-center">
                                             <Avatar className="h-20 w-20 border mb-4"><AvatarImage src={neighbor.avatarUrl} alt={neighbor.name} /><AvatarFallback>{neighbor.name.charAt(0)}</AvatarFallback></Avatar>
                                             <h3 className="font-semibold text-lg">{neighbor.name}</h3>
@@ -353,7 +366,7 @@ export default function NeighborsPage() {
                     ) : friends.length > 0 ? (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
                             {friends.map((friend) => (
-                                <Card key={friend.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedUser(friend.uid)}>
+                                <Card key={friend.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedUser({user: friend, status: 'friends'})}>
                                     <CardContent className="p-4 flex items-center gap-4">
                                         <Avatar className="h-12 w-12 border"><AvatarImage src={friend.avatarUrl} alt={friend.name} /><AvatarFallback>{friend.name.charAt(0)}</AvatarFallback></Avatar>
                                         <div className="flex-1 space-y-1">

@@ -10,10 +10,9 @@ import type { User, FriendRequest } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
 import { MapPin, MessageSquare, UserPlus, Check, X, Clock, MoreHorizontal, ShieldBan } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader } from '@/components/ui/dialog';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -32,104 +31,59 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+type FriendshipStatus = 'friends' | 'request_sent' | 'request_received' | 'none';
+
 interface UserProfileDialogProps {
-    userId: string;
+    user: User;
+    friendshipStatus: FriendshipStatus;
     open: boolean;
-    onOpenChange: (open: boolean) => void;
+    onOpenChange: (wasChanged: boolean) => void;
 }
 
-const ProfileSkeleton = () => (
-    <Card className="max-w-2xl mx-auto border-none shadow-none">
-        <CardHeader className="flex flex-col items-center text-center p-6 bg-muted/50">
-            <Skeleton className="h-24 w-24 rounded-full mb-4" />
-            <Skeleton className="h-8 w-48 mb-2" />
-            <Skeleton className="h-5 w-32" />
-        </CardHeader>
-        <CardContent className="p-6">
-            <Skeleton className="h-6 w-full mb-4" />
-            <Skeleton className="h-5 w-3/4" />
-        </CardContent>
-        <CardFooter className="p-6 justify-center">
-            <Skeleton className="h-10 w-32" />
-        </CardFooter>
-    </Card>
-);
-
-export function UserProfileDialog({ userId, open, onOpenChange }: UserProfileDialogProps) {
+export function UserProfileDialog({ user: profileUser, friendshipStatus: initialStatus, open, onOpenChange }: UserProfileDialogProps) {
     const { user: currentUser, userDetails } = useAuth();
     const { toast } = useToast();
     const router = useRouter();
 
-    const [profileUser, setProfileUser] = useState<User | null>(null);
-    const [friendshipStatus, setFriendshipStatus] = useState<string | null>(null);
+    const [friendshipStatus, setFriendshipStatus] = useState<FriendshipStatus>(initialStatus);
     const [friendRequest, setFriendRequest] = useState<FriendRequest | null>(null);
     const [isBlocked, setIsBlocked] = useState(false);
-    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        if (!userId || !currentUser) {
-            setLoading(false);
-            return;
-        }
-        
+        if (!profileUser || !currentUser) return;
+
         // Don't open a dialog for the current user
-        if (userId === currentUser.uid) {
+        if (profileUser.uid === currentUser.uid) {
             onOpenChange(false);
             return;
         }
-        
-        setLoading(true);
-        setIsBlocked(userDetails?.blockedUsers?.includes(userId) ?? false);
-        
-        const userDocRef = doc(db, 'users', userId);
-        const unsubscribeUser = onSnapshot(userDocRef, (doc) => {
-            if (doc.exists()) {
-                setProfileUser({ id: doc.id, ...doc.data() } as User);
-            } else {
-                setProfileUser(null);
-            }
-            setLoading(false);
-        });
 
-        const requestsQuery = query(
-            collection(db, 'friend_requests'),
-            where('participantIds', 'in', [[currentUser.uid, userId], [userId, currentUser.uid]])
-        );
+        setIsBlocked(userDetails?.blockedUsers?.includes(profileUser.uid) ?? false);
+        setFriendshipStatus(initialStatus);
 
-        const unsubscribeRequests = onSnapshot(requestsQuery, (snapshot) => {
-            if (!snapshot.empty) {
-                const requestDoc = snapshot.docs[0];
-                const requestData = { id: requestDoc.id, ...requestDoc.data() } as FriendRequest;
-                setFriendRequest(requestData);
-                if (requestData.status === 'pending') {
-                    setFriendshipStatus(requestData.fromUserId === currentUser.uid ? 'request_sent' : 'request_received');
-                } else if (userDetails?.friends?.includes(userId)) {
-                    setFriendshipStatus('friends');
-                } else {
-                    setFriendshipStatus('none');
+        if (initialStatus === 'request_received' || initialStatus === 'request_sent') {
+             const requestsQuery = query(
+                collection(db, 'friend_requests'),
+                where('participantIds', 'in', [[currentUser.uid, profileUser.uid], [profileUser.uid, currentUser.uid]]),
+                where('status', '==', 'pending')
+            );
+            const unsubscribe = onSnapshot(requestsQuery, (snapshot) => {
+                 if (!snapshot.empty) {
+                    setFriendRequest({ id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as FriendRequest);
                 }
-            } else {
-                 if (userDetails?.friends?.includes(userId)) {
-                    setFriendshipStatus('friends');
-                } else {
-                    setFriendshipStatus('none');
-                }
-                setFriendRequest(null);
-            }
-        });
+            });
+            return () => unsubscribe();
+        }
 
-        return () => {
-            unsubscribeUser();
-            unsubscribeRequests();
-        };
+    }, [profileUser, currentUser, userDetails, initialStatus, onOpenChange]);
 
-    }, [userId, currentUser, userDetails, onOpenChange]);
 
     const handleAddFriend = async () => {
         if (!currentUser || !profileUser || isBlocked) return;
         try {
             await addDoc(collection(db, "friend_requests"), { fromUserId: currentUser.uid, toUserId: profileUser.uid, participantIds: [currentUser.uid, profileUser.uid].sort(), status: "pending", timestamp: serverTimestamp() });
             toast({ title: "Friend request sent!" });
+            setFriendshipStatus('request_sent');
         } catch {
             toast({ variant: "destructive", title: "Error", description: "Could not send friend request." });
         }
@@ -141,6 +95,7 @@ export function UserProfileDialog({ userId, open, onOpenChange }: UserProfileDia
             const acceptFriendRequest = httpsCallable(functions, 'acceptfriendrequest');
             await acceptFriendRequest({ friendRequestId: friendRequest.id });
             toast({ title: "Friend request accepted!" });
+            setFriendshipStatus('friends');
         } catch {
             toast({ variant: "destructive", title: "Error", description: "Could not accept friend request." });
         }
@@ -151,6 +106,7 @@ export function UserProfileDialog({ userId, open, onOpenChange }: UserProfileDia
         const requestRef = doc(db, "friend_requests", friendRequest.id);
         await updateDoc(requestRef, { status: "declined" });
         toast({ title: "Friend request declined." });
+        setFriendshipStatus('none');
     };
 
     const handleUnfriend = async () => {
@@ -179,6 +135,7 @@ export function UserProfileDialog({ userId, open, onOpenChange }: UserProfileDia
             }
             setIsBlocked(true);
             toast({ title: "User blocked." });
+            onOpenChange(true);
         } catch {
             toast({ variant: "destructive", title: "Error", description: "Could not block user." });
         }
@@ -201,8 +158,8 @@ export function UserProfileDialog({ userId, open, onOpenChange }: UserProfileDia
         return [location.city, location.lga, location.state].filter(Boolean).join(", ");
     };
 
-    const getOrCreateConversation = async (): Promise<string | null> => {
-        if (!currentUser || !profileUser) return null;
+    const handleMessageClick = async () => {
+        if (!currentUser || !profileUser) return;
 
         const sortedIds = [currentUser.uid, profileUser.uid].sort();
         const conversationQuery = query(
@@ -212,39 +169,23 @@ export function UserProfileDialog({ userId, open, onOpenChange }: UserProfileDia
 
         try {
             const querySnapshot = await getDocs(conversationQuery);
-            if (!querySnapshot.empty) {
-                // Conversation already exists
-                return querySnapshot.docs[0].id;
-            } else {
-                // Create a new conversation
-                const newConversationRef = doc(collection(db, 'conversations'));
-                const batch = writeBatch(db);
+            let convId: string;
 
-                batch.set(newConversationRef, {
+            if (!querySnapshot.empty) {
+                convId = querySnapshot.docs[0].id;
+            } else {
+                 const newConversationRef = await addDoc(collection(db, 'conversations'), {
                     participantIds: sortedIds,
                     lastMessage: null,
-                    // You might want to add other initial fields here
                 });
-
-                // Also update the user docs to reference each other if needed
-                // For example, adding to a 'chats' subcollection or updating a field
-                // This part depends on your data model for quick access
-
-                await batch.commit();
-                return newConversationRef.id;
+                convId = newConversationRef.id;
             }
-        } catch (error) {
-            console.error("Error getting or creating conversation:", error);
-            toast({ variant: "destructive", title: "Error", description: "Could not start a conversation." });
-            return null;
-        }
-    };
-
-    const handleMessageClick = async () => {
-        const convId = await getOrCreateConversation();
-        if (convId) {
             onOpenChange(false);
             router.push(`/messages/${convId}`);
+
+        } catch (error) {
+            console.error("Error handling message click:", error);
+            toast({ variant: "destructive", title: "Error", description: "Could not start a conversation." });
         }
     }
 
@@ -273,11 +214,9 @@ export function UserProfileDialog({ userId, open, onOpenChange }: UserProfileDia
     };
 
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
+        <Dialog open={open} onOpenChange={() => onOpenChange(isBlocked)}>
             <DialogContent className="sm:max-w-md p-0">
-                {loading ? (
-                    <ProfileSkeleton />
-                ) : !profileUser ? (
+                {!profileUser ? (
                     <div className="text-center py-10">User not found.</div>
                 ) : (
                     <>
@@ -285,7 +224,6 @@ export function UserProfileDialog({ userId, open, onOpenChange }: UserProfileDia
                             <AlertDialogDescription className="sr-only">
                             {`View and interact with ${profileUser.name}'s profile.`}
                             </AlertDialogDescription>
-
                         </DialogHeader>
                         <Card className="border-none shadow-none">
                             <CardHeader className="flex flex-col items-center text-center p-6 bg-muted/50 relative">
@@ -327,7 +265,7 @@ export function UserProfileDialog({ userId, open, onOpenChange }: UserProfileDia
                             </CardHeader>
                             <CardContent className="p-6">
                                 <h2 className="font-semibold text-lg mb-2">Bio</h2>
-                                <p className="text-muted-foreground">{profileUser.bio || "This user hasn&apos;t written a bio yet."}</p>
+                                <p className="text-muted-foreground">{profileUser.bio || "This user hasn't written a bio yet."}</p>
                             </CardContent>
                             <CardFooter className="p-6 justify-center">
                                 {renderActionButtons()}
