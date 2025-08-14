@@ -51,15 +51,6 @@ import { useToast } from "@/hooks/use-toast";
 import type { Post, PostCategory } from "@/types";
 import { useIsMobile } from "@/hooks/use-mobile";
 
-const formSchema = z.object({
-  text: z.string().min(1, "Post can't be empty.").max(500),
-  category: z.enum(["General", "Event", "For Sale", "Business"]),
-  price: z.preprocess(
-      (val) => (val === "" ? undefined : Number(val)),
-      z.number().positive("Price must be positive.").optional()
-  ),
-});
-
 type CreatePostDialogProps = {
     children?: React.ReactNode;
     preselectedCategory?: PostCategory;
@@ -74,10 +65,38 @@ export function CreatePostDialog({ children, preselectedCategory, postToEdit, on
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [imageFile, setImageFile] = useState<File | null>(null);
   const isMobile = useIsMobile();
   
   const isEditMode = !!postToEdit;
+
+  // Define the schema inside the component to access props like postToEdit
+  const formSchema = z.object({
+    text: z.string().min(1, "Post can't be empty.").max(500),
+    category: z.enum(["General", "Event", "For Sale", "Business"]),
+    price: z.preprocess(
+        (val) => (val === "" ? undefined : Number(val)),
+        z.number().positive("Price must be positive.").optional()
+    ),
+    image: z.any().optional(),
+  }).superRefine((data, ctx) => {
+      const hasNewImage = data.image && data.image.length > 0;
+      const hasExistingImage = isEditMode && postToEdit?.imageUrl;
+
+      if ((data.category === 'Event' || data.category === 'For Sale') && !hasNewImage && !hasExistingImage) {
+          ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ['image'],
+              message: 'An image is required for Event and For Sale posts.',
+          });
+      }
+      if (data.category === 'For Sale' && (data.price === undefined || data.price <= 0)) {
+          ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ['price'],
+              message: 'A valid price is required for "For Sale" items.',
+          });
+      }
+  });
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -85,24 +104,26 @@ export function CreatePostDialog({ children, preselectedCategory, postToEdit, on
       text: "",
       category: preselectedCategory || "General",
       price: undefined,
+      image: undefined,
     },
   });
 
    useEffect(() => {
     if (open) {
-        if (isEditMode) {
-          form.reset({
-            text: postToEdit.text,
-            category: postToEdit.category,
-            price: postToEdit.price || undefined,
-          });
-        } else {
-            form.reset({
-                text: "",
-                category: preselectedCategory || "General",
-                price: undefined,
-            });
-        }
+        const defaultValues = isEditMode
+          ? {
+              text: postToEdit.text,
+              category: postToEdit.category,
+              price: postToEdit.price || undefined,
+              image: undefined,
+            }
+          : {
+              text: "",
+              category: preselectedCategory || "General",
+              price: undefined,
+              image: undefined,
+            };
+        form.reset(defaultValues);
     }
   }, [postToEdit, preselectedCategory, form, isEditMode, open]);
 
@@ -116,6 +137,8 @@ export function CreatePostDialog({ children, preselectedCategory, postToEdit, on
 
     try {
         let imageUrl = postToEdit?.imageUrl || "";
+        const imageFile = values.image?.[0];
+
         if (imageFile) {
             const storageRef = ref(storage, `posts/${user.uid}/${Date.now()}_${imageFile.name}`);
             const snapshot = await uploadBytes(storageRef, imageFile);
@@ -150,7 +173,6 @@ export function CreatePostDialog({ children, preselectedCategory, postToEdit, on
         }
 
         form.reset();
-        setImageFile(null);
         setOpen(false);
 
     } catch(error) {
@@ -167,20 +189,15 @@ export function CreatePostDialog({ children, preselectedCategory, postToEdit, on
         onOpenChange(newOpenState);
     }
   }
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files?.[0]) {
-        setImageFile(e.target.files[0]);
-    }
-  }
   
   const finalTitle = title || (isEditMode ? 'Edit Post' : 'Create Post');
   const finalDescription = description || (isEditMode ? 'Make changes to your post here.' : 'Share an update with your neighborhood.');
 
+  const imageField = form.register('image');
 
-  const FormContent = () => (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 px-1">
+  const FormContent = (
+    <>
+      <div className="space-y-4 px-1">
         <FormField
           control={form.control}
           name="text"
@@ -193,7 +210,7 @@ export function CreatePostDialog({ children, preselectedCategory, postToEdit, on
                   {...field}
                 />
               </FormControl>
-              <FormMessage />
+              <FormMessage className="px-4" />
             </FormItem>
           )}
         />
@@ -240,22 +257,32 @@ export function CreatePostDialog({ children, preselectedCategory, postToEdit, on
                 )}
             </div>
             
-            <FormItem>
-                <FormLabel>Add an image</FormLabel>
-                <FormControl>
-                    <Input 
-                        type="file" 
-                        accept="image/*" 
-                        onChange={handleImageChange}
-                    />
-                </FormControl>
-            </FormItem>
-            {postToEdit?.imageUrl && !imageFile && (
+            <FormField
+              control={form.control}
+              name="image"
+              render={() => (
+                <FormItem>
+                    <FormLabel>
+                        Add an image
+                        {(form.watch('category') === 'Event' || form.watch('category') === 'For Sale') && <span className="text-destructive">*</span>}
+                    </FormLabel>
+                    <FormControl>
+                        <Input 
+                            type="file" 
+                            accept="image/*" 
+                            {...imageField}
+                        />
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+              )}
+            />
+            {postToEdit?.imageUrl && (
                 <div className="text-sm text-muted-foreground">Current image: <a href={postToEdit.imageUrl} target="_blank" rel="noopener noreferrer" className="underline">view image</a></div>
             )}
         </div>
-      </form>
-    </Form>
+      </div>
+    </>
   );
 
   const Trigger = React.forwardRef<HTMLDivElement>((props, ref) => (
@@ -278,21 +305,25 @@ export function CreatePostDialog({ children, preselectedCategory, postToEdit, on
             <SheetTrigger asChild>
                 { children || <Trigger /> }
             </SheetTrigger>
-            <SheetContent side="bottom" className="p-0">
+            <SheetContent side="bottom" className="p-0 flex flex-col">
                 <SheetHeader className="p-4 border-b">
                     <SheetTitle>{finalTitle}</SheetTitle>
                     <DialogDescription>
                         {finalDescription}
                     </DialogDescription>
                 </SheetHeader>
-                <div className="py-4">
-                    <FormContent />
-                </div>
-                <SheetFooter className="p-4 border-t">
-                  <Button onClick={form.handleSubmit(onSubmit)} className="w-full" variant="default" disabled={loading}>
-                    {loading ? (isEditMode ? 'Saving...' : 'Posting...') : (isEditMode ? 'Save Changes' : 'Post')}
-                  </Button>
-                </SheetFooter>
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col">
+                    <div className="py-4 flex-1 overflow-y-auto">
+                        {FormContent}
+                    </div>
+                    <SheetFooter className="p-4 border-t mt-auto">
+                      <Button type="submit" className="w-full" variant="default" disabled={loading}>
+                        {loading ? (isEditMode ? 'Saving...' : 'Posting...') : (isEditMode ? 'Save Changes' : 'Post')}
+                      </Button>
+                    </SheetFooter>
+                  </form>
+                </Form>
             </SheetContent>
         </Sheet>
     )
@@ -304,18 +335,22 @@ export function CreatePostDialog({ children, preselectedCategory, postToEdit, on
         { children || <Trigger /> }
       </DialogTrigger>
       <DialogContent className="sm:max-w-[525px] p-0">
-        <DialogHeader className="p-6 pb-0">
-          <DialogTitle>{finalTitle}</DialogTitle>
-          <DialogDescription>
-             {finalDescription}
-          </DialogDescription>
-        </DialogHeader>
-        <FormContent />
-        <DialogFooter className="p-6 pt-0">
-          <Button onClick={form.handleSubmit(onSubmit)} className="w-full" variant="default" disabled={loading}>
-            {loading ? (isEditMode ? 'Saving...' : 'Posting...') : (isEditMode ? 'Save Changes' : 'Post')}
-          </Button>
-        </DialogFooter>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)}>
+            <DialogHeader className="p-6 pb-0">
+              <DialogTitle>{finalTitle}</DialogTitle>
+              <DialogDescription>
+                 {finalDescription}
+              </DialogDescription>
+            </DialogHeader>
+            {FormContent}
+            <DialogFooter className="p-6 pt-0">
+              <Button type="submit" className="w-full" variant="default" disabled={loading}>
+                {loading ? (isEditMode ? 'Saving...' : 'Posting...') : (isEditMode ? 'Save Changes' : 'Post')}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );
