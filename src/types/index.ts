@@ -96,6 +96,7 @@ export interface Conversation {
       timestamp: string;
   };
   messages: Message[];
+  typing?: { [key: string]: boolean };
 }
 
 export interface Message {

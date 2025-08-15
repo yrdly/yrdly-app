@@ -2,7 +2,7 @@
 "use client";
 
 import type { Conversation, User, Message } from "../../types";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -24,6 +24,8 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import Link from "next/link";
+import { useDebouncedCallback } from "use-debounce";
+
 
 interface NoFriendsEmptyStateProps {
     title?: string;
@@ -72,6 +74,7 @@ export function ChatLayout({
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const [isTyping, setIsTyping] = useState(false);
 
   // Update conversation list when prop changes
   useEffect(() => {
@@ -98,7 +101,7 @@ export function ChatLayout({
       orderBy("timestamp", "asc")
     );
 
-    const unsubscribe = onSnapshot(q, async (querySnapshot) => {
+    const unsubscribeMessages = onSnapshot(q, async (querySnapshot) => {
       const msgs: Message[] = await Promise.all(
         querySnapshot.docs.map(async (docSnap) => {
           const msgData = docSnap.data();
@@ -132,8 +135,22 @@ export function ChatLayout({
       
       setMessages(msgs);
     });
+    
+    const convRef = doc(db, "conversations", selectedConversation.id);
+    const unsubscribeConversation = onSnapshot(convRef, (doc) => {
+        const data = doc.data();
+        if(data?.typing && data.typing[selectedConversation.participant.id]) {
+            setIsTyping(true);
+        } else {
+            setIsTyping(false);
+        }
+    });
 
-    return () => unsubscribe();
+
+    return () => {
+        unsubscribeMessages();
+        unsubscribeConversation();
+    };
   }, [selectedConversation, currentUser]);
 
   // Scroll to bottom when messages change
@@ -141,8 +158,28 @@ export function ChatLayout({
     if (scrollAreaRef.current) {
       scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [messages, isTyping]);
+  
+  const debouncedUpdateTyping = useDebouncedCallback(async (isTyping: boolean) => {
+      if (!selectedConversation) return;
+      const conversationRef = doc(db, 'conversations', selectedConversation.id);
+      try {
+          await updateDoc(conversationRef, {
+              [`typing.${currentUser.id}`]: isTyping
+          });
+      } catch (e) {
+          console.error("Error updating typing status", e)
+      }
 
+  }, 2000);
+
+
+  const handleTyping = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      setNewMessage(e.target.value);
+      debouncedUpdateTyping.cancel();
+      debouncedUpdateTyping(true);
+  };
+  
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newMessage.trim() === "" || !selectedConversation) return;
@@ -166,10 +203,12 @@ export function ChatLayout({
                 senderId: currentUser.id,
                 timestamp: serverTimestamp(),
                 read: false,
-            }
+            },
+            [`typing.${currentUser.id}`]: false,
         });
-
-      setNewMessage("");
+        
+        debouncedUpdateTyping.cancel();
+        setNewMessage("");
     } catch (error) {
       console.error("Error sending message: ", error);
     }
@@ -310,6 +349,19 @@ export function ChatLayout({
                     </div>
                   </div>
                 ))}
+                 {isTyping && (
+                  <div className="flex gap-3 justify-start">
+                      <Avatar className="h-8 w-8">
+                          <AvatarImage src={selectedConversation.participant.avatarUrl} />
+                          <AvatarFallback>
+                              {selectedConversation.participant.name.charAt(0)}
+                          </AvatarFallback>
+                      </Avatar>
+                      <div className="rounded-lg px-4 py-2 bg-card border animate-pulse">
+                          typing...
+                      </div>
+                  </div>
+                )}
               </div>
             </ScrollArea>
             <div className="p-4 border-t bg-card">
@@ -320,7 +372,7 @@ export function ChatLayout({
                 <Textarea
                   placeholder="Type a message..."
                   value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
+                  onChange={handleTyping}
                   className="flex-1 resize-none"
                   rows={1}
                   onKeyDown={(e) => {
