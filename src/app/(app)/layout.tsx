@@ -9,7 +9,7 @@ import { AppHeader } from '@/components/layout/AppHeader';
 import { AppBottomNav } from '@/components/layout/AppBottomNav';
 import { useAuth } from '@/hooks/use-auth';
 import { PushNotificationManager } from '@/components/PushNotificationManager';
-import { Loader2 } from 'lucide-react';
+import Image from 'next/image';
 
 function ProtectedLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -23,8 +23,15 @@ function ProtectedLayout({ children }: { children: React.ReactNode }) {
 
   if (loading || !user) {
     return (
-      <div className="flex h-screen w-screen items-center justify-center">
-        <Loader2 className="h-12 w-12 animate-spin" />
+      <div className="flex h-screen w-screen items-center justify-center bg-background">
+        <Image 
+            src="/yrdly-logo.png" 
+            alt="Yrdly Logo" 
+            width={96} 
+            height={96} 
+            className="animate-pulse"
+            priority
+        />
       </div>
     );
   }
