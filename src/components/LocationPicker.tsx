@@ -2,8 +2,12 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { APIProvider, Map, AdvancedMarker, Pin, MapMouseEvent } from '@vis.gl/react-google-maps';
+import { usePlacesAutocomplete } from '@/hooks/use-places-autocomplete';
 import { Input } from './ui/input';
 import { Loader2 } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { Command, CommandGroup, CommandItem } from './ui/command';
+
 
 interface LocationPickerProps {
     onLocationSelect: (location: { address: string; latitude: number; longitude: number; }) => void;
@@ -15,59 +19,103 @@ export function LocationPicker({ onLocationSelect, initialLocation }: LocationPi
         initialLocation 
             ? { lat: initialLocation.latitude, lng: initialLocation.longitude } 
             : { lat: 6.5244, lng: 3.3792 }
-    ); // Default to Lagos
+    );
     const [address, setAddress] = useState('');
     const [loading, setLoading] = useState(false);
+    
+    const {
+        placesService,
+        placePredictions,
+        getPlacePredictions,
+        isPlacePredictionsLoading,
+    } = usePlacesAutocomplete();
 
-    const inputRef = useRef<HTMLInputElement>(null);
+    const [isPopoverOpen, setIsPopoverOpen] = useState(false);
 
-    useEffect(() => {
-        if (inputRef.current && window.google?.maps?.places) {
-            const autocomplete = new google.maps.places.Autocomplete(inputRef.current, {
-                fields: ["geometry.location", "formatted_address"]
-            });
-            autocomplete.addListener('place_changed', () => {
-                const place = autocomplete.getPlace();
-                if (place.geometry?.location) {
-                    const lat = place.geometry.location.lat();
-                    const lng = place.geometry.location.lng();
-                    setMarkerPosition({ lat, lng });
-                    setAddress(place.formatted_address || '');
-                    onLocationSelect({ address: place.formatted_address || '', latitude: lat, longitude: lng });
-                }
-            });
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        getPlacePredictions({ input: e.target.value });
+        if(e.target.value) {
+            setIsPopoverOpen(true);
+        } else {
+            setIsPopoverOpen(false);
         }
-    }, [onLocationSelect]);
+    };
 
+    const handleSuggestionClick = (placeId: string) => {
+        placesService?.getDetails({ placeId, fields: ['geometry.location', 'formatted_address'] }, (placeDetails) => {
+            if (placeDetails?.geometry?.location && placeDetails.formatted_address) {
+                const lat = placeDetails.geometry.location.lat();
+                const lng = placeDetails.geometry.location.lng();
+                setMarkerPosition({ lat, lng });
+                setAddress(placeDetails.formatted_address);
+                onLocationSelect({ address: placeDetails.formatted_address, latitude: lat, longitude: lng });
+                setIsPopoverOpen(false);
+            }
+        });
+    };
+    
     const handleMapClick = (event: MapMouseEvent) => {
         if (event.detail.latLng) {
             setLoading(true);
             const { lat, lng } = event.detail.latLng;
             setMarkerPosition({ lat, lng });
 
-            // Reverse geocode to get the address
-            const geocoder = new google.maps.Geocoder();
-            geocoder.geocode({ location: { lat, lng } })
-                .then(response => {
-                    if (response.results[0]) {
-                        const formattedAddress = response.results[0].formatted_address;
-                        setAddress(formattedAddress);
-                        onLocationSelect({ address: formattedAddress, latitude: lat, longitude: lng });
-                    }
-                })
-                .catch(error => {
-                    console.error("Error reverse geocoding:", error);
-                })
-                .finally(() => {
-                    setLoading(false);
-                });
+            if (window.google?.maps) {
+                const geocoder = new window.google.maps.Geocoder();
+                geocoder.geocode({ location: { lat, lng } })
+                    .then(response => {
+                        if (response.results[0]) {
+                            const formattedAddress = response.results[0].formatted_address;
+                            setAddress(formattedAddress);
+                            onLocationSelect({ address: formattedAddress, latitude: lat, longitude: lng });
+                        }
+                    })
+                    .catch(error => {
+                        console.error("Error reverse geocoding:", error);
+                    })
+                    .finally(() => {
+                        setLoading(false);
+                    });
+            }
         }
     };
 
     return (
         <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!} libraries={['places']}>
             <div className="space-y-4">
-                <Input ref={inputRef} placeholder="Search for a location" />
+                <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
+                     <PopoverTrigger asChild>
+                        <Input 
+                            placeholder="Search for a location" 
+                            onChange={handleInputChange} 
+                            value={address}
+                            onFocus={() => address && setIsPopoverOpen(true)}
+                        />
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
+                         <Command>
+                            <CommandGroup>
+                                {isPlacePredictionsLoading ? (
+                                    <CommandItem>
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                        Loading...
+                                    </CommandItem>
+                                ) : (
+                                    placePredictions.map(item => (
+                                        <CommandItem
+                                            key={item.place_id}
+                                            onSelect={() => handleSuggestionClick(item.place_id)}
+                                            value={item.description}
+                                        >
+                                            {item.description}
+                                        </CommandItem>
+                                    ))
+                                )}
+                            </CommandGroup>
+                        </Command>
+                    </PopoverContent>
+                </Popover>
+
                 <div className="h-64 w-full rounded-md overflow-hidden relative">
                     <Map
                         defaultCenter={markerPosition}
