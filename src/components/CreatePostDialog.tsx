@@ -48,41 +48,57 @@ import { collection, addDoc, updateDoc, doc, serverTimestamp } from "firebase/fi
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
-import type { Post, PostCategory } from "@/types";
+import type { Post, PostCategory, Business } from "@/types";
 import { usePosts } from "@/hooks/use-posts";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { LocationPicker } from "./LocationPicker";
 
 type CreatePostDialogProps = {
     children?: React.ReactNode;
     preselectedCategory?: PostCategory;
-    postToEdit?: Post;
+    postToEdit?: Post | Business;
+    postType?: 'Post' | 'Business';
     onOpenChange?: (open: boolean) => void;
     title?: string;
     description?: string;
 }
 
-export function CreatePostDialog({ children, preselectedCategory, postToEdit, onOpenChange, title, description }: CreatePostDialogProps) {
+export function CreatePostDialog({ 
+    children, 
+    preselectedCategory, 
+    postToEdit, 
+    postType = 'Post',
+    onOpenChange, 
+    title, 
+    description 
+}: CreatePostDialogProps) {
   const { user, userDetails } = useAuth();
   const { toast } = useToast();
-  const { createPost: createPostHook, updatePost } = usePosts();
+  const { createPost, updatePost, updateBusiness } = usePosts();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const isMobile = useIsMobile();
+  const [location, setLocation] = useState(postToEdit && 'location' in postToEdit ? {
+      address: postToEdit.location.address,
+      latitude: postToEdit.location.latitude,
+      longitude: postToEdit.location.longitude,
+  } : null);
   
   const isEditMode = !!postToEdit;
 
-  // Define the schema inside the component to access props like postToEdit
   const formSchema = z.object({
-    text: z.string().min(1, "Post can't be empty.").max(500),
+    text: z.string().min(1, "Description can't be empty.").max(5000),
     category: z.enum(["General", "Event", "For Sale", "Business"]),
     price: z.preprocess(
         (val) => (val === "" ? undefined : Number(val)),
         z.number().positive("Price must be positive.").optional()
     ),
     image: z.any().optional(),
+    // Business specific
+    name: z.string().optional(),
+    businessCategory: z.string().optional(),
+
   }).superRefine((data, ctx) => {
-      // On the server, data.image will be undefined, so this check will pass.
-      // On the client, it will be a FileList.
       const hasNewImage = typeof window !== 'undefined' && data.image && data.image.length > 0;
       const hasExistingImages = isEditMode && postToEdit?.imageUrls && postToEdit.imageUrls.length > 0;
 
@@ -100,36 +116,58 @@ export function CreatePostDialog({ children, preselectedCategory, postToEdit, on
               message: 'A valid price is required for "For Sale" items.',
           });
       }
+      if (postType === 'Business') {
+        if (!data.name) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['name'], message: "Business name can't be empty." });
+        if (!data.businessCategory) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['businessCategory'], message: "Category can't be empty." });
+        if (!location) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['location'], message: "Location is required" });
+      }
   });
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       text: "",
-      category: preselectedCategory || "General",
+      category: preselectedCategory || (postType === 'Business' ? 'Business' : "General"),
       price: undefined,
       image: undefined,
+      name: "",
+      businessCategory: "",
     },
   });
 
    useEffect(() => {
     if (open) {
-        const defaultValues = isEditMode
-          ? {
-              text: postToEdit.text,
-              category: postToEdit.category,
-              price: postToEdit.price || undefined,
-              image: undefined,
+        if (isEditMode && postToEdit) {
+            if (postType === 'Business' && 'ownerId' in postToEdit) { // It's a Business
+                form.reset({
+                    name: postToEdit.name,
+                    businessCategory: postToEdit.category,
+                    text: postToEdit.description,
+                    category: 'Business',
+                    image: undefined,
+                });
+                setLocation(postToEdit.location);
+            } else if ('userId' in postToEdit) { // It's a Post
+                 form.reset({
+                    text: postToEdit.text,
+                    category: postToEdit.category,
+                    price: postToEdit.price || undefined,
+                    image: undefined,
+                });
             }
-          : {
-              text: "",
-              category: preselectedCategory || "General",
-              price: undefined,
-              image: undefined,
-            };
-        form.reset(defaultValues);
+        } else {
+             form.reset({
+                text: "",
+                category: preselectedCategory || (postType === 'Business' ? 'Business' : "General"),
+                price: undefined,
+                image: undefined,
+                name: "",
+                businessCategory: "",
+            });
+            setLocation(null);
+        }
     }
-  }, [postToEdit, preselectedCategory, form, isEditMode, open]);
+  }, [postToEdit, preselectedCategory, form, isEditMode, open, postType]);
 
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
@@ -144,40 +182,50 @@ export function CreatePostDialog({ children, preselectedCategory, postToEdit, on
         const imageFiles = values.image;
 
         if (imageFiles && imageFiles instanceof FileList && imageFiles.length > 0) {
-            if (values.category === 'For Sale') {
-                const uploadedUrls = await Promise.all(
-                    Array.from(imageFiles).map(async (file) => {
-                        const storageRef = ref(storage, `posts/${user.uid}/${Date.now()}_${file.name}`);
-                        await uploadBytes(storageRef, file);
-                        return getDownloadURL(storageRef);
-                    })
-                );
-                imageUrls = [...imageUrls, ...uploadedUrls];
-            } else {
-                const imageFile = imageFiles[0];
-                const storageRef = ref(storage, `posts/${user.uid}/${Date.now()}_${imageFile.name}`);
-                await uploadBytes(storageRef, imageFile);
-                imageUrls = [await getDownloadURL(storageRef)];
+             const uploadedUrls = await Promise.all(
+                Array.from(imageFiles).map(async (file) => {
+                    const storagePath = postType === 'Business' ? `businesses/${user.uid}/${Date.now()}_${file.name}` : `posts/${user.uid}/${Date.now()}_${file.name}`;
+                    const storageRef = ref(storage, storagePath);
+                    await uploadBytes(storageRef, file);
+                    return getDownloadURL(storageRef);
+                })
+            );
+            imageUrls = isEditMode ? [...imageUrls, ...uploadedUrls] : uploadedUrls;
+        }
+
+        if (postType === 'Business') {
+            const businessData: Partial<Business> = {
+                name: values.name,
+                category: values.businessCategory,
+                description: values.text,
+                location: location!,
+                imageUrls: imageUrls
+            };
+            if (isEditMode && postToEdit) {
+                await updateBusiness(postToEdit.id, businessData);
+                toast({ title: 'Business updated!' });
+            } 
+            // 'Add Business' is handled by a separate page, this dialog is only for editing businesses
+            
+        } else { // It's a Post
+            const postData: Partial<Post> = {
+                text: values.text,
+                category: values.category,
+                imageUrls: imageUrls,
+                imageUrl: imageUrls[0] || "",
+            };
+
+            if(values.category === 'For Sale' && values.price) {
+                postData.price = values.price;
             }
-        }
 
-        const postData: Partial<Post> = {
-            text: values.text,
-            category: values.category,
-            imageUrls: imageUrls,
-            imageUrl: imageUrls[0] || "", // For backwards compatibility
-        };
-
-        if(values.category === 'For Sale' && values.price) {
-            postData.price = values.price;
-        }
-
-        if (isEditMode) {
-            await updatePost(postToEdit.id, postData);
-            toast({ title: 'Post updated!' });
-        } else {
-            await createPostHook(postData as Omit<Post, 'id' | 'userId' | 'authorName' | 'authorImage' | 'timestamp' | 'commentCount' | 'likedBy'>);
-            toast({ title: 'Post created!' });
+            if (isEditMode && postToEdit) {
+                await updatePost(postToEdit.id, postData);
+                toast({ title: 'Post updated!' });
+            } else {
+                await createPost(postData as Omit<Post, 'id' | 'userId' | 'authorName' | 'authorImage' | 'timestamp' | 'commentCount' | 'likedBy'>);
+                toast({ title: 'Post created!' });
+            }
         }
 
         form.reset();
@@ -198,72 +246,127 @@ export function CreatePostDialog({ children, preselectedCategory, postToEdit, on
     }
   }
   
-  const finalTitle = title || (isEditMode ? 'Edit Post' : 'Create Post');
-  const finalDescription = description || (isEditMode ? 'Make changes to your post here.' : 'Share an update with your neighborhood.');
+  const finalTitle = title || (isEditMode ? `Edit ${postType}` : `Create ${postType}`);
+  const finalDescription = description || (isEditMode ? `Make changes to your ${postType.toLowerCase()} here.` : `Share an update with your neighborhood.`);
 
   const imageField = form.register('image');
 
+  const BusinessFormFields = () => (
+      <>
+        <FormField
+          control={form.control}
+          name="name"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Business Name</FormLabel>
+              <FormControl><Input placeholder="e.g., The Corner Cafe" {...field} /></FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="businessCategory"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Category</FormLabel>
+              <FormControl><Input placeholder="e.g., Food & Drink" {...field} /></FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="text"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Description</FormLabel>
+              <FormControl><Textarea placeholder="Tell everyone about your business..." {...field} /></FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormItem>
+            <FormLabel>Location</FormLabel>
+            <FormControl>
+                <LocationPicker 
+                    onLocationSelect={setLocation} 
+                    initialLocation={location ? { latitude: location.latitude, longitude: location.longitude } : undefined}
+                />
+            </FormControl>
+            <FormMessage />
+        </FormItem>
+      </>
+  );
+
+  const PostFormFields = () => (
+    <>
+       <FormField
+            control={form.control}
+            name="text"
+            render={({ field }) => (
+            <FormItem>
+                <FormControl>
+                <Textarea
+                    placeholder="What&apos;s happening in the neighborhood?"
+                    className="resize-none min-h-[120px] border-none shadow-none focus-visible:ring-0 p-4"
+                    {...field}
+                />
+                </FormControl>
+                <FormMessage className="px-4" />
+            </FormItem>
+            )}
+        />
+        <div className="px-4 pb-4 space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+                <FormField
+                    control={form.control}
+                    name="category"
+                    render={({ field }) => (
+                    <FormItem>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                            <SelectTrigger>
+                            <SelectValue placeholder="Select a category" />
+                            </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                            <SelectItem value="General">General</SelectItem>
+                            <SelectItem value="Event">Event</SelectItem>
+                            <SelectItem value="For Sale">For Sale</SelectItem>
+                        </SelectContent>
+                        </Select>
+                    </FormItem>
+                    )}
+                />
+                
+                {form.watch('category') === 'For Sale' && (
+                    <FormField
+                        control={form.control}
+                        name="price"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormControl>
+                            <div className="relative">
+                                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">$</span>
+                                <Input type="number" placeholder="Price" className="pl-7" {...field} />
+                            </div>
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                )}
+            </div>
+        </div>
+    </>
+  );
+
+
   const FormContent = (
     <div className="space-y-4 px-1">
-      <FormField
-        control={form.control}
-        name="text"
-        render={({ field }) => (
-          <FormItem>
-            <FormControl>
-              <Textarea
-                placeholder="What&apos;s happening in the neighborhood?"
-                className="resize-none min-h-[120px] border-none shadow-none focus-visible:ring-0 p-4"
-                {...field}
-              />
-            </FormControl>
-            <FormMessage className="px-4" />
-          </FormItem>
-        )}
-      />
-      <div className="px-4 pb-4 space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-             <FormField
-                control={form.control}
-                name="category"
-                render={({ field }) => (
-                  <FormItem>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a category" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="General">General</SelectItem>
-                        <SelectItem value="Event">Event</SelectItem>
-                        <SelectItem value="For Sale">For Sale</SelectItem>
-                        <SelectItem value="Business">Business</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </FormItem>
-                )}
-              />
-              
-              {form.watch('category') === 'For Sale' && (
-                  <FormField
-                    control={form.control}
-                    name="price"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormControl>
-                           <div className="relative">
-                              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">$</span>
-                              <Input type="number" placeholder="Price" className="pl-7" {...field} />
-                           </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-              )}
-          </div>
-          
+      {postType === 'Business' ? <BusinessFormFields /> : <PostFormFields />}
+       <div className="px-4 pb-4 space-y-4">
           <FormField
             control={form.control}
             name="image"
@@ -271,13 +374,13 @@ export function CreatePostDialog({ children, preselectedCategory, postToEdit, on
               <FormItem>
                   <FormLabel>
                       Add an image
-                      {(form.watch('category') === 'Event' || form.watch('category') === 'For Sale') && <span className="text-destructive">*</span>}
+                      {(form.watch('category') === 'Event' || form.watch('category') === 'For Sale' || postType === 'Business') && <span className="text-destructive">*</span>}
                   </FormLabel>
                   <FormControl>
                       <Input 
                           type="file" 
                           accept="image/*" 
-                          multiple={form.watch('category') === 'For Sale'}
+                          multiple={form.watch('category') === 'For Sale' || postType === 'Business'}
                           {...imageField}
                       />
                   </FormControl>
@@ -318,7 +421,7 @@ export function CreatePostDialog({ children, preselectedCategory, postToEdit, on
             <SheetTrigger asChild>
                 { children || <Trigger /> }
             </SheetTrigger>
-            <SheetContent side="bottom" className="p-0 flex flex-col">
+            <SheetContent side="bottom" className="p-0 flex flex-col max-h-screen">
                 <SheetHeader className="p-4 border-b">
                     <SheetTitle>{finalTitle}</SheetTitle>
                     <DialogDescription>
@@ -332,7 +435,7 @@ export function CreatePostDialog({ children, preselectedCategory, postToEdit, on
                     </div>
                     <SheetFooter className="p-4 border-t mt-auto">
                         <Button type="submit" className="w-full" variant="default" disabled={loading}>
-                            {loading ? (isEditMode ? 'Saving...' : 'Posting...') : (isEditMode ? 'Save Changes' : 'Post')}
+                            {loading ? (isEditMode ? 'Saving...' : 'Posting...') : (isEditMode ? 'Save Changes' : `Create ${postType}`)}
                         </Button>
                     </SheetFooter>
                   </form>
@@ -356,10 +459,12 @@ export function CreatePostDialog({ children, preselectedCategory, postToEdit, on
                  {finalDescription}
               </DialogDescription>
             </DialogHeader>
-            {FormContent}
-            <DialogFooter className="p-6 pt-0">
+            <div className="max-h-[70vh] overflow-y-auto p-6">
+                {FormContent}
+            </div>
+            <DialogFooter className="p-6 pt-0 border-t">
                 <Button type="submit" className="w-full" variant="default" disabled={loading}>
-                    {loading ? (isEditMode ? 'Saving...' : 'Posting...') : (isEditMode ? 'Save Changes' : 'Post')}
+                    {loading ? (isEditMode ? 'Saving...' : 'Posting...') : (isEditMode ? 'Save Changes' : `Create ${postType}`)}
                 </Button>
             </DialogFooter>
           </form>

@@ -16,7 +16,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/hooks/use-auth';
-import { Post } from '@/types';
+import { Post, Business } from '@/types';
 import { useToast } from './use-toast';
 
 export const usePosts = () => {
@@ -133,6 +133,23 @@ export const usePosts = () => {
     [user, toast]
   );
 
+  const updateBusiness = useCallback(
+    async (businessId: string, businessData: Partial<Business>) => {
+        if (!user) {
+            toast({ title: 'Error', description: 'You must be logged in to update a business.' });
+            return;
+        }
+        try {
+            const businessRef = doc(db, 'businesses', businessId);
+            await updateDoc(businessRef, businessData);
+            toast({ title: 'Success', description: 'Business updated successfully.' });
+        } catch (error) {
+            console.error('Error updating business:', error);
+            toast({ title: 'Error', description: 'Failed to update business.' });
+        }
+    }, [user, toast]
+  );
+
   const deleteBusiness = useCallback(
     async (businessId: string) => {
         if (!user) {
@@ -152,5 +169,5 @@ export const usePosts = () => {
     [user, toast]
   );
 
-  return { posts, loading, createPost, likePost, addComment, updatePost, deletePost, deleteBusiness };
+  return { posts, loading, createPost, likePost, addComment, updatePost, deletePost, updateBusiness, deleteBusiness };
 };

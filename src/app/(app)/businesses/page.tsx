@@ -38,10 +38,10 @@ import { usePosts } from "@/hooks/use-posts";
 
 function BusinessCard({ business }: { business: Business }) {
     const { user } = useAuth();
-    const { deletePost } = usePosts();
+    const { deleteBusiness } = usePosts();
 
     const handleDelete = () => {
-        deletePost(business.id);
+        deleteBusiness(business.id);
     }
 
     return (
@@ -74,7 +74,7 @@ function BusinessCard({ business }: { business: Business }) {
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                                <CreatePostDialog postToEdit={business as any}>
+                                <CreatePostDialog postToEdit={business as any} postType="Business">
                                     <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
                                         <Edit className="mr-2 h-4 w-4" />
                                         <span>Edit</span>
