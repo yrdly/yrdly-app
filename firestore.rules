@@ -1,73 +1,75 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-  
-    // Users can only create their own user document and update their own data.
-    // Any authenticated user can read public profile info.
+
+    // --- Utility Functions ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isUser(userId) {
+      return request.auth.uid == userId;
+    }
+
+    // --- User Profiles ---
     match /users/{userId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth.uid == userId;
-      allow update: if request.auth.uid == userId;
-      allow delete: if false; // Deletions should be handled by server-side logic
+      allow read: if isSignedIn();
+      allow create: if isUser(userId);
+      allow update: if isUser(userId);
     }
     
-    // Posts can be read by any authenticated user.
-    // Users can only create, update, and delete their own posts.
-    // Any authenticated user can update the 'likedBy' or 'attendees' arrays.
-    match /posts/{postId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      
-      // Allow update if user is the author, OR if they are only modifying the likedBy/attendees list.
-      allow update: if request.auth.uid == resource.data.userId ||
-                      (request.auth.uid != resource.data.userId &&
-                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likedBy', 'attendees']));
-                       
-      allow delete: if request.auth.uid == resource.data.userId;
-
-      // Rules for comments subcollection
-      match /comments/{commentId} {
-        allow read: if request.auth != null;
-        allow create: if request.auth != null;
-        
-        // Allow update only if user is modifying reactions, not the comment text itself.
-        allow update: if request.auth.uid == resource.data.userId &&
-                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions']);
-        
-        allow delete: if request.auth.uid == resource.data.userId;
-      }
-    }
-    
-    // Businesses can be read by anyone, but only created, updated, and deleted by the owner.
-    match /businesses/{businessId} {
-        allow read: if request.auth != null;
-        allow create: if request.auth.uid == request.resource.data.ownerId;
-        allow update, delete: if request.auth.uid == resource.data.ownerId;
-    }
-
-    // Friend requests are managed by cloud functions. Client-side read might be needed.
-    // Writes should be disabled and handled via callable functions.
+    // --- Friend Requests & Notifications (Managed by backend) ---
     match /friend_requests/{requestId} {
-      allow read: if request.auth != null && request.auth.uid in resource.data.participantIds;
-      allow create, update, delete: if false; // Handled by Cloud Functions
+    	allow read: if isSignedIn() && request.auth.uid in resource.data.participantIds;
+      allow create, update, delete: if false; // Managed by Cloud Functions
+    }
+
+    match /notifications/{notificationId} {
+    	allow read: if isSignedIn() && request.auth.uid == resource.data.userId;
+      allow update: if isSignedIn() && request.auth.uid == resource.data.userId && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead']);
+      allow create, delete: if false; // Managed by Cloud Functions
     }
     
-    // Only participants can read/write to a conversation and its messages.
-    match /conversations/{conversationId} {
-      allow read, update: if request.auth.uid in resource.data.participantIds;
-      allow create: if request.auth.uid in request.resource.data.participantIds;
+    // --- Businesses ---
+    match /businesses/{businessId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn() && request.auth.uid == resource.data.ownerId;
+    }
+    
+    // --- Posts (General, Events, For Sale) ---
+    match /posts/{postId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow delete: if isUser(resource.data.userId);
+      
+      // Allow author to edit any field.
+      // Allow any signed-in user to modify ONLY the 'likedBy' or 'attendees' arrays.
+      allow update: if (isUser(resource.data.userId)) ||
+                    (isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likedBy', 'attendees']));
 
-      match /messages/{messageId} {
-        allow read, create: if request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds;
-        allow update, delete: if false;
+      // --- Comments (Subcollection of Posts) ---
+      match /comments/{commentId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn();
+        allow delete: if isUser(resource.data.userId);
+        
+        // Allow any user to update ONLY the reactions.
+        allow update: if isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions']);
       }
     }
-
-    // Notifications are write-only from the server and read-only for the intended user.
-    match /notifications/{notificationId} {
-      allow read: if request.auth.uid == resource.data.userId;
-      allow create, update, delete: if false; // Handled by Cloud Functions
+    
+    // --- Conversations ---
+    match /conversations/{conversationId} {
+      allow read, update: if isSignedIn() && request.auth.uid in resource.data.participantIds;
+      allow create: if isSignedIn() && request.auth.uid in request.resource.data.participantIds;
+      
+      // --- Messages (Subcollection of Conversations) ---
+      match /messages/{messageId} {
+        allow read, create: if isSignedIn() && request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds;
+      }
     }
   }
 }

@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/hooks/use-auth';
 import { PT_Sans } from 'next/font/google';
+import { Analytics } from '@vercel/analytics/react';
 
 const ptSans = PT_Sans({
   subsets: ['latin'],
@@ -34,6 +35,7 @@ export default function RootLayout({
             {children}
         </AuthProvider>
         <Toaster />
+        <Analytics />
       </body>
     </html>
   );
