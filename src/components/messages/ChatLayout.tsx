@@ -92,6 +92,11 @@ export function ChatLayout({
       if (conversationToSelect) {
         setSelectedConversation(conversationToSelect);
       }
+    } else {
+        // If no conversation is selected, and we are on mobile, clear selection
+        if(window.innerWidth < 768) {
+            setSelectedConversation(null);
+        }
     }
   }, [selectedConversationId, conversations]);
 
@@ -236,7 +241,7 @@ export function ChatLayout({
                 onOpenChange={(wasChanged) => setProfileUser(null)}
             />
         )}
-        <Card className="h-[calc(100vh-10rem)] w-full flex overflow-hidden">
+        <Card className="h-full w-full flex overflow-hidden">
           {/* Conversation List */}
           <div
             className={cn(
@@ -299,7 +304,7 @@ export function ChatLayout({
           {/* Chat View */}
           <div
             className={cn(
-              "w-full md:w-2/3 flex flex-col absolute md:static inset-0 transition-transform duration-300 ease-in-out bg-background",
+              "w-full md:w-2/3 flex flex-col absolute md:static inset-0 transition-transform duration-300 ease-in-out bg-background z-20",
               "md:translate-x-0",
               selectedConversation ? "translate-x-0" : "translate-x-full"
             )}
@@ -307,7 +312,7 @@ export function ChatLayout({
             {selectedConversation ? (
               <>
                 <button
-                    className="flex items-center gap-4 p-3 border-b hover:bg-muted/50"
+                    className="flex items-center gap-4 p-3 border-b hover:bg-muted/50 w-full"
                     onClick={() => setProfileUser(selectedConversation.participant)}
                 >
                   <Button

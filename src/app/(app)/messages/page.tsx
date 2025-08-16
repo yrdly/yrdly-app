@@ -8,6 +8,7 @@ import type { Conversation, User } from '@/types';
 import { collection, query, where, onSnapshot, getDoc, doc, Timestamp, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 const MessagesLoading = () => (
     <div className="p-4 space-y-4">
@@ -126,13 +127,21 @@ export default function MessagesPage({ params }: { params?: { convId?: string } 
     }
 
     if (conversations.length === 0) {
-        return <NoFriendsEmptyState 
-            title="No Conversations Yet"
-            description="You haven't started any conversations yet. Find neighbors and send them a friend request to start chatting!"
-            buttonText="Find Neighbors"
-            buttonLink="/neighbors"
-        />;
+        return (
+            <div className="h-full">
+                <NoFriendsEmptyState 
+                    title="No Conversations Yet"
+                    description="You haven't started any conversations yet. Find neighbors and send them a friend request to start chatting!"
+                    buttonText="Find Neighbors"
+                    buttonLink="/neighbors"
+                />
+            </div>
+        );
     }
 
-    return <ChatLayout conversations={conversations} currentUser={currentUser} selectedConversationId={selectedConversationId} />;
+    return (
+        <div className="h-[calc(100vh_-_8rem)] md:h-auto">
+            <ChatLayout conversations={conversations} currentUser={currentUser} selectedConversationId={selectedConversationId} />
+        </div>
+    );
 }
