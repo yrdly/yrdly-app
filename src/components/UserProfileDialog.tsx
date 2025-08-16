@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card';
 import { MapPin, MessageSquare, UserPlus, Check, X, Clock, MoreHorizontal, ShieldBan } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { Dialog, DialogContent, DialogHeader } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -231,9 +231,7 @@ export function UserProfileDialog({ user: profileUser, open, onOpenChange }: Use
                 ) : (
                     <>
                         <DialogHeader>
-                            <div className="sr-only">
-                            {`View and interact with ${profileUser.name}'s profile.`}
-                            </div>
+                            <DialogTitle className="sr-only">{`Profile of ${profileUser.name}`}</DialogTitle>
                         </DialogHeader>
                         <Card className="border-none shadow-none">
                             <CardHeader className="flex flex-col items-center text-center p-6 bg-muted/50 relative">
