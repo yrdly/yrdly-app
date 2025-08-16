@@ -24,9 +24,14 @@ export default function SettingsPage() {
   const { user } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
+
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [initialUserData, setInitialUserData] = useState<Partial<User>>({});
+
   const [name, setName] = useState(user?.displayName || "");
   const [bio, setBio] = useState("");
   const [profilePic, setProfilePic] = useState<File | null>(null);
+  const [profilePicUrl, setProfilePicUrl] = useState(user?.photoURL || "");
   const [uploading, setUploading] = useState(false);
   const [location, setLocation] = useState<User['location']>({});
   const [wardsForSelectedLga, setWardsForSelectedLga] = useState<string[]>([]);
@@ -40,22 +45,26 @@ export default function SettingsPage() {
         const userDocSnap = await getDoc(userDocRef);
         if (userDocSnap.exists()) {
           const userData = userDocSnap.data() as User;
-          setBio(userData.bio || "");
-          if (userData.location) {
-            setLocation(userData.location);
-            if (userData.location.lga) {
-                setWardsForSelectedLga(wardsByLga[userData.location.lga] || []);
-            }
-          }
-          if (!user.displayName) {
-            setName(userData.name || "");
+          const fullUserData = {
+            name: userData.name || user.displayName || "",
+            bio: userData.bio || "",
+            location: userData.location || {},
+            avatarUrl: userData.avatarUrl || user.photoURL || "",
+          };
+
+          setInitialUserData(fullUserData);
+          setName(fullUserData.name);
+          setBio(fullUserData.bio);
+          setLocation(fullUserData.location);
+          setProfilePicUrl(fullUserData.avatarUrl);
+
+          if (userData.location?.lga) {
+              setWardsForSelectedLga(wardsByLga[userData.location.lga] || []);
           }
         }
       };
       fetchUserData();
-      if (user.displayName) {
-        setName(user.displayName);
-      }
+      setProfilePicUrl(user.photoURL || "");
     }
   }, [user]);
 
@@ -76,7 +85,9 @@ export default function SettingsPage() {
 
   const handleProfilePicChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setProfilePic(e.target.files[0]);
+      const file = e.target.files[0];
+      setProfilePic(file);
+      setProfilePicUrl(URL.createObjectURL(file));
     }
   };
 
@@ -84,30 +95,34 @@ export default function SettingsPage() {
     if (!user) return;
     setUploading(true);
     try {
-      let photoURL = user.photoURL;
+      let newPhotoURL = profilePicUrl;
 
       if (profilePic) {
         const storageRef = ref(storage, `avatars/${user.uid}/${profilePic.name}`);
         const snapshot = await uploadBytes(storageRef, profilePic);
-        photoURL = await getDownloadURL(snapshot.ref);
+        newPhotoURL = await getDownloadURL(snapshot.ref);
       }
 
-      await updateProfile(user, {
-        displayName: name,
-        photoURL: photoURL
-      });
-
+      if (user.displayName !== name || user.photoURL !== newPhotoURL) {
+        await updateProfile(user, {
+            displayName: name,
+            photoURL: newPhotoURL,
+        });
+      }
+      
       const userData: Partial<User> = {
         name: name,
         bio: bio,
         location: location,
-        avatarUrl: photoURL || user.photoURL || undefined,
+        avatarUrl: newPhotoURL || user.photoURL || undefined,
         email: user.email || undefined,
       };
 
       await setDoc(doc(db, "users", user.uid), userData, { merge: true } );
 
       toast({ title: "Profile Updated", description: "Your profile has been successfully updated." });
+      setIsEditMode(false);
+      setProfilePic(null);
     } catch (error) {
       console.error("Error updating profile: ", error);
       toast({ variant: "destructive", title: "Error", description: "Failed to update profile." });
@@ -115,6 +130,15 @@ export default function SettingsPage() {
       setUploading(false);
     }
   };
+
+  const handleCancelEdit = () => {
+    setName(initialUserData.name || "");
+    setBio(initialUserData.bio || "");
+    setLocation(initialUserData.location || {});
+    setProfilePicUrl(initialUserData.avatarUrl || user?.photoURL || "");
+    setProfilePic(null);
+    setIsEditMode(false);
+  }
 
   const handleLogout = async () => {
     await auth.signOut();
@@ -145,18 +169,18 @@ export default function SettingsPage() {
             <CardContent className="space-y-6">
               <div className="flex items-center gap-4">
                 <Avatar className="h-20 w-20">
-                  <AvatarImage src={user?.photoURL || ""} alt={user?.displayName || ""} />
-                  <AvatarFallback>{user?.displayName?.charAt(0)}</AvatarFallback>
+                  <AvatarImage src={profilePicUrl} alt={name} />
+                  <AvatarFallback>{name?.charAt(0)}</AvatarFallback>
                 </Avatar>
                 <div className="space-y-1">
                   <Label htmlFor="picture">Profile Picture</Label>
-                  <Input id="picture" type="file" onChange={handleProfilePicChange} accept="image/*" />
+                  <Input id="picture" type="file" onChange={handleProfilePicChange} accept="image/*" disabled={!isEditMode} />
                 </div>
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="name">Name</Label>
-                <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
+                <Input id="name" value={name} onChange={(e) => setName(e.target.value)} disabled={!isEditMode}/>
               </div>
 
               <div className="space-y-2">
@@ -164,7 +188,7 @@ export default function SettingsPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <Label htmlFor="state" className="text-xs">State</Label>
-                    <Select value={location?.state || ""} onValueChange={(value) => handleLocationChange("state", value)}>
+                    <Select value={location?.state || ""} onValueChange={(value) => handleLocationChange("state", value)} disabled={!isEditMode}>
                       <SelectTrigger id="state"><SelectValue placeholder="Select your state" /></SelectTrigger>
                       <SelectContent>{allStates.map((state) => (<SelectItem key={state} value={state}>{state}</SelectItem>))}</SelectContent>
                     </Select>
@@ -172,7 +196,7 @@ export default function SettingsPage() {
 
                   <div className="space-y-1">
                     <Label htmlFor="lga" className="text-xs">LGA</Label>
-                    <Select value={location?.lga || ""} onValueChange={(value) => handleLocationChange("lga", value)} disabled={!location?.state}>
+                    <Select value={location?.lga || ""} onValueChange={(value) => handleLocationChange("lga", value)} disabled={!location?.state || !isEditMode}>
                       <SelectTrigger id="lga"><SelectValue placeholder="Select your LGA" /></SelectTrigger>
                       <SelectContent>{lgasForSelectedState.map((lga) => (<SelectItem key={lga} value={lga}>{lga}</SelectItem>))}</SelectContent>
                     </Select>
@@ -180,7 +204,7 @@ export default function SettingsPage() {
 
                   <div className="space-y-1">
                     <Label htmlFor="ward" className="text-xs">Ward</Label>
-                    <Select value={location?.ward || ""} onValueChange={(value) => handleLocationChange("ward", value)} disabled={!location?.lga}>
+                    <Select value={location?.ward || ""} onValueChange={(value) => handleLocationChange("ward", value)} disabled={!location?.lga || !isEditMode}>
                       <SelectTrigger id="ward"><SelectValue placeholder="Select your Ward" /></SelectTrigger>
                       <SelectContent>{wardsForSelectedLga.map((ward) => (<SelectItem key={ward} value={ward}>{ward}</SelectItem>))}</SelectContent>
                     </Select>
@@ -188,20 +212,27 @@ export default function SettingsPage() {
                   
                   <div className="space-y-1">
                     <Label htmlFor="city" className="text-xs">City / Town / Street</Label>
-                    <Input id="city" placeholder="e.g. Opebi Street" value={location?.city || ""} onChange={(e) => handleLocationChange("city", e.target.value)} />
+                    <Input id="city" placeholder="e.g. Opebi Street" value={location?.city || ""} onChange={(e) => handleLocationChange("city", e.target.value)} disabled={!isEditMode}/>
                   </div>
                 </div>
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="bio">Bio</Label>
-                <Textarea id="bio" placeholder="Tell us about yourself" className="min-h-[100px] resize-none" value={bio} onChange={(e) => setBio(e.target.value)} />
+                <Textarea id="bio" placeholder="Tell us about yourself" className="min-h-[100px] resize-none" value={bio} onChange={(e) => setBio(e.target.value)} disabled={!isEditMode}/>
               </div>
             </CardContent>
             <CardFooter>
-              <Button onClick={handleProfileUpdate} disabled={uploading}>
-                {uploading ? "Saving..." : "Save Changes"}
-              </Button>
+              {isEditMode ? (
+                <div className="flex gap-2">
+                    <Button onClick={handleProfileUpdate} disabled={uploading}>
+                        {uploading ? "Saving..." : "Save Changes"}
+                    </Button>
+                    <Button variant="outline" onClick={handleCancelEdit}>Cancel</Button>
+                </div>
+              ) : (
+                <Button onClick={() => setIsEditMode(true)}>Edit Profile</Button>
+              )}
             </CardFooter>
           </Card>
         </TabsContent>

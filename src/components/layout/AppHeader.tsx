@@ -2,7 +2,7 @@
 "use client";
 
 import { useState } from 'react';
-import { Search, LogOut, MessageCircle, Map } from 'lucide-react';
+import { Search, LogOut, MessageCircle, Map, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -59,27 +59,14 @@ export function AppHeader() {
             </Button>
           </Link>
           <NotificationsPanel />
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="rounded-full">
+          <Link href="/settings">
+             <Button variant="ghost" size="icon" className="rounded-full">
                 <Avatar className="h-8 w-8">
                   <AvatarImage src={user?.photoURL || `https://placehold.co/100x100.png`} alt={user?.displayName || 'User'} data-ai-hint="person portrait" />
                   <AvatarFallback>{user?.displayName?.charAt(0) || 'U'}</AvatarFallback>
                 </Avatar>
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>{user?.displayName || 'My Account'}</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild><Link href="/settings">Settings</Link></DropdownMenuItem>
-              <DropdownMenuItem>Support</DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleLogout}>
-                <LogOut className="mr-2 h-4 w-4" />
-                <span>Logout</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          </Link>
         </div>
       </header>
       <SearchDialog open={isSearchOpen} onOpenChange={setIsSearchOpen} />
