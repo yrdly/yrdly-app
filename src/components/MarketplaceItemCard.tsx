@@ -14,9 +14,9 @@ export function MarketplaceItemCard({ item }: MarketplaceItemCardProps) {
     
     const formatPrice = (price?: number) => {
         if (price === undefined || price === null) return "Free";
-        return new Intl.NumberFormat('en-US', {
+        return new Intl.NumberFormat('en-NG', {
             style: 'currency',
-            currency: 'USD',
+            currency: 'NGN',
         }).format(price);
     };
 

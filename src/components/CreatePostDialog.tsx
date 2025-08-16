@@ -351,7 +351,7 @@ export function CreatePostDialog({
                         <FormItem>
                             <FormControl>
                             <div className="relative">
-                                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">$</span>
+                                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">₦</span>
                                 <Input type="number" placeholder="Price" className="pl-7" {...field} />
                             </div>
                             </FormControl>
