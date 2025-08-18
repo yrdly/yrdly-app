@@ -15,7 +15,7 @@ export interface Business {
   description: string;
   location: Location;
   imageUrls?: string[];
-  createdAt?: Timestamp;
+  createdAt: Timestamp;
 }
 
 export type PostCategory = 'General' | 'Event' | 'For Sale' | 'Business';
@@ -26,6 +26,7 @@ export interface Post {
   authorName: string;
   authorImage: string;
   text: string;
+  description?: string; // For marketplace listings
   imageUrl?: string;
   imageUrls?: string[];
   timestamp: Timestamp;
@@ -74,6 +75,7 @@ export interface User {
   friends?: string[];
   blockedUsers?: string[];
   notificationSettings?: NotificationSettings;
+  timestamp?: Timestamp;
 }
 
 export interface FriendRequest {

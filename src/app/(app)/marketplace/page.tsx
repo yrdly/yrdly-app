@@ -3,7 +3,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus } from "lucide-react";
+import { Search, Plus, ShoppingCart } from "lucide-react";
 import { CreatePostDialog } from "@/components/CreatePostDialog";
 import { useState, useEffect, useMemo } from "react";
 import type { Post as PostType } from "@/types";
@@ -11,33 +11,18 @@ import { collection, query, where, onSnapshot, orderBy } from "firebase/firestor
 import { db } from "@/lib/firebase";
 import { MarketplaceItemCard } from "@/components/MarketplaceItemCard";
 import { Skeleton } from "@/components/ui/skeleton";
-import Link from "next/link";
 
-interface CategorySectionProps {
-    title: string;
-    items: PostType[];
-}
-
-function CategorySection({ title, items }: CategorySectionProps) {
-    if (items.length === 0) return null;
-
+function EmptyMarketplace() {
     return (
-        <div className="space-y-4">
-            <div className="flex justify-between items-center">
-                <h2 className="text-xl font-bold">{title}</h2>
-                <Button variant="ghost" asChild>
-                    <Link href="#">See all in {title}</Link>
-                </Button>
+        <div className="text-center py-16">
+            <div className="inline-block bg-muted p-4 rounded-full mb-4">
+                <ShoppingCart className="h-12 w-12 text-muted-foreground" />
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                {items.map(item => (
-                    <MarketplaceItemCard key={item.id} item={item} />
-                ))}
-            </div>
+            <h2 className="text-2xl font-bold">The marketplace is empty</h2>
+            <p className="text-muted-foreground mt-2 mb-6">Be the first to list an item for sale in your neighborhood!</p>
         </div>
-    );
+    )
 }
-
 
 export default function MarketplacePage() {
     const [items, setItems] = useState<PostType[]>([]);
@@ -71,15 +56,6 @@ export default function MarketplacePage() {
         );
     }, [items, searchTerm]);
 
-    // This is a placeholder for actual categorization logic
-    // In a real app, you might have sub-categories stored with the post
-    const categorizedItems = useMemo(() => {
-        const furniture = filteredItems.filter(i => i.text.toLowerCase().includes('desk') || i.text.toLowerCase().includes('cabinet') || i.text.toLowerCase().includes('table'));
-        const pets = filteredItems.filter(i => i.text.toLowerCase().includes('dog') || i.text.toLowerCase().includes('pet') || i.text.toLowerCase().includes('tortoise'));
-        const other = filteredItems.filter(i => !furniture.includes(i) && !pets.includes(i));
-        return { furniture, pets, other };
-    }, [filteredItems]);
-
   return (
     <div className="space-y-8">
        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -101,22 +77,26 @@ export default function MarketplacePage() {
         
         {loading ? (
              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-48 w-full" />)}
+                {[...Array(10)].map((_, i) => <Skeleton key={i} className="h-48 w-full" />)}
             </div>
         ) : filteredItems.length > 0 ? (
-            <div className="space-y-8">
-                <CategorySection title="Featured" items={categorizedItems.other} />
-                <CategorySection title="Furniture" items={categorizedItems.furniture} />
-                <CategorySection title="Spoil your pets" items={categorizedItems.pets} />
+             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                {filteredItems.map(item => (
+                    <MarketplaceItemCard key={item.id} item={item} />
+                ))}
             </div>
         ) : (
-             <div className="text-center py-16">
-                <div className="inline-block bg-muted p-4 rounded-full mb-4">
-                    <Search className="h-12 w-12 text-muted-foreground" />
+            searchTerm ? (
+                <div className="text-center py-16">
+                    <div className="inline-block bg-muted p-4 rounded-full mb-4">
+                        <Search className="h-12 w-12 text-muted-foreground" />
+                    </div>
+                    <h2 className="text-2xl font-bold">No items found for &quot;{searchTerm}&quot;</h2>
+                    <p className="text-muted-foreground mt-2 mb-6">Try searching for something else.</p>
                 </div>
-                <h2 className="text-2xl font-bold">No items found for &quot;{searchTerm}&quot;</h2>
-                <p className="text-muted-foreground mt-2 mb-6">Try searching for something else.</p>
-            </div>
+            ) : (
+                <EmptyMarketplace />
+            )
         )}
         
         <div className="fixed bottom-20 right-4 z-20">

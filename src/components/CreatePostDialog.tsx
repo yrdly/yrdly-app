@@ -87,7 +87,8 @@ export function CreatePostDialog({
   const isEditMode = !!postToEdit;
 
   const formSchema = z.object({
-    text: z.string().min(1, "Description can't be empty.").max(5000),
+    text: z.string().min(1, "Title can't be empty.").max(100),
+    description: z.string().optional(),
     category: z.enum(["General", "Event", "For Sale", "Business"]),
     price: z.preprocess(
         (val) => (val === "" ? undefined : Number(val)),
@@ -127,6 +128,7 @@ export function CreatePostDialog({
     resolver: zodResolver(formSchema),
     defaultValues: {
       text: "",
+      description: "",
       category: preselectedCategory || (postType === 'Business' ? 'Business' : "General"),
       price: undefined,
       image: undefined,
@@ -158,6 +160,7 @@ export function CreatePostDialog({
         } else {
              form.reset({
                 text: "",
+                description: "",
                 category: preselectedCategory || (postType === 'Business' ? 'Business' : "General"),
                 price: undefined,
                 image: undefined,
@@ -194,7 +197,7 @@ export function CreatePostDialog({
         }
 
         if (postType === 'Business') {
-            const businessData: Omit<Business, 'id' | 'ownerId' | 'createdAt'> = {
+            const businessData: Partial<Business> = {
                 name: values.name!,
                 category: values.businessCategory!,
                 description: values.text,
@@ -205,13 +208,14 @@ export function CreatePostDialog({
                 await updateBusiness(postToEdit.id, businessData);
                 toast({ title: 'Business updated!' });
             } else {
-                await createBusiness(businessData);
+                await createBusiness(businessData as Omit<Business, 'id' | 'ownerId' | 'createdAt'>);
                 toast({ title: 'Business added!' });
             }
             
         } else { // It's a Post
             const postData: Partial<Post> = {
                 text: values.text,
+                description: values.description,
                 category: values.category,
                 imageUrls: imageUrls,
                 imageUrl: imageUrls[0] || "",
@@ -302,74 +306,100 @@ export function CreatePostDialog({
       </>
   );
 
-  const PostFormFields = () => (
+  const PostFormFields = () => {
+    const category = form.watch("category");
+
+    return (
     <>
        <FormField
             control={form.control}
             name="text"
             render={({ field }) => (
             <FormItem>
+                <FormLabel>{category === 'For Sale' ? 'Item Title' : 'Post'}</FormLabel>
                 <FormControl>
                 <Textarea
-                    placeholder="What&apos;s happening in the neighborhood?"
-                    className="resize-none min-h-[120px] border-none shadow-none focus-visible:ring-0 p-4"
+                    placeholder={category === 'For Sale' ? 'e.g. Slightly used armchair' : "What's happening in the neighborhood?"}
+                    className="resize-none min-h-[120px]"
                     {...field}
                 />
                 </FormControl>
-                <FormMessage className="px-4" />
+                <FormMessage />
             </FormItem>
             )}
         />
-        <div className="px-4 pb-4 space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+
+        {category === 'For Sale' && (
+            <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Description (Optional)</FormLabel>
+                    <FormControl>
+                    <Textarea
+                        placeholder="Add more details about the item, its condition, etc."
+                        className="resize-none min-h-[100px]"
+                        {...field}
+                    />
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+        )}
+
+
+        <div className="grid grid-cols-2 gap-4">
+            <FormField
+                control={form.control}
+                name="category"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Category</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                        <SelectTrigger>
+                        <SelectValue placeholder="Select a category" />
+                        </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                        <SelectItem value="General">General</SelectItem>
+                        <SelectItem value="Event">Event</SelectItem>
+                        <SelectItem value="For Sale">For Sale</SelectItem>
+                    </SelectContent>
+                    </Select>
+                </FormItem>
+                )}
+            />
+            
+            {category === 'For Sale' && (
                 <FormField
                     control={form.control}
-                    name="category"
+                    name="price"
                     render={({ field }) => (
                     <FormItem>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormLabel>Price</FormLabel>
                         <FormControl>
-                            <SelectTrigger>
-                            <SelectValue placeholder="Select a category" />
-                            </SelectTrigger>
+                        <div className="relative">
+                            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">₦</span>
+                            <Input type="number" placeholder="Price" className="pl-7" {...field} />
+                        </div>
                         </FormControl>
-                        <SelectContent>
-                            <SelectItem value="General">General</SelectItem>
-                            <SelectItem value="Event">Event</SelectItem>
-                            <SelectItem value="For Sale">For Sale</SelectItem>
-                        </SelectContent>
-                        </Select>
+                        <FormMessage />
                     </FormItem>
                     )}
                 />
-                
-                {form.watch('category') === 'For Sale' && (
-                    <FormField
-                        control={form.control}
-                        name="price"
-                        render={({ field }) => (
-                        <FormItem>
-                            <FormControl>
-                            <div className="relative">
-                                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">₦</span>
-                                <Input type="number" placeholder="Price" className="pl-7" {...field} />
-                            </div>
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                        )}
-                    />
-                )}
-            </div>
+            )}
         </div>
     </>
-  );
+  )};
 
 
   const FormContent = (
     <div className="space-y-4 px-1">
       {postType === 'Business' ? <BusinessFormFields /> : <PostFormFields />}
-       <div className="px-4 pb-4 space-y-4">
+       <div className="space-y-4">
           <FormField
             control={form.control}
             name="image"
@@ -429,7 +459,7 @@ export function CreatePostDialog({
                 </SheetHeader>
                 <Form {...form}>
                   <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col">
-                    <div className="py-4 flex-1 overflow-y-auto">
+                    <div className="p-4 flex-1 overflow-y-auto">
                         {FormContent}
                     </div>
                     <SheetFooter className="p-4 border-t mt-auto">

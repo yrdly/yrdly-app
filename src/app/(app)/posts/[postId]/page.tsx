@@ -8,6 +8,8 @@ import { Post as PostType } from '@/types';
 import { PostCard } from '@/components/PostCard';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft } from 'lucide-react';
 
 interface PostPageProps {
     params: {
@@ -61,6 +63,12 @@ export default function PostPage({ params }: PostPageProps) {
 
     return (
         <div className="max-w-2xl mx-auto">
+             {post.category === "For Sale" && (
+                <Button variant="ghost" onClick={() => router.back()} className="mb-4">
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Back to Marketplace
+                </Button>
+             )}
             <PostCard post={post} />
         </div>
     );

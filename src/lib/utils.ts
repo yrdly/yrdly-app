@@ -1,3 +1,4 @@
+
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 
@@ -34,3 +35,11 @@ export function timeAgo(date: Date | undefined | null): string {
   }
   return Math.floor(seconds) + " seconds ago";
 }
+
+export const formatPrice = (price?: number) => {
+    if (price === undefined || price === null) return "Free";
+    return new Intl.NumberFormat('en-NG', {
+        style: 'currency',
+        currency: 'NGN',
+    }).format(price);
+};

@@ -1,7 +1,7 @@
 
 "use client";
 
-import type { User, Post, FriendRequest } from "@/types";
+import type { User, Post } from "@/types";
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Heart, MessageCircle, Share2, MapPin, Briefcase, MoreHorizontal, Trash2, Edit } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { doc, arrayUnion, arrayRemove, onSnapshot, getDoc, deleteDoc, runTransaction, collection, query, where } from "firebase/firestore";
+import { doc, arrayUnion, arrayRemove, onSnapshot, getDoc, deleteDoc, runTransaction, collection, query, where, addDoc, serverTimestamp, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Skeleton } from "./ui/skeleton";
 import {
@@ -38,8 +38,9 @@ import {
 import { CreatePostDialog } from "./CreatePostDialog";
 import { useToast } from "@/hooks/use-toast";
 import { CommentSection } from "./CommentSection";
-import { timeAgo } from "@/lib/utils";
+import { timeAgo, formatPrice } from "@/lib/utils";
 import { UserProfileDialog } from "./UserProfileDialog";
+import { useRouter } from "next/navigation";
 
 
 interface PostCardProps {
@@ -49,6 +50,7 @@ interface PostCardProps {
 export function PostCard({ post }: PostCardProps) {
   const { user: currentUser } = useAuth();
   const { toast } = useToast();
+  const router = useRouter();
   const [author, setAuthor] = useState<User | null>(null);
   const [loadingAuthor, setLoadingAuthor] = useState(true);
   const [likes, setLikes] = useState(post.likedBy?.length || 0);
@@ -184,11 +186,88 @@ export function PostCard({ post }: PostCardProps) {
     }
   };
   
+    const handleMessageSeller = async () => {
+        if (!currentUser || !author || currentUser.uid === author.uid) return;
+
+        const sortedParticipantIds = [currentUser.uid, author.uid].sort();
+        
+        const q = query(
+            collection(db, "conversations"),
+            where("participantIds", "==", sortedParticipantIds)
+        );
+
+        try {
+            const querySnapshot = await getDocs(q);
+            let conversationId: string;
+
+            if (querySnapshot.empty) {
+                const newConvRef = await addDoc(collection(db, "conversations"), {
+                    participantIds: sortedParticipantIds,
+                    lastMessage: null,
+                    timestamp: serverTimestamp(),
+                });
+                conversationId = newConvRef.id;
+            } else {
+                conversationId = querySnapshot.docs[0].id;
+            }
+            
+            router.push(`/messages/${conversationId}`);
+        } catch (error) {
+            console.error("Error handling message action:", error);
+            toast({ variant: "destructive", title: "Error", description: "Could not open conversation." });
+        }
+    };
+
   const openProfile = () => {
     if (author && author.uid !== currentUser?.uid) {
         setSelectedUser(author);
     }
   };
+
+  const renderMarketplaceContent = () => (
+    <CardContent className="p-4 pt-2">
+        <h2 className="text-3xl font-bold">{formatPrice(post.price)}</h2>
+        <h3 className="text-xl font-semibold mt-2">{post.text}</h3>
+        
+        <div className="mt-6">
+            <h4 className="font-semibold text-md mb-2">Description</h4>
+            <p className="text-muted-foreground whitespace-pre-wrap">{post.description || "No description provided."}</p>
+        </div>
+        
+        <div className="mt-6 border-t pt-4">
+            <h4 className="font-semibold text-md mb-2">Seller Information</h4>
+            <button onClick={openProfile} className="flex items-center gap-3 hover:bg-muted p-2 rounded-lg w-full text-left">
+                <Avatar>
+                    <AvatarImage src={author?.avatarUrl} alt={author?.name} />
+                    <AvatarFallback>{author?.name?.charAt(0)}</AvatarFallback>
+                </Avatar>
+                <div>
+                    <p className="font-semibold">{author?.name}</p>
+                    <p className="text-xs text-muted-foreground">Joined {timeAgo(author?.timestamp?.toDate())}</p>
+                </div>
+            </button>
+        </div>
+
+        {currentUser?.uid !== post.userId && (
+            <Button className="w-full mt-4" onClick={handleMessageSeller}>
+                <MessageCircle className="mr-2 h-4 w-4" /> Message Seller
+            </Button>
+        )}
+
+    </CardContent>
+  );
+
+  const renderDefaultContent = () => (
+     <CardContent className="p-4 pt-0">
+        <p className="whitespace-pre-wrap">{post.text}</p>
+        {post.eventLocation && (
+            <div className="flex items-center text-sm text-muted-foreground mt-2">
+                <MapPin className="h-4 w-4 mr-1"/>
+                <span>{post.eventLocation.address}</span>
+            </div>
+        )}
+    </CardContent>
+  );
 
   return (
     <Card className="overflow-hidden">
@@ -270,19 +349,10 @@ export function PostCard({ post }: PostCardProps) {
       </CardHeader>
 
       <Collapsible open={isCommentsOpen} onOpenChange={setIsCommentsOpen}>
-        <CardContent className="p-4 pt-0">
-            <p className="whitespace-pre-wrap">{post.text}</p>
-            {post.eventLocation && (
-                <div className="flex items-center text-sm text-muted-foreground mt-2">
-                    <MapPin className="h-4 w-4 mr-1"/>
-                    <span>{post.eventLocation.address}</span>
-                </div>
-            )}
-        </CardContent>
-        {post.imageUrl && (
+        {post.imageUrls && post.imageUrls.length > 0 && (
             <div className="relative w-full aspect-video">
             <Image
-                src={post.imageUrl}
+                src={post.imageUrls[0]}
                 alt="Post image"
                 fill
                 className="object-cover"
@@ -290,6 +360,9 @@ export function PostCard({ post }: PostCardProps) {
             />
             </div>
         )}
+        
+        {post.category === 'For Sale' ? renderMarketplaceContent() : renderDefaultContent()}
+
         <CardFooter className="p-2 bg-background/50">
             <div className="flex justify-around w-full">
             <Button variant="ghost" className="flex-1 gap-2" onClick={handleLike}>

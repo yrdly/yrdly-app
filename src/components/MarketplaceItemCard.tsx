@@ -5,20 +5,13 @@ import type { Post } from "@/types";
 import Image from "next/image";
 import Link from "next/link";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { formatPrice } from "@/lib/utils";
 
 interface MarketplaceItemCardProps {
     item: Post;
 }
 
 export function MarketplaceItemCard({ item }: MarketplaceItemCardProps) {
-    
-    const formatPrice = (price?: number) => {
-        if (price === undefined || price === null) return "Free";
-        return new Intl.NumberFormat('en-NG', {
-            style: 'currency',
-            currency: 'NGN',
-        }).format(price);
-    };
 
     return (
         <Link href={`/posts/${item.id}`}>
@@ -26,7 +19,7 @@ export function MarketplaceItemCard({ item }: MarketplaceItemCardProps) {
                 <CardContent className="p-0">
                     <div className="relative w-full aspect-square overflow-hidden">
                         <Image
-                            src={item.imageUrl || `https://placehold.co/400x400.png`}
+                            src={item.imageUrls?.[0] || `https://placehold.co/400x400.png`}
                             alt={item.text}
                             fill
                             className="object-cover group-hover:scale-105 transition-transform duration-300"
@@ -36,7 +29,7 @@ export function MarketplaceItemCard({ item }: MarketplaceItemCardProps) {
                 </CardContent>
                 <CardFooter className="p-3 flex-col items-start">
                     <p className="font-semibold truncate w-full">{item.text}</p>
-                    <p className="text-sm text-muted-foreground">{formatPrice(item.price)}</p>
+                    <p className="text-sm font-semibold">{formatPrice(item.price)}</p>
                 </CardFooter>
             </Card>
         </Link>
