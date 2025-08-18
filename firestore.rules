@@ -1,138 +1,65 @@
 
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Helper function to check if a user is authenticated
-    function isAuthenticated() {
-      return request.auth != null;
-    }
-
-    // Helper function to check if a user is the owner of a document
-    function isOwner(userId) {
-      return request.auth.uid == userId;
-    }
-    
-    // Helper function to check if the update only modifies specific fields
-    function isUpdatingFields(fields) {
-      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(fields);
-    }
-    
-    // Helper function to check if the update only adds to an array
-    function isAddingToArray(field) {
-       return request.resource.data[field].containsAll(resource.data[field]) &&
-              request.resource.data[field].size() == resource.data[field].size() + 1;
-    }
-    
-     // Helper function to check if removing from an array
-    function isRemovingFromArray(field) {
-      return resource.data[field].containsAll(request.resource.data[field]) &&
-             request.resource.data[field].size() == resource.data[field].size() - 1;
-    }
-
-    // Users collection
     match /users/{userId} {
-      allow read: if isAuthenticated();
-      // Users can create their own profile
-      allow create: if isOwner(userId);
-      // Users can update their own profile's mutable fields
-      allow update: if isOwner(userId) && request.resource.data.keys().hasOnly(['name', 'avatarUrl', 'bio', 'location', 'fcmToken', 'friends', 'blockedUsers', 'notificationSettings']);
+      // Anyone can read a user's profile
+      allow read;
+      
+      // A user can only be created if they are the one making the request
+      allow create: if request.auth != null && request.resource.id == request.auth.uid;
+      
+      // A user can only update their own document, and only specific fields
+      allow update: if request.auth != null && request.auth.uid == userId 
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'bio', 'location', 'avatarUrl', 'friends', 'blockedUsers', 'fcmToken']);
     }
 
-    // Posts and Events
     match /posts/{postId} {
-      // Anyone authenticated can read posts
-      allow get: if isAuthenticated();
-      allow list: if isAuthenticated();
-      
-      // Users can create posts if they are logged in and the post belongs to them
-      allow create: if isAuthenticated() && isOwner(request.resource.data.userId);
+      allow read;
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow delete: if request.auth != null && resource.data.userId == request.auth.uid;
+      // Allow post owner to update their own post.
+      // Allow any authenticated user to update only the likedBy, attendees, or commentCount fields.
+      allow update: if request.auth != null && (
+                      (request.auth.uid == resource.data.userId) ||
+                      (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likedBy', 'attendees', 'commentCount']))
+                    );
+    }
 
-      // Allow updates only for specific fields by authenticated users
-      allow update: if isAuthenticated() && (
-        // The owner can edit specific fields of their own post
-        (isOwner(resource.data.userId) && isUpdatingFields(['text', 'category', 'price', 'imageUrls', 'imageUrl', 'description'])) ||
-        // Any authenticated user can like/unlike a post (update 'likedBy' array)
-        isUpdatingFields(['likedBy']) ||
-        // Any authenticated user can attend/unattend an event (update 'attendees' array)
-        isUpdatingFields(['attendees']) ||
-        // Any authenticated user can increment/decrement the comment count
-        (isUpdatingFields(['commentCount']) && (request.resource.data.commentCount == resource.data.commentCount + 1 || request.resource.data.commentCount == resource.data.commentCount - 1))
-      );
-      
-      // Only the post owner can delete their post
-      allow delete: if isAuthenticated() && isOwner(resource.data.userId);
-
-      // Comments subcollection
-      match /comments/{commentId} {
-        // Anyone authenticated can read comments
-        allow get, list: if isAuthenticated();
-        
-        // Anyone authenticated can create a comment
-        allow create: if isAuthenticated() && isOwner(request.resource.data.userId);
-
-        // Allow updates only for reactions
-        allow update: if isAuthenticated() && isUpdatingFields(['reactions']);
-        
-        // Owner of the comment or owner of the post can delete the comment
-        allow delete: if isAuthenticated() && (isOwner(resource.data.userId) || isOwner(get(/databases/$(database)/documents/posts/$(postId)).data.userId));
-      }
+    match /posts/{postId}/comments/{commentId} {
+        allow read;
+        allow create: if request.auth != null;
+        // Allow user to update reactions, or the post author to delete the comment (by updating text)
+        allow update: if request.auth != null && (
+                        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions'])) ||
+                        (get(/databases/$(database)/documents/posts/$(postId)).data.userId == request.auth.uid)
+                      );
+        allow delete: if request.auth != null && (
+                        resource.data.userId == request.auth.uid ||
+                        get(/databases/$(database)/documents/posts/$(postId)).data.userId == request.auth.uid
+                      );
     }
     
-    // Businesses collection
-    match /businesses/{businessId} {
-      // Anyone authenticated can read business listings
-      allow get: if isAuthenticated();
-      allow list: if isAuthenticated();
-      
-      // Users can create a business listing if they are logged in and are the owner
-      allow create: if isAuthenticated() && isOwner(request.resource.data.ownerId);
-      
-      // Only the business owner can update or delete their listing
-      allow update, delete: if isAuthenticated() && isOwner(resource.data.ownerId);
-    }
-    
-    // Friend Requests
     match /friend_requests/{requestId} {
-        // Can only be read by the participants
-        allow read: if isAuthenticated() && request.auth.uid in resource.data.participantIds;
-        // Can be created by the sender
-        allow create: if isAuthenticated() && isOwner(request.resource.data.fromUserId);
-        // Can be updated (accepted/declined) by the receiver
-        allow update: if isAuthenticated() && 
-                       isOwner(resource.data.toUserId) &&
-                       isUpdatingFields(['status']);
+        allow read, create, update, delete: if request.auth != null && request.auth.uid in resource.data.participantIds;
     }
 
-    // Conversations & Messages
     match /conversations/{conversationId} {
-      // Readable by participants
-      allow get: if isAuthenticated() && request.auth.uid in resource.data.participantIds;
-      // Listable by participants
-      allow list: if isAuthenticated() && request.auth.uid in request.query.where.participantIds;
-
-      // Updatable by participants (for last message, typing indicators)
-      allow update: if isAuthenticated() && request.auth.uid in resource.data.participantIds;
-
-      // Subcollection for messages
+      allow read, create, update: if request.auth != null && request.auth.uid in resource.data.participantIds;
       match /messages/{messageId} {
-        // Readable/Listable by participants of the parent conversation
-        allow read: if isAuthenticated() && request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds;
-        // Creatable by participants of the parent conversation
-        allow create: if isAuthenticated() && 
-                         isOwner(request.resource.data.senderId) && 
-                         request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds;
+        allow read, create: if request.auth != null && request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds;
       }
     }
 
-    // Notifications
-    match /notifications/{notificationId} {
-      // Can only be read by the recipient
-      allow read, list: if isAuthenticated() && isOwner(resource.data.userId);
-      // Can be updated (marked as read) by the recipient
-      allow update: if isAuthenticated() && isOwner(resource.data.userId) && isUpdatingFields(['isRead']);
+    match /businesses/{businessId} {
+      allow get;
+      allow list: if request.auth != null;
+      allow create: if request.auth != null && request.resource.data.ownerId == request.auth.uid;
+      allow update, delete: if request.auth != null && resource.data.ownerId == request.auth.uid;
     }
-
+    
+    match /notifications/{notificationId} {
+        allow read, update: if request.auth != null && request.auth.uid == resource.data.userId;
+    }
   }
 }
