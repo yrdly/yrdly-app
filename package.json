@@ -6,11 +6,10 @@
     "dev": "next dev -p 9002",
     "genkit:dev": "genkit start -- tsx src/ai/dev.ts",
     "genkit:watch": "genkit start -- tsx --watch src/ai/dev.ts",
-    "build": "rimraf .next && next build",
+    "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit",
-    "postinstall": "npm --prefix functions install"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.2",
