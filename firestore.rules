@@ -46,21 +46,21 @@ service cloud.firestore {
 
     match /posts/{postId} {
       allow read: if isAuthenticated();
-      allow create: if isOwner(isIncomingData().authorId) &&
+      allow create: if isOwner(isIncomingData().userId) &&
                       isIncomingData().authorName is string &&
                       isIncomingData().category is string &&
                       isIncomingData().text is string &&
                       isIncomingData().timestamp == request.time &&
-                      (!('location' in isIncomingData()) || isValidLocation(isIncomingData().location));
+                      (!('eventLocation' in isIncomingData()) || isValidLocation(isIncomingData().eventLocation));
 
-      allow delete: if isAuthenticated() && resource.data.authorId == request.auth.uid;
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
 
       allow update: if isAuthenticated() && (
         // Case 1: The owner is updating their post.
-        (resource.data.authorId == request.auth.uid &&
+        (resource.data.userId == request.auth.uid &&
           request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(['text', 'title', 'description', 'category', 'price', 'imageUrls', 'imageUrl', 'location', 'eventDate', 'eventTime', 'eventLink']) &&
-            (!('location' in isIncomingData()) || isValidLocation(isIncomingData().location))
+            .hasOnly(['text', 'title', 'description', 'category', 'price', 'imageUrls', 'imageUrl', 'eventLocation', 'eventDate', 'eventTime', 'eventLink']) &&
+            (!('eventLocation' in isIncomingData()) || isValidLocation(isIncomingData().eventLocation))
         ) ||
         // Case 2: A user is liking/unliking a post (only adding/removing themselves).
         (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likedBy']) &&
@@ -88,7 +88,7 @@ service cloud.firestore {
 
         allow delete: if isAuthenticated() && (
                         resource.data.userId == request.auth.uid ||
-                        get(/databases/$(database)/documents/posts/$(postId)).data.authorId == request.auth.uid
+                        get(/databases/$(database)/documents/posts/$(postId)).data.userId == request.auth.uid
                       );
     }
     

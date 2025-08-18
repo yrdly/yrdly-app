@@ -1,10 +1,9 @@
 
-import type { Timestamp } from "firebase/firestore";
+import type { Timestamp, GeoPoint } from "firebase/firestore";
 
 export interface Location {
   address: string;
-  latitude: number;
-  longitude: number;
+  geopoint?: GeoPoint;
 }
 
 export interface Business {

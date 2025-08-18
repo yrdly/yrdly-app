@@ -88,7 +88,7 @@ export function CreateEventDialog({ children, onOpenChange, postToEdit }: Create
           form.reset({
             title: postToEdit.title || "",
             description: postToEdit.text || "",
-            location: postToEdit.location,
+            location: postToEdit.eventLocation,
             eventDate: postToEdit.eventDate || "",
             eventTime: postToEdit.eventTime || "",
             eventLink: postToEdit.eventLink || "",
@@ -132,13 +132,13 @@ export function CreateEventDialog({ children, onOpenChange, postToEdit }: Create
 
         const eventData = {
             ...postToEdit, // Carry over existing fields like attendees, likedBy etc.
-            authorId: user.uid,
+            userId: user.uid,
             authorName: userDetails.name,
             authorImage: userDetails.avatarUrl,
             category: "Event",
             text: values.description,
             title: values.title,
-            location: values.location,
+            eventLocation: values.location,
             eventDate: values.eventDate,
             eventTime: values.eventTime,
             eventLink: values.eventLink,

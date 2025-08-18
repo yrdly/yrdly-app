@@ -101,7 +101,7 @@ export function EventCard({ event }: EventCardProps) {
   };
 
   const handleDelete = async () => {
-    if (!user || !event.id || user.uid !== event.authorId) return;
+    if (!user || !event.id || user.uid !== event.userId) return;
     try {
         await deleteDoc(doc(db, "posts", event.id));
         toast({ title: "Event deleted", description: "Your event has been successfully removed." });
@@ -144,7 +144,7 @@ export function EventCard({ event }: EventCardProps) {
                   <p className="text-sm font-semibold">{event.authorName}</p>
                   <p className="text-xs text-muted-foreground">{timeAgo(event.timestamp?.toDate())}</p>
                </div>
-               {user?.uid === event.authorId && (
+               {user?.uid === event.userId && (
                  <AlertDialog>
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>

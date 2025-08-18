@@ -30,16 +30,15 @@ export default function MapPage() {
             setLoading(true);
             const fetchedMarkers: MarkerData[] = [];
 
-            // Fetch events with locations
-            const eventsQuery = query(collection(db, 'posts'), where('category', '==', 'Event'), where('eventLocation', '!=', null));
+            const eventsQuery = query(collection(db, 'posts'), where('category', '==', 'Event'), where('eventLocation.geopoint', '!=', null));
             const eventsSnapshot = await getDocs(eventsQuery);
             eventsSnapshot.forEach(doc => {
                 const post = doc.data() as Post;
-                if (post.eventLocation) {
+                if (post.eventLocation?.geopoint) {
                     fetchedMarkers.push({
                         id: doc.id,
                         type: 'event',
-                        position: { lat: post.eventLocation.latitude, lng: post.eventLocation.longitude },
+                        position: { lat: post.eventLocation.geopoint.latitude, lng: post.eventLocation.geopoint.longitude },
                         title: post.title || post.text,
                         address: post.eventLocation.address,
                     });
@@ -47,17 +46,19 @@ export default function MapPage() {
             });
 
             // Fetch businesses
-            const businessesQuery = query(collection(db, 'businesses'));
+            const businessesQuery = query(collection(db, 'businesses'), where('location.geopoint', '!=', null));
             const businessesSnapshot = await getDocs(businessesQuery);
             businessesSnapshot.forEach(doc => {
                 const business = doc.data() as Business;
-                fetchedMarkers.push({
-                    id: doc.id,
-                    type: 'business',
-                    position: { lat: business.location.latitude, lng: business.location.longitude },
-                    title: business.name,
-                    address: business.location.address,
-                });
+                if (business.location?.geopoint) {
+                    fetchedMarkers.push({
+                        id: doc.id,
+                        type: 'business',
+                        position: { lat: business.location.geopoint.latitude, lng: business.location.geopoint.longitude },
+                        title: business.name,
+                        address: business.location.address,
+                    });
+                }
             });
 
             setMarkers(fetchedMarkers);
