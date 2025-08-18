@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/layout/AppSidebar';
@@ -11,10 +11,13 @@ import { useAuth } from '@/hooks/use-auth';
 import { PushNotificationManager } from '@/components/PushNotificationManager';
 import Image from 'next/image';
 import { APIProvider } from '@vis.gl/react-google-maps';
+import { UserProfileDialog } from '@/components/UserProfileDialog';
+import type { User } from '@/types';
 
 function ProtectedLayout({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user, userDetails, loading } = useAuth();
   const router = useRouter();
+  const [profileUser, setProfileUser] = useState<User | null>(null);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -22,7 +25,7 @@ function ProtectedLayout({ children }: { children: React.ReactNode }) {
     }
   }, [user, loading, router]);
 
-  if (loading || !user) {
+  if (loading || !user || !userDetails) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-background">
         <Image 
@@ -37,11 +40,22 @@ function ProtectedLayout({ children }: { children: React.ReactNode }) {
     );
   }
 
+  const handleProfileClick = () => {
+    setProfileUser(userDetails);
+  };
+
   return (
     <>
+      {profileUser && (
+        <UserProfileDialog 
+          user={profileUser}
+          open={!!profileUser}
+          onOpenChange={() => setProfileUser(null)}
+        />
+      )}
       <PushNotificationManager />
       <SidebarProvider>
-        <AppSidebar />
+        <AppSidebar onProfileClick={handleProfileClick} />
         <SidebarInset>
           <div className="md:hidden">
               <AppHeader />

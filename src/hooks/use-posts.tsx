@@ -37,21 +37,24 @@ export const usePosts = () => {
 
   const createPost = useCallback(
     async (postData: Omit<Post, 'id' | 'userId' | 'authorName' | 'authorImage' | 'timestamp' | 'commentCount' | 'likedBy'>) => {
-      if (!user) {
+      if (!user || !userDetails) {
         toast({ title: 'Error', description: 'You must be logged in to create a post.' });
         return;
       }
 
       try {
-        await addDoc(collection(db, 'posts'), {
+        const newPostData = {
           ...postData,
           userId: user.uid,
-          authorName: userDetails?.name || 'Anonymous',
-          authorImage: userDetails?.avatarUrl || '',
+          authorName: userDetails.name || 'Anonymous',
+          authorImage: userDetails.avatarUrl || '',
           timestamp: serverTimestamp(),
           commentCount: 0,
           likedBy: [],
-        });
+        };
+        const docRef = await addDoc(collection(db, 'posts'), newPostData);
+        // Manually update local state to include the new post with its ID
+        setPosts(prevPosts => [{ id: docRef.id, ...newPostData } as Post, ...prevPosts]);
         toast({ title: 'Success', description: 'Post created successfully.' });
       } catch (error) {
         console.error('Error creating post:', error);

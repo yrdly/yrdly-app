@@ -9,14 +9,14 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
 } from '@/components/ui/sidebar';
-import { Home, ShoppingCart, Calendar, Briefcase, MessageSquare, Settings, Users, Map } from 'lucide-react';
+import { Home, ShoppingCart, Calendar, Briefcase, MessageSquare, Settings, Users, Map, User as UserIcon } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 
-export function AppSidebar() {
+export function AppSidebar({ onProfileClick }: { onProfileClick: () => void }) {
   const pathname = usePathname();
   const { pendingRequestCount } = useAuth();
 
@@ -40,6 +40,15 @@ export function AppSidebar() {
       </SidebarHeader>
       <SidebarContent className="p-4">
         <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              onClick={onProfileClick}
+              tooltip={{ children: 'My Profile', side: 'right' }}
+            >
+              <UserIcon />
+              <span>My Profile</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
           {menuItems.map((item) => (
             <SidebarMenuItem key={item.label}>
               <SidebarMenuButton

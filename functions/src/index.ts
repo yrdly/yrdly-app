@@ -78,18 +78,18 @@ export const processMailQueue = onDocumentCreated("mail/{mailId}", async (event)
 
 
 // --- Callable Functions ---
-export const acceptfriendrequest = onCall(async (request) => {
+export const acceptfriendrequest = onCall({ cors: ["https://yrdly-app.vercel.app", "http://localhost:9002"] }, async (request) => {
     // ... (existing code)
 });
 
-export const unfriendUser = onCall(async (request) => {
+export const unfriendUser = onCall({ cors: ["https://yrdly-app.vercel.app", "http://localhost:9002"] }, async (request) => {
     // ... (existing code)
 });
 
-export const blockUser = onCall(async (request) => {
+export const blockUser = onCall({ cors: ["https://yrdly-app.vercel.app", "http://localhost:9002"] }, async (request) => {
     // ... (existing code)
 });
 
-export const unblockUser = onCall(async (request) => {
+export const unblockUser = onCall({ cors: ["https://yrdly-app.vercel.app", "http://localhost:9002"] }, async (request) => {
     // ... (existing code)
 });
