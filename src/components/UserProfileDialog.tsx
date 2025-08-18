@@ -11,7 +11,7 @@ import type { User, FriendRequest } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card';
-import { MapPin, MessageSquare, UserPlus, Check, X, Clock, MoreHorizontal, ShieldBan } from 'lucide-react';
+import { MapPin, MessageSquare, UserPlus, Check, X, Clock, MoreHorizontal, ShieldBan, UserMinus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
@@ -50,45 +50,43 @@ export function UserProfileDialog({ user: profileUser, open, onOpenChange }: Use
     const [isBlocked, setIsBlocked] = useState(false);
 
     useEffect(() => {
-        if (!profileUser || !currentUser) return;
+        if (!profileUser || !currentUser || !userDetails) {
+            if (open) onOpenChange(false);
+            return;
+        };
 
         // Don't open a dialog for the current user
         if (profileUser.uid === currentUser.uid) {
-            onOpenChange(false);
+            if (open) onOpenChange(false);
             return;
         }
-
-        setIsBlocked(userDetails?.blockedUsers?.includes(profileUser.uid) ?? false);
         
-        if (userDetails?.friends?.includes(profileUser.uid)) {
+        setIsBlocked(userDetails.blockedUsers?.includes(profileUser.uid) ?? false);
+
+        if (userDetails.friends?.includes(profileUser.uid)) {
             setFriendshipStatus('friends');
-            return;
-        }
-
-        const requestsQuery = query(
-            collection(db, 'friend_requests'),
-            where('participantIds', 'in', [[currentUser.uid, profileUser.uid], [profileUser.uid, currentUser.uid]]),
-            where('status', '==', 'pending')
-        );
-
-        const unsubscribe = onSnapshot(requestsQuery, (snapshot) => {
-             if (!snapshot.empty) {
-                const request = { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as FriendRequest
-                setFriendRequest(request);
-                setFriendshipStatus(request.fromUserId === currentUser.uid ? 'request_sent' : 'request_received');
-            } else {
-                setFriendRequest(null);
-                // Check again if they are friends in case the request was just accepted
-                if (userDetails?.friends?.includes(profileUser.uid)) {
-                    setFriendshipStatus('friends');
+        } else {
+            // Only check for requests if they are not friends
+            const requestsQuery = query(
+                collection(db, 'friend_requests'),
+                where('participantIds', 'in', [[currentUser.uid, profileUser.uid], [profileUser.uid, currentUser.uid]]),
+                where('status', '==', 'pending')
+            );
+            
+            const unsubscribe = onSnapshot(requestsQuery, (snapshot) => {
+                 if (!snapshot.empty) {
+                    const request = { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as FriendRequest
+                    setFriendRequest(request);
+                    setFriendshipStatus(request.fromUserId === currentUser.uid ? 'request_sent' : 'request_received');
                 } else {
+                    setFriendRequest(null);
                     setFriendshipStatus('none');
                 }
-            }
-        });
-        return () => unsubscribe();
+            });
+            return () => unsubscribe();
+        }
 
-    }, [profileUser, currentUser, userDetails, onOpenChange]);
+    }, [profileUser, currentUser, userDetails, open, onOpenChange]);
 
 
     const handleAddFriend = async () => {
@@ -129,8 +127,9 @@ export function UserProfileDialog({ user: profileUser, open, onOpenChange }: Use
                 transaction.update(friendUserRef, { friends: arrayRemove(currentUser.uid) });
             });
             toast({ title: "Friend removed." });
-        } catch {
-            toast({ variant: "destructive", title: "Error", description: "Could not remove friend." });
+            onOpenChange(true);
+        } catch (error) {
+            toast({ variant: "destructive", title: "Error", description: `Could not remove friend. ${error}` });
         }
     };
 
@@ -138,15 +137,17 @@ export function UserProfileDialog({ user: profileUser, open, onOpenChange }: Use
         if (!currentUser || !profileUser) return;
         const currentUserRef = doc(db, "users", currentUser.uid);
         try {
+            // Block first, then unfriend if they are friends
             await updateDoc(currentUserRef, { blockedUsers: arrayUnion(profileUser.uid) });
+            
             if (friendshipStatus === 'friends') {
                 await handleUnfriend();
             }
-            setIsBlocked(true);
+
             toast({ title: "User blocked." });
-            onOpenChange(true);
-        } catch {
-            toast({ variant: "destructive", title: "Error", description: "Could not block user." });
+            onOpenChange(true); // Signal that a change was made
+        } catch (error) {
+            toast({ variant: "destructive", title: "Error", description: `Could not block user. ${error}` });
         }
     };
     
@@ -155,8 +156,8 @@ export function UserProfileDialog({ user: profileUser, open, onOpenChange }: Use
         const currentUserRef = doc(db, "users", currentUser.uid);
         try {
             await updateDoc(currentUserRef, { blockedUsers: arrayRemove(profileUser.uid) });
-            setIsBlocked(false);
             toast({ title: "User unblocked." });
+            onOpenChange(true); // Signal that a change was made
         } catch {
             toast({ variant: "destructive", title: "Error", description: "Could not unblock user." });
         }
@@ -201,8 +202,14 @@ export function UserProfileDialog({ user: profileUser, open, onOpenChange }: Use
 
     const renderActionButtons = () => {
         if (!profileUser || profileUser.uid === currentUser?.uid) return null;
+        
         if (isBlocked) {
-            return <Button onClick={handleUnblockUser} variant="destructive"><ShieldBan className="mr-2 h-4 w-4" /> Unblock User</Button>;
+            return (
+                <div className="flex flex-col items-center text-center">
+                    <p className="text-sm text-destructive font-semibold">You have blocked this user.</p>
+                    <Button onClick={handleUnblockUser} variant="outline" className="mt-2">Unblock</Button>
+                </div>
+            );
         }
 
         switch (friendshipStatus) {
@@ -224,62 +231,73 @@ export function UserProfileDialog({ user: profileUser, open, onOpenChange }: Use
     };
 
     return (
-        <Dialog open={open} onOpenChange={() => onOpenChange(isBlocked)}>
+        <Dialog open={open} onOpenChange={() => onOpenChange(false)}>
             <DialogContent className="sm:max-w-md p-0">
                 {!profileUser ? (
                     <div className="text-center py-10">User not found.</div>
                 ) : (
-                    <>
+                    <Card className="border-none shadow-none">
                         <DialogHeader>
                             <DialogTitle className="sr-only">{`Profile of ${profileUser.name}`}</DialogTitle>
                         </DialogHeader>
-                        <Card className="border-none shadow-none">
-                            <CardHeader className="flex flex-col items-center text-center p-6 bg-muted/50 relative">
-                                {profileUser.uid !== currentUser?.uid && (
-                                    <div className="absolute top-4 right-4">
+                        <CardHeader className="flex flex-col items-center text-center p-6 bg-muted/50 relative">
+                            {profileUser.uid !== currentUser?.uid && (
+                                <div className="absolute top-2 right-2">
+                                     <AlertDialog>
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
                                                 <Button variant="ghost" size="icon"><MoreHorizontal className="h-5 w-5" /></Button>
                                             </DropdownMenuTrigger>
-                                            <DropdownMenuContent>
-                                                <AlertDialog>
-                                                    <AlertDialogTrigger asChild>
-                                                        <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive">
-                                                            <ShieldBan className="mr-2 h-4 w-4" /> {isBlocked ? "Unblock" : "Block"} User
+                                            <DropdownMenuContent align="end">
+                                                {friendshipStatus === 'friends' && (
+                                                     <AlertDialogTrigger asChild>
+                                                        <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive">
+                                                            <UserMinus className="mr-2 h-4 w-4" /> Unfriend
                                                         </DropdownMenuItem>
                                                     </AlertDialogTrigger>
-                                                    <AlertDialogContent>
-                                                        <AlertDialogHeaderComponent>
-                                                            <AlertDialogTitleComponent>Are you sure?</AlertDialogTitleComponent>
-                                                            <AlertDialogDescription>
-                                                                {isBlocked ? `This will unblock ${profileUser.name}.` : `This will block ${profileUser.name}. You will no longer see their content or be able to interact with them.`}
-                                                            </AlertDialogDescription>
-                                                        </AlertDialogHeaderComponent>
-                                                        <AlertDialogFooter>
-                                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                            <AlertDialogAction onClick={isBlocked ? handleUnblockUser : handleBlockUser} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                                                                {isBlocked ? "Unblock" : "Block"}
-                                                            </AlertDialogAction>
-                                                        </AlertDialogFooter>
-                                                    </AlertDialogContent>
-                                                </AlertDialog>
+                                                )}
+                                                <AlertDialogTrigger asChild>
+                                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive">
+                                                        <ShieldBan className="mr-2 h-4 w-4" /> {isBlocked ? "Unblock" : "Block"} User
+                                                    </DropdownMenuItem>
+                                                </AlertDialogTrigger>
                                             </DropdownMenuContent>
                                         </DropdownMenu>
-                                    </div>
-                                )}
-                                <Avatar className="h-24 w-24 mb-4 border-2 border-background"><AvatarImage src={profileUser.avatarUrl} alt={profileUser.name} /><AvatarFallback>{profileUser.name.charAt(0)}</AvatarFallback></Avatar>
-                                <h1 className="text-2xl font-bold">{profileUser.name}</h1>
-                                {profileUser.location && (<div className="flex items-center text-sm text-muted-foreground mt-1"><MapPin className="h-4 w-4 mr-1" /><span>{displayLocation(profileUser.location)}</span></div>)}
-                            </CardHeader>
-                            <CardContent className="p-6">
-                                <h2 className="font-semibold text-lg mb-2">Bio</h2>
-                                <p className="text-muted-foreground">{profileUser.bio || "This user hasn't written a bio yet."}</p>
-                            </CardContent>
-                            <CardFooter className="p-6 justify-center">
-                                {renderActionButtons()}
-                            </CardFooter>
-                        </Card>
-                    </>
+
+                                        <AlertDialogContent>
+                                            <AlertDialogHeaderComponent>
+                                                <AlertDialogTitleComponent>Are you sure?</AlertDialogTitleComponent>
+                                                <AlertDialogDescription>
+                                                    {isBlocked 
+                                                        ? `This will unblock ${profileUser.name}.` 
+                                                        : friendshipStatus === 'friends'
+                                                        ? `This will remove ${profileUser.name} from your friends list.`
+                                                        : `This will block ${profileUser.name}. You won't see their content or be able to interact with them.`
+                                                    }
+                                                </AlertDialogDescription>
+                                            </AlertDialogHeaderComponent>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                <AlertDialogAction onClick={isBlocked ? handleUnblockUser : (friendshipStatus === 'friends' ? handleUnfriend : handleBlockUser)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                                    {isBlocked ? "Unblock" : (friendshipStatus === 'friends' ? "Unfriend" : "Block")}
+                                                </AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
+                                </div>
+                            )}
+                            <Avatar className="h-24 w-24 mb-4 border-2 border-background"><AvatarImage src={profileUser.avatarUrl} alt={profileUser.name} /><AvatarFallback>{profileUser.name.charAt(0)}</AvatarFallback></Avatar>
+                            <h1 className="text-2xl font-bold">{profileUser.name}</h1>
+                            {profileUser.location && (<div className="flex items-center text-sm text-muted-foreground mt-1"><MapPin className="h-4 w-4 mr-1" /><span>{displayLocation(profileUser.location)}</span></div>)}
+                        </CardHeader>
+                        <CardContent className="p-6">
+                            <h2 className="font-semibold text-lg mb-2">Bio</h2>
+                            <p className="text-muted-foreground">{profileUser.bio || "This user hasn't written a bio yet."}</p>
+                        </CardContent>
+                        <CardFooter className="p-6 justify-center">
+                            {renderActionButtons()}
+                        </CardFooter>
+                    </Card>
                 )}
             </DialogContent>
         </Dialog>

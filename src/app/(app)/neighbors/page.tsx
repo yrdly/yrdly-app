@@ -24,7 +24,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { MessageSquare, UserPlus, MapPin, Check, X, UserMinus } from "lucide-react";
+import { MessageSquare, UserPlus, MapPin, Check, X, UserMinus, MoreHorizontal, ShieldBan } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
     Select,
@@ -78,18 +78,19 @@ export default function NeighborsPage() {
     useEffect(() => {
         if (!currentUser) return;
 
+        // Base query for users, excluding self
         const usersQuery = query(
             collection(db, "users"),
             where('uid', '!=', currentUser.uid)
         );
 
         const unsubscribeUsers = onSnapshot(usersQuery, (querySnapshot) => {
-            const usersData = querySnapshot.docs
-                .map(doc => ({ id: doc.id, ...doc.data() } as User));
+            const usersData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
             setAllNeighbors(usersData);
             setLoading(false);
         });
 
+        // Query for friend requests involving the current user
         const requestsQuery = query(
             collection(db, "friend_requests"),
             where("participantIds", "array-contains", currentUser.uid)
@@ -100,13 +101,12 @@ export default function NeighborsPage() {
             setFriendRequests(requests);
         });
 
-
         return () => {
             unsubscribeUsers();
             unsubscribeRequests();
         };
     }, [currentUser]);
-
+    
     const handleFilterChange = (type: "state" | "lga", value: string) => {
         setFilters((prev) => {
             const newFilters = { ...prev, [type]: value };
@@ -119,27 +119,32 @@ export default function NeighborsPage() {
         if (userDetails?.friends?.includes(neighborId)) return "friends";
         
         const request = friendRequests.find(req => 
+            req.status === 'pending' &&
             ((req.fromUserId === currentUser?.uid && req.toUserId === neighborId) ||
              (req.fromUserId === neighborId && req.toUserId === currentUser?.uid))
         );
 
-        if (request && request.status === 'pending') {
+        if (request) {
             return request.fromUserId === currentUser?.uid ? 'request_sent' : 'request_received';
         }
 
         return "none";
     }, [userDetails, friendRequests, currentUser]);
 
-    const filteredNeighbors = useMemo(() => {
+    const filteredAndSortedNeighbors = useMemo(() => {
         if (!currentUser) return [];
         const blockedByMe = userDetails?.blockedUsers || [];
+        
         return allNeighbors.filter((neighbor) => {
+            // Basic filters
             if (neighbor.uid === currentUser.uid) return false;
-            if (blockedByMe.includes(neighbor.uid)) return false;
-            if (neighbor.blockedUsers?.includes(currentUser.uid)) return false;
+            if (blockedByMe.includes(neighbor.uid)) return false; // Filter out blocked users
+            if (neighbor.blockedUsers?.includes(currentUser.uid)) return false; // Filter out users who blocked me
 
+            // Location filters
             const stateMatch = filters.state === "all" || neighbor.location?.state === filters.state;
             const lgaMatch = filters.lga === "all" || neighbor.location?.lga === filters.lga;
+            
             return stateMatch && lgaMatch;
         });
     }, [allNeighbors, filters, userDetails, currentUser]);
@@ -180,25 +185,6 @@ export default function NeighborsPage() {
         const requestRef = doc(db, "friend_requests", request.id);
         await updateDoc(requestRef, { status: "declined" });
         toast({ title: "Friend request declined." });
-    };
-
-    const handleUnfriend = async (e: React.MouseEvent, friendId: string) => {
-        e.stopPropagation();
-        if (!currentUser) return;
-        try {
-            await runTransaction(db, async (transaction) => {
-                const currentUserRef = doc(db, "users", currentUser.uid);
-                const friendUserRef = doc(db, "users", friendId);
-                transaction.update(currentUserRef, { friends: arrayRemove(friendId) });
-                transaction.update(friendUserRef, { friends: arrayRemove(currentUser.uid) });
-            });
-            // Optimistically update UI
-            setAllNeighbors(prev => prev.map(n => n.uid === friendId ? { ...n, friends: n.friends?.filter(f => f !== currentUser.uid) } : n));
-            toast({ title: "Friend removed." });
-        } catch (error) {
-            console.error("Error removing friend: ", error);
-            toast({ variant: "destructive", title: "Error", description: "Could not remove friend." });
-        }
     };
     
      const handleMessage = async (e: React.MouseEvent, friendId: string) => {
@@ -266,9 +252,12 @@ export default function NeighborsPage() {
     
     const handleProfileDialogClose = (wasChanged: boolean) => {
         if (wasChanged) {
-            // Re-evaluate state if user was blocked/unfriended
-            const updatedNeighbors = allNeighbors.filter(n => n.uid !== selectedUser?.uid);
-            setAllNeighbors(updatedNeighbors);
+            // The userDetails listener in useAuth should handle the main state update.
+            // But we can optimistically filter the user out if they were blocked.
+            if(selectedUser) {
+                const blockedId = selectedUser.uid;
+                 setAllNeighbors(prev => prev.filter(n => n.uid !== blockedId));
+            }
         }
         setSelectedUser(null)
     }
@@ -342,9 +331,9 @@ export default function NeighborsPage() {
                     </div>
                     {loading ? (
                         <div className="space-y-4"><NeighborSkeleton /><NeighborSkeleton /><NeighborSkeleton /></div>
-                    ) : filteredNeighbors.length > 0 ? (
+                    ) : filteredAndSortedNeighbors.length > 0 ? (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {filteredNeighbors.map((neighbor) => {
+                            {filteredAndSortedNeighbors.map((neighbor) => {
                                 const status = getFriendshipStatus(neighbor.uid);
                                 return (
                                     <Card key={neighbor.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedUser(neighbor)}>
@@ -383,18 +372,6 @@ export default function NeighborsPage() {
                                             <h3 className="font-semibold text-base">{friend.name}</h3>
                                             {friend.location && (<div className="flex items-center text-xs text-muted-foreground"><MapPin className="h-3 w-3 mr-1" /><span>{displayLocation(friend.location)}</span></div>)}
                                         </div>
-                                        <AlertDialog>
-                                            <AlertDialogTrigger asChild>
-                                                <Button size="icon" variant="ghost" onClick={(e) => e.stopPropagation()}><UserMinus className="h-4 w-4 text-destructive" /></Button>
-                                            </AlertDialogTrigger>
-                                            <AlertDialogContent>
-                                                <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This will remove {friend.name} from your friends list. This action cannot be undone.</AlertDialogDescription></AlertDialogHeader>
-                                                <AlertDialogFooter>
-                                                    <AlertDialogCancel onClick={(e) => e.stopPropagation()}>Cancel</AlertDialogCancel>
-                                                    <AlertDialogAction onClick={(e) => handleUnfriend(e, friend.uid)}>Unfriend</AlertDialogAction>
-                                                </AlertDialogFooter>
-                                            </AlertDialogContent>
-                                        </AlertDialog>
                                     </CardContent>
                                 </Card>
                             ))}
