@@ -51,7 +51,10 @@ service cloud.firestore {
                       isIncomingData().category is string &&
                       isIncomingData().text is string &&
                       isIncomingData().timestamp == request.time &&
-                      (!('eventLocation' in isIncomingData()) || isValidLocation(isIncomingData().eventLocation));
+                      // Enforce location rules based on category
+                      (isIncomingData().category == 'Event' ? 
+                          isValidLocation(isIncomingData().eventLocation) : 
+                          !('eventLocation' in isIncomingData()));
 
       allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
 
