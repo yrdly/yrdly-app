@@ -20,6 +20,8 @@ export const metadata: Metadata = {
   description: 'Connect with your neighbors, share updates, and build a stronger community with Yrdly.',
 };
 
+import { ThemeProvider } from '@/components/ThemeProvider';
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -31,11 +33,18 @@ export default function RootLayout({
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
       </head>
       <body className={cn('font-body antialiased min-h-screen bg-background', ptSans.variable)}>
-        <AuthProvider>
-            {children}
-        </AuthProvider>
-        <Toaster />
-        <Analytics />
+        <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+        >
+            <AuthProvider>
+                {children}
+            </AuthProvider>
+            <Toaster />
+            <Analytics />
+        </ThemeProvider>
       </body>
     </html>
   );

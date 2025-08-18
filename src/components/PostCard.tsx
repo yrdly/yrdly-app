@@ -269,8 +269,16 @@ export function PostCard({ post }: PostCardProps) {
     </CardContent>
   );
 
+  const handleCardClick = () => {
+    // Navigate to post details, but not if a collapsible section (like comments) is already open.
+    if (!isCommentsOpen) {
+      router.push(`/posts/${post.id}`);
+    }
+  };
+
   return (
     <Card className="overflow-hidden">
+       <div onClick={handleCardClick} className="cursor-pointer">
       {selectedUser && (
           <UserProfileDialog 
               user={selectedUser} 
@@ -387,6 +395,7 @@ export function PostCard({ post }: PostCardProps) {
             </div>
         </CollapsibleContent>
       </Collapsible>
+    </div>
     </Card>
   );
 }

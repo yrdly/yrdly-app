@@ -9,7 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { SendHorizonal, Search, ArrowLeft, Users } from "lucide-react";
+import { SendHorizonal, Search, ArrowLeft, Users, ImagePlus, X } from "lucide-react";
 import { Textarea } from "../ui/textarea";
 import {
   collection,
@@ -23,11 +23,13 @@ import {
   updateDoc,
   arrayUnion,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { db, storage } from "@/lib/firebase";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import Link from "next/link";
 import { useDebouncedCallback } from "use-debounce";
 import { UserProfileDialog } from "../UserProfileDialog";
-import { getFriendshipStatus } from "@/lib/user-actions";
+import Image from "next/image";
+import { Progress } from "../ui/progress";
 
 
 interface NoFriendsEmptyStateProps {
@@ -79,6 +81,10 @@ export function ChatLayout({
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const [isTyping, setIsTyping] = useState(false);
   const [profileUser, setProfileUser] = useState<User | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Update conversation list when prop changes
   useEffect(() => {
@@ -141,6 +147,7 @@ export function ChatLayout({
             id: docSnap.id,
             senderId: msgData.senderId,
             text: msgData.text,
+            imageUrl: msgData.imageUrl,
             sender,
             timestamp:
               msgData.timestamp?.toDate().toLocaleTimeString([], {
@@ -201,23 +208,38 @@ export function ChatLayout({
   
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (newMessage.trim() === "" || !selectedConversation) return;
+    if ((newMessage.trim() === "" && !imageFile) || !selectedConversation) return;
 
     const conversationRef = doc(db, "conversations", selectedConversation.id);
     const messagesRef = collection(conversationRef, "messages");
 
     try {
-        const messageData = {
+        let imageUrl = "";
+        if (imageFile) {
+            setUploadProgress(0);
+            const storageRef = ref(storage, `chat_images/${selectedConversation.id}/${Date.now()}_${imageFile.name}`);
+            const uploadTask = await uploadBytes(storageRef, imageFile);
+            imageUrl = await getDownloadURL(uploadTask.ref);
+            setUploadProgress(100);
+        }
+
+        const messageData: Partial<Message> = {
           senderId: currentUser.id,
-          text: newMessage,
-          timestamp: serverTimestamp(),
+          timestamp: serverTimestamp() as any,
         };
+
+        if (imageUrl) {
+            messageData.imageUrl = imageUrl;
+        }
+        if (newMessage.trim() !== "") {
+            messageData.text = newMessage;
+        }
         
         await addDoc(messagesRef, messageData);
 
         await updateDoc(conversationRef, {
             lastMessage: {
-                text: newMessage,
+                text: imageUrl ? "📷 Image" : newMessage,
                 senderId: currentUser.id,
                 timestamp: serverTimestamp(),
                 readBy: [currentUser.id]
@@ -227,10 +249,30 @@ export function ChatLayout({
         
         debouncedUpdateTyping.cancel();
         setNewMessage("");
+        setImageFile(null);
+        setImagePreview(null);
+        setUploadProgress(null);
     } catch (error) {
       console.error("Error sending message: ", error);
+      setUploadProgress(null);
     }
   };
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+        const file = e.target.files[0];
+        setImageFile(file);
+        setImagePreview(URL.createObjectURL(file));
+    }
+  };
+
+  const removeImagePreview = () => {
+      setImageFile(null);
+      setImagePreview(null);
+      if(fileInputRef.current) {
+          fileInputRef.current.value = "";
+      }
+  }
 
   return (
       <>
@@ -361,13 +403,18 @@ export function ChatLayout({
                         )}
                         <div
                           className={cn(
-                            "rounded-lg px-4 py-2 max-w-xs lg:max-w-md break-words",
+                            "rounded-lg px-3 py-2 max-w-xs lg:max-w-md break-words",
                             msg.sender.id === currentUser.id
                               ? "bg-primary text-primary-foreground"
                               : "bg-card border"
                           )}
                         >
-                          <p>{msg.text}</p>
+                          {msg.imageUrl && (
+                              <div className="relative w-48 h-48 mb-2">
+                                  <Image src={msg.imageUrl} alt="Chat image" layout="fill" className="rounded-md object-cover" />
+                              </div>
+                          )}
+                          {msg.text && <p>{msg.text}</p>}
                           <p
                             className={cn(
                               "text-xs opacity-70 mt-1",
@@ -397,10 +444,23 @@ export function ChatLayout({
                   </div>
                 </ScrollArea>
                 <div className="p-4 border-t bg-card">
+                  {imagePreview && (
+                      <div className="relative w-24 h-24 mb-2">
+                          <Image src={imagePreview} alt="Image preview" layout="fill" className="rounded-md object-cover" />
+                          <Button variant="destructive" size="icon" className="absolute -top-2 -right-2 h-6 w-6 rounded-full" onClick={removeImagePreview}>
+                              <X className="h-4 w-4" />
+                          </Button>
+                      </div>
+                  )}
+                  {uploadProgress !== null && <Progress value={uploadProgress} className="mb-2" />}
                   <form
                     onSubmit={handleSendMessage}
                     className="flex items-center gap-2"
                   >
+                    <input type="file" accept="image/*" ref={fileInputRef} onChange={handleImageSelect} className="hidden" />
+                    <Button type="button" variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()}>
+                        <ImagePlus className="h-5 w-5" />
+                    </Button>
                     <Textarea
                       placeholder="Type a message..."
                       value={newMessage}
@@ -417,7 +477,7 @@ export function ChatLayout({
                     <Button
                       type="submit"
                       size="icon"
-                      disabled={!newMessage.trim()}
+                      disabled={(!newMessage.trim() && !imageFile) || uploadProgress !== null}
                     >
                       <SendHorizonal className="h-5 w-5" />
                     </Button>

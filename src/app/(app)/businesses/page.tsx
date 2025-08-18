@@ -47,39 +47,43 @@ function BusinessCard({ business }: { business: Business }) {
 
     return (
         <Card className="overflow-hidden flex flex-col h-full">
-             <Carousel className="w-full">
-                <CarouselContent>
-                    {business.imageUrls && business.imageUrls.length > 0 ? (
-                        business.imageUrls.map((url, index) => (
-                             <CarouselItem key={index}>
-                                <AspectRatio ratio={16 / 9}>
-                                    <Image
-                                        src={url}
-                                        alt={`${business.name} image ${index + 1}`}
-                                        fill
-                                        className="object-cover"
-                                        data-ai-hint="business photo"
-                                    />
-                                </AspectRatio>
-                            </CarouselItem>
-                        ))
-                    ) : (
-                         <CarouselItem>
-                            <AspectRatio ratio={16/9}>
-                                <div className="bg-muted flex items-center justify-center h-full">
-                                    <Briefcase className="h-12 w-12 text-muted-foreground" />
-                                </div>
-                            </AspectRatio>
-                        </CarouselItem>
-                    )}
-                </CarouselContent>
-                {business.imageUrls && business.imageUrls.length > 1 && (
-                    <>
+            {business.imageUrls && business.imageUrls.length > 0 ? (
+                business.imageUrls.length > 1 ? (
+                    <Carousel className="w-full">
+                        <CarouselContent>
+                            {business.imageUrls.map((url, index) => (
+                                <CarouselItem key={index}>
+                                    <AspectRatio ratio={16 / 9}>
+                                        <Image
+                                            src={url}
+                                            alt={`${business.name} image ${index + 1}`}
+                                            fill
+                                            className="object-cover"
+                                        />
+                                    </AspectRatio>
+                                </CarouselItem>
+                            ))}
+                        </CarouselContent>
                         <CarouselPrevious className="left-2" />
                         <CarouselNext className="right-2" />
-                    </>
-                )}
-            </Carousel>
+                    </Carousel>
+                ) : (
+                    <AspectRatio ratio={16 / 9}>
+                        <Image
+                            src={business.imageUrls[0]}
+                            alt={`${business.name} image 1`}
+                            fill
+                            className="object-cover"
+                        />
+                    </AspectRatio>
+                )
+            ) : (
+                <AspectRatio ratio={16/9}>
+                    <div className="bg-muted flex items-center justify-center h-full">
+                        <Briefcase className="h-12 w-12 text-muted-foreground" />
+                    </div>
+                </AspectRatio>
+            )}
            
             <CardHeader className="flex-row items-start justify-between">
                 <div>

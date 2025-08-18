@@ -50,7 +50,7 @@ import { useToast } from "@/hooks/use-toast";
 import type { Post, PostCategory, Business } from "@/types";
 import { usePosts } from "@/hooks/use-posts";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { LocationPicker } from "./LocationPicker";
+import { LocationInput, LocationValue } from "./LocationInput";
 
 type CreatePostDialogProps = {
     children?: React.ReactNode;
@@ -74,7 +74,7 @@ const formSchema = z.object({
   // Business specific
   name: z.string().optional(),
   businessCategory: z.string().optional(),
-  location: z.any().optional(),
+  location: z.custom<LocationValue>().optional(),
 
 }).superRefine((data, ctx) => {
     const isBusiness = data.category === 'Business';
@@ -87,7 +87,7 @@ const formSchema = z.object({
     if (isBusiness) {
       if (!data.name) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['name'], message: "Business name can't be empty." });
       if (!data.businessCategory) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['businessCategory'], message: "Category can't be empty." });
-      if (!data.location) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['location'], message: "Location is required for a business." });
+      if (!data.location || !data.location.address) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['location'], message: "Location is required for a business." });
       if (!hasNewImage && !hasExistingImages) {
           ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['image'], message: 'An image is required for a business.' });
       }
@@ -128,7 +128,7 @@ export function CreatePostDialog({
       image: undefined,
       name: "",
       businessCategory: "",
-      location: null,
+      location: { address: "" },
     },
   });
 
@@ -161,7 +161,7 @@ export function CreatePostDialog({
                 image: undefined,
                 name: "",
                 businessCategory: "",
-                location: null,
+                location: { address: "" },
             });
         }
     }
@@ -294,9 +294,10 @@ export function CreatePostDialog({
                 <FormItem>
                     <FormLabel>Location</FormLabel>
                     <FormControl>
-                        <LocationPicker 
-                            onLocationSelect={field.onChange} 
-                            initialLocation={field.value}
+                        <LocationInput 
+                            name={field.name}
+                            control={form.control}
+                            defaultValue={field.value}
                         />
                     </FormControl>
                     <FormMessage />

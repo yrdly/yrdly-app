@@ -34,44 +34,47 @@ import {
 import { PlusCircle } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { useAuth } from "@/hooks/use-auth";
-import { useState } from "react";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { useState, useEffect } from "react";
+import { collection, addDoc, serverTimestamp, doc, updateDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
-import { LocationPicker } from "./LocationPicker";
+import { LocationInput, LocationValue } from "./LocationInput";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { Post } from "@/types";
 
 const formSchema = z.object({
   title: z.string().min(1, "Event title can't be empty.").max(100),
   description: z.string().min(1, "Event description can't be empty.").max(1000),
+  location: z.custom<LocationValue>().refine(value => value && value.address.length > 0, {
+    message: "Location is required.",
+  }),
   eventDate: z.string().min(1, "Date can't be empty."),
   eventTime: z.string().min(1, "Time can't be empty."),
-  eventLink: z.string().url("Please enter a valid URL.").optional().or(z.literal('')),
-  image: z.any().refine((files) => {
-    if (typeof window === 'undefined') return true;
-    return files instanceof FileList && files.length > 0;
-  }, "An image is required for the event."),
+  eventLink: z.string().url("Please enter a valid URL.").min(1, "Event link is required."),
+  image: z.any().refine((files) => files && (files.length > 0 || (Array.isArray(files) && files.some(f => typeof f === 'string'))), "An image is required for the event."),
 });
 
 type CreateEventDialogProps = {
     children?: React.ReactNode;
     onOpenChange?: (open: boolean) => void;
+    postToEdit?: Post;
 }
 
-export function CreateEventDialog({ children, onOpenChange }: CreateEventDialogProps) {
+export function CreateEventDialog({ children, onOpenChange, postToEdit }: CreateEventDialogProps) {
   const { user, userDetails } = useAuth();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [eventLocation, setEventLocation] = useState<{ address: string; latitude: number; longitude: number; } | null>(null);
   const isMobile = useIsMobile();
+  const isEditMode = !!postToEdit;
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       title: "",
       description: "",
+      location: { address: "" },
       eventDate: "",
       eventTime: "",
       eventLink: "",
@@ -79,57 +82,91 @@ export function CreateEventDialog({ children, onOpenChange }: CreateEventDialogP
     },
   });
 
+  useEffect(() => {
+    if (open) {
+        if (isEditMode && postToEdit) {
+          form.reset({
+            title: postToEdit.title || "",
+            description: postToEdit.text || "",
+            location: postToEdit.location,
+            eventDate: postToEdit.eventDate || "",
+            eventTime: postToEdit.eventTime || "",
+            eventLink: postToEdit.eventLink || "",
+            image: postToEdit.imageUrls || [],
+          });
+        } else {
+            form.reset({
+                title: "",
+                description: "",
+                location: { address: "" },
+                eventDate: "",
+                eventTime: "",
+                eventLink: "",
+                image: undefined,
+            });
+        }
+    }
+  }, [isEditMode, postToEdit, form, open]);
+
   async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!user || !userDetails) {
         toast({ variant: 'destructive', title: 'Not authenticated' });
         return;
     }
-    if (!eventLocation) {
-        toast({ variant: 'destructive', title: 'Location required', description: 'Please select a location for the event.' });
-        return;
-    }
     setLoading(true);
 
     try {
-        const imageUrls: string[] = [];
-        const imageFiles = values.image as FileList;
-        if (imageFiles && imageFiles.length > 0) {
-            for (const file of Array.from(imageFiles)) {
-                const storageRef = ref(storage, `event_images/${user.uid}/${Date.now()}_${file.name}`);
-                const snapshot = await uploadBytes(storageRef, file);
-                const downloadUrl = await getDownloadURL(snapshot.ref);
-                imageUrls.push(downloadUrl);
-            }
+        let imageUrls: string[] = postToEdit?.imageUrls || [];
+        const imageFiles = values.image;
+
+        if (imageFiles && imageFiles instanceof FileList && imageFiles.length > 0) {
+            const uploadedUrls = await Promise.all(
+                Array.from(imageFiles).map(async (file) => {
+                    const storageRef = ref(storage, `event_images/${user.uid}/${Date.now()}_${file.name}`);
+                    await uploadBytes(storageRef, file);
+                    return getDownloadURL(storageRef);
+                })
+            );
+            imageUrls = isEditMode ? [...imageUrls, ...uploadedUrls] : uploadedUrls;
         }
 
         const eventData = {
+            ...postToEdit, // Carry over existing fields like attendees, likedBy etc.
             authorId: user.uid,
             authorName: userDetails.name,
             authorImage: userDetails.avatarUrl,
             category: "Event",
             text: values.description,
             title: values.title,
-            eventLocation: eventLocation,
+            location: values.location,
             eventDate: values.eventDate,
             eventTime: values.eventTime,
-            eventLink: values.eventLink || "",
+            eventLink: values.eventLink,
             imageUrls: imageUrls,
             imageUrl: imageUrls[0] || "",
-            timestamp: serverTimestamp(),
-            likedBy: [],
-            commentCount: 0,
-            attendees: []
+            timestamp: isEditMode && postToEdit.timestamp ? postToEdit.timestamp : serverTimestamp(),
         };
 
-        await addDoc(collection(db, "posts"), eventData);
-        toast({ title: 'Event created!' });
+        if (isEditMode && postToEdit) {
+            const postRef = doc(db, "posts", postToEdit.id);
+            await updateDoc(postRef, eventData);
+            toast({ title: 'Event updated!' });
+        } else {
+            await addDoc(collection(db, "posts"), {
+                ...eventData,
+                likedBy: [],
+                commentCount: 0,
+                attendees: []
+            });
+            toast({ title: 'Event created!' });
+        }
+        
         form.reset();
-        setEventLocation(null);
         setOpen(false);
 
     } catch(error) {
-        console.error("Error creating event:", error);
-        toast({ variant: 'destructive', title: 'Error', description: 'Failed to create event.' });
+        console.error("Error submitting event:", error);
+        toast({ variant: 'destructive', title: 'Error', description: `Failed to ${isEditMode ? 'update' : 'create'} event.` });
     } finally {
         setLoading(false);
     }
@@ -140,9 +177,11 @@ export function CreateEventDialog({ children, onOpenChange }: CreateEventDialogP
     if(onOpenChange) onOpenChange(newOpenState);
     if (!newOpenState) {
         form.reset();
-        setEventLocation(null);
     }
   }
+  
+  const finalTitle = isEditMode ? "Edit Event" : "Create Event";
+  const finalDescription = isEditMode ? "Make changes to your event." : "Plan and share your neighborhood event.";
 
   const FormContent = () => (
      <Form {...form}>
@@ -169,11 +208,23 @@ export function CreateEventDialog({ children, onOpenChange }: CreateEventDialogP
                 </FormItem>
               )}
             />
-            <FormItem>
-                <FormLabel>Location</FormLabel>
-                <FormControl><LocationPicker onLocationSelect={setEventLocation} /></FormControl>
-                <FormMessage />
-            </FormItem>
+            <FormField
+              control={form.control}
+              name="location"
+              render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Location</FormLabel>
+                    <FormControl>
+                        <LocationInput 
+                            name={field.name}
+                            control={form.control}
+                            defaultValue={field.value}
+                        />
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+              )}
+            />
             <div className="grid grid-cols-2 gap-4">
                 <FormField
                     control={form.control}
@@ -203,7 +254,7 @@ export function CreateEventDialog({ children, onOpenChange }: CreateEventDialogP
                 name="eventLink"
                 render={({ field }) => (
                     <FormItem>
-                         <FormLabel>Event Link (Optional)</FormLabel>
+                         <FormLabel>Event Link</FormLabel>
                         <FormControl><Input placeholder="Link to tickets or more info" {...field} /></FormControl>
                         <FormMessage />
                     </FormItem>
@@ -212,7 +263,7 @@ export function CreateEventDialog({ children, onOpenChange }: CreateEventDialogP
             <FormField
               control={form.control}
               name="image"
-              render={({ field }) => (
+              render={({ field: { onChange, value, ...rest }}) => (
                 <FormItem>
                   <FormLabel>Event Image</FormLabel>
                   <FormControl>
@@ -220,7 +271,8 @@ export function CreateEventDialog({ children, onOpenChange }: CreateEventDialogP
                       type="file"
                       accept="image/*"
                       multiple
-                      onChange={(e) => field.onChange(e.target.files)}
+                      onChange={(e) => onChange(e.target.files)}
+                      {...rest}
                     />
                   </FormControl>
                   <FormMessage />
@@ -249,11 +301,11 @@ export function CreateEventDialog({ children, onOpenChange }: CreateEventDialogP
         <Sheet open={open} onOpenChange={handleOpenChange}>
             <SheetTrigger asChild>{children ? children : <Trigger />}</SheetTrigger>
             <SheetContent side="bottom" className="max-h-screen overflow-y-auto">
-                <SheetHeader className="px-4"><SheetTitle>Create Event</SheetTitle></SheetHeader>
+                <SheetHeader className="px-4"><SheetTitle>{finalTitle}</SheetTitle></SheetHeader>
                 <div className="py-4"><FormContent /></div>
                 <SheetFooter className="px-4 pb-4">
                     <Button onClick={form.handleSubmit(onSubmit)} className="w-full" variant="default" disabled={loading}>
-                        {loading ? 'Creating...' : 'Create Event'}
+                        {loading ? (isEditMode ? 'Saving...' : 'Creating...') : (isEditMode ? 'Save Changes' : 'Create Event')}
                     </Button>
                 </SheetFooter>
             </SheetContent>
@@ -266,13 +318,13 @@ export function CreateEventDialog({ children, onOpenChange }: CreateEventDialogP
       <DialogTrigger asChild>{children ? children : <Trigger />}</DialogTrigger>
       <DialogContent className="sm:max-w-[525px]">
         <DialogHeader>
-          <DialogTitle>Create Event</DialogTitle>
-          <DialogDescription>Plan and share your neighborhood event.</DialogDescription>
+          <DialogTitle>{finalTitle}</DialogTitle>
+          <DialogDescription>{finalDescription}</DialogDescription>
         </DialogHeader>
         <div className="py-4"><FormContent /></div>
         <DialogFooter>
           <Button onClick={form.handleSubmit(onSubmit)} className="w-full" variant="default" disabled={loading}>
-            {loading ? 'Creating...' : 'Create Event'}
+            {loading ? (isEditMode ? 'Saving...' : 'Creating...') : (isEditMode ? 'Save Changes' : 'Create Event')}
           </Button>
         </DialogFooter>
       </DialogContent>

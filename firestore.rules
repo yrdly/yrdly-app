@@ -1,65 +1,140 @@
-
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // --- Reusable Helper Functions ---
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isDataObject(data) {
+        return data is map && data.keys().size() > 0;
+    }
+
+    function isValidLocation(location) {
+      return location is map &&
+             location.keys().hasOnly(['address', 'geopoint']) &&
+             location.address is string &&
+             (!('geopoint' in location) || location.geopoint is latlng);
+    }
+    
+    function isIncomingData() {
+        return request.resource.data;
+    }
+
+    // --- Collection Rules ---
+
     match /users/{userId} {
-      // Anyone can read a user's profile
-      allow read;
+      allow read: if isAuthenticated();
+      allow create: if isOwner(userId) &&
+                    isDataObject(isIncomingData()) &&
+                    isIncomingData().name is string &&
+                    isIncomingData().email == request.auth.token.email; // Ensure email matches token
       
-      // A user can only be created if they are the one making the request
-      allow create: if request.auth != null && request.resource.id == request.auth.uid;
-      
-      // A user can only update their own document, and only specific fields
-      allow update: if request.auth != null && request.auth.uid == userId 
-                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'bio', 'location', 'avatarUrl', 'friends', 'blockedUsers', 'fcmToken']);
+      // A user can only update their own document, and only specific, non-critical fields.
+      // 'friends' and 'blockedUsers' should be managed by Cloud Functions.
+      allow update: if isOwner(userId) &&
+                    request.resource.data.diff(resource.data).affectedKeys()
+                      .hasOnly(['name', 'bio', 'location', 'avatarUrl', 'fcmToken', 'notificationSettings']);
     }
 
     match /posts/{postId} {
-      allow read;
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow delete: if request.auth != null && resource.data.userId == request.auth.uid;
-      // Allow post owner to update their own post.
-      // Allow any authenticated user to update only the likedBy, attendees, or commentCount fields.
-      allow update: if request.auth != null && (
-                      (request.auth.uid == resource.data.userId) ||
-                      (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likedBy', 'attendees', 'commentCount']))
-                    );
+      allow read: if isAuthenticated();
+      allow create: if isOwner(isIncomingData().authorId) &&
+                      isIncomingData().authorName is string &&
+                      isIncomingData().category is string &&
+                      isIncomingData().text is string &&
+                      isIncomingData().timestamp == request.time &&
+                      (!('location' in isIncomingData()) || isValidLocation(isIncomingData().location));
+
+      allow delete: if isAuthenticated() && resource.data.authorId == request.auth.uid;
+
+      allow update: if isAuthenticated() && (
+        // Case 1: The owner is updating their post.
+        (resource.data.authorId == request.auth.uid &&
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['text', 'title', 'description', 'category', 'price', 'imageUrls', 'imageUrl', 'location', 'eventDate', 'eventTime', 'eventLink']) &&
+            (!('location' in isIncomingData()) || isValidLocation(isIncomingData().location))
+        ) ||
+        // Case 2: A user is liking/unliking a post (only adding/removing themselves).
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likedBy']) &&
+          (request.resource.data.likedBy == resource.data.likedBy.concat([request.auth.uid]) || 
+           request.resource.data.likedBy == resource.data.likedBy.remove(request.auth.uid))
+        ) ||
+        // Case 3: A user is attending/unattending an event (only adding/removing themselves).
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['attendees']) &&
+          (request.resource.data.attendees == resource.data.attendees.concat([request.auth.uid]) ||
+           request.resource.data.attendees == resource.data.attendees.remove(request.auth.uid))
+        )
+      );
     }
 
     match /posts/{postId}/comments/{commentId} {
-        allow read;
-        allow create: if request.auth != null;
-        // Allow user to update reactions, or the post author to delete the comment (by updating text)
-        allow update: if request.auth != null && (
-                        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions'])) ||
-                        (get(/databases/$(database)/documents/posts/$(postId)).data.userId == request.auth.uid)
-                      );
-        allow delete: if request.auth != null && (
+        allow read: if isAuthenticated();
+        allow create: if isOwner(isIncomingData().userId) &&
+                        isIncomingData().authorName is string &&
+                        isIncomingData().text is string && isIncomingData().text.size() < 500 &&
+                        isIncomingData().timestamp == request.time;
+
+        // Allow comment author to edit their own comment text.
+        allow update: if isOwner(resource.data.userId) &&
+                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text']);
+
+        allow delete: if isAuthenticated() && (
                         resource.data.userId == request.auth.uid ||
-                        get(/databases/$(database)/documents/posts/$(postId)).data.userId == request.auth.uid
+                        get(/databases/$(database)/documents/posts/$(postId)).data.authorId == request.auth.uid
                       );
     }
     
     match /friend_requests/{requestId} {
-        allow read, create, update, delete: if request.auth != null && request.auth.uid in resource.data.participantIds;
+        allow read, update: if isAuthenticated() && request.auth.uid in resource.data.participantIds;
+        allow create: if isAuthenticated() && 
+                        isOwner(isIncomingData().fromUserId) &&
+                        isIncomingData().status == 'pending';
+        allow delete: if isAuthenticated() && isOwner(resource.data.fromUserId);
     }
 
     match /conversations/{conversationId} {
-      allow read, create, update: if request.auth != null && request.auth.uid in resource.data.participantIds;
+      allow read, create, update: if isAuthenticated() && request.auth.uid in resource.data.participantIds;
+      
       match /messages/{messageId} {
-        allow read, create: if request.auth != null && request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds;
+        allow read: if isAuthenticated() && request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds;
+        allow create: if isAuthenticated() && 
+                        isOwner(isIncomingData().senderId) &&
+                        isIncomingData().text is string && isIncomingData().text.size() < 1000 &&
+                        isIncomingData().timestamp == request.time &&
+                        request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds;
       }
     }
 
     match /businesses/{businessId} {
-      allow get;
-      allow list: if request.auth != null;
-      allow create: if request.auth != null && request.resource.data.ownerId == request.auth.uid;
-      allow update, delete: if request.auth != null && resource.data.ownerId == request.auth.uid;
+      allow get; // Publicly readable
+      allow list: if isAuthenticated();
+      allow create: if isOwner(isIncomingData().ownerId) &&
+                      isIncomingData().name is string &&
+                      isIncomingData().category is string &&
+                      isIncomingData().description is string &&
+                      isValidLocation(isIncomingData().location);
+
+      allow update: if isOwner(resource.data.ownerId) &&
+                      request.resource.data.diff(resource.data).affectedKeys()
+                        .hasOnly(['name', 'category', 'description', 'imageUrls', 'location']) &&
+                      isValidLocation(isIncomingData().location);
+
+      allow delete: if isOwner(resource.data.ownerId);
     }
     
     match /notifications/{notificationId} {
-        allow read, update: if request.auth != null && request.auth.uid == resource.data.userId;
+        allow read: if isOwner(resource.data.userId);
+        // Only allow updating the 'isRead' status.
+        allow update: if isOwner(resource.data.userId) &&
+                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead']);
     }
   }
 }

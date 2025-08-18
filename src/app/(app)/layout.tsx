@@ -10,6 +10,7 @@ import { AppBottomNav } from '@/components/layout/AppBottomNav';
 import { useAuth } from '@/hooks/use-auth';
 import { PushNotificationManager } from '@/components/PushNotificationManager';
 import Image from 'next/image';
+import { APIProvider } from '@vis.gl/react-google-maps';
 
 function ProtectedLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -60,8 +61,10 @@ export default function AppLayout({
   children: React.ReactNode;
 }) {
   return (
-    <ProtectedLayout>
-      {children}
-    </ProtectedLayout>
+    <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!}>
+      <ProtectedLayout>
+        {children}
+      </ProtectedLayout>
+    </APIProvider>
   );
 }

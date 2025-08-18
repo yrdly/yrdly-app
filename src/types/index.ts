@@ -108,7 +108,8 @@ export interface Message {
     id: string;
     senderId: string;
     sender: User;
-    text: string;
+    text?: string; // Make text optional
+    imageUrl?: string; // Add imageUrl
     timestamp: string; // Should be string for display
     isRead: boolean;
 }

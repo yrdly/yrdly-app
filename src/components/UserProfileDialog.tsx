@@ -120,42 +120,32 @@ export function UserProfileDialog({ user: profileUser, open, onOpenChange }: Use
     const handleUnfriend = async () => {
         if (!currentUser || !profileUser) return;
         try {
-            await runTransaction(db, async (transaction) => {
-                const currentUserRef = doc(db, "users", currentUser.uid);
-                const friendUserRef = doc(db, "users", profileUser.uid);
-                transaction.update(currentUserRef, { friends: arrayRemove(profileUser.uid) });
-                transaction.update(friendUserRef, { friends: arrayRemove(currentUser.uid) });
-            });
+            const unfriend = httpsCallable(functions, 'unfriendUser');
+            await unfriend({ friendId: profileUser.uid });
             toast({ title: "Friend removed." });
             onOpenChange(true);
         } catch (error) {
-            toast({ variant: "destructive", title: "Error", description: `Could not remove friend. ${error}` });
+            toast({ variant: "destructive", title: "Error", description: "Could not remove friend." });
         }
     };
 
     const handleBlockUser = async () => {
         if (!currentUser || !profileUser) return;
-        const currentUserRef = doc(db, "users", currentUser.uid);
         try {
-            // Block first, then unfriend if they are friends
-            await updateDoc(currentUserRef, { blockedUsers: arrayUnion(profileUser.uid) });
-            
-            if (friendshipStatus === 'friends') {
-                await handleUnfriend();
-            }
-
+            const block = httpsCallable(functions, 'blockUser');
+            await block({ userIdToBlock: profileUser.uid });
             toast({ title: "User blocked." });
             onOpenChange(true); // Signal that a change was made
         } catch (error) {
-            toast({ variant: "destructive", title: "Error", description: `Could not block user. ${error}` });
+            toast({ variant: "destructive", title: "Error", description: "Could not block user." });
         }
     };
     
     const handleUnblockUser = async () => {
         if (!currentUser || !profileUser) return;
-        const currentUserRef = doc(db, "users", currentUser.uid);
         try {
-            await updateDoc(currentUserRef, { blockedUsers: arrayRemove(profileUser.uid) });
+            const unblock = httpsCallable(functions, 'unblockUser');
+            await unblock({ userIdToUnblock: profileUser.uid });
             toast({ title: "User unblocked." });
             onOpenChange(true); // Signal that a change was made
         } catch {
