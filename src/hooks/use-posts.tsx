@@ -1,48 +1,5 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import {
-  collection,
-  addDoc,
-  serverTimestamp,
-  query,
-  orderBy,
-  onSnapshot,
-  doc,
-  updateDoc,
-  arrayUnion,
-  arrayRemove,
-  increment,
-  deleteDoc,
-} from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { useAuth } from '@/hooks/use-auth';
-import { Post, Business } from '@/types';
-import { useToast } from './use-toast';
-
-export const usePosts = () => {
-  const { user, userDetails } = useAuth();
-  const { toast } = useToast();
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const q = query(collection(db, 'posts'), orderBy('timestamp', 'desc'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const postsData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Post));
-      setPosts(postsData);
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
-
-  const createPost = useCallback(
-    async (postData: Omit<Post, 'id' | 'userId' | 'authorName' | 'authorImage' | 'timestamp' | 'commentCount' | 'likedBy'>) => {
-      if (!user || !userDetails) {
-        toast({ title: 'Error', description: 'You must be logged in to create a post.' });
-        return;
-      }
-
-      import {
   collection,
   addDoc,
   serverTimestamp,
@@ -113,12 +70,6 @@ export const usePosts = () => {
     },
     [user, userDetails, toast]
   );
-        console.error('Error creating post:', error);
-        toast({ title: 'Error', description: 'Failed to create post.' });
-      }
-    },
-    [user, userDetails, toast]
-  );
   
   const createBusiness = useCallback(
     async (businessData: Omit<Business, 'id' | 'ownerId' | 'createdAt'>) => {
@@ -158,11 +109,11 @@ export const usePosts = () => {
 
   const addComment = useCallback(
     async (postId: string, commentText: string) => {
-      if (!user) return;
+      if (!user || !userDetails) return;
       const commentData = {
         userId: user.uid,
-        authorName: userDetails?.name || 'Anonymous',
-        authorImage: userDetails?.avatarUrl || '',
+        authorName: userDetails.name || 'Anonymous',
+        authorImage: userDetails.avatarUrl || '',
         text: commentText,
         timestamp: serverTimestamp(),
         parentId: null,
