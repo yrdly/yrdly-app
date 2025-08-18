@@ -57,8 +57,33 @@ export const usePosts = () => {
   deleteDoc,
   Timestamp,
 } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { useAuth } from '@/hooks/use-auth';
+import { Post, Business } from '@/types';
+import { useToast } from './use-toast';
 
-// ...
+export const usePosts = () => {
+  const { user, userDetails } = useAuth();
+  const { toast } = useToast();
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const q = query(collection(db, 'posts'), orderBy('timestamp', 'desc'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const postsData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Post));
+      setPosts(postsData);
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const createPost = useCallback(
+    async (postData: Omit<Post, 'id' | 'userId' | 'authorName' | 'authorImage' | 'timestamp' | 'commentCount' | 'likedBy'>) => {
+      if (!user || !userDetails) {
+        toast({ title: 'Error', description: 'You must be logged in to create a post.' });
+        return;
+      }
 
       try {
         const newPostData = {
@@ -82,6 +107,12 @@ export const usePosts = () => {
         setPosts(prevPosts => [clientPost as Post, ...prevPosts]);
         toast({ title: 'Success', description: 'Post created successfully.' });
       } catch (error) {
+        console.error('Error creating post:', error);
+        toast({ title: 'Error', description: 'Failed to create post.' });
+      }
+    },
+    [user, userDetails, toast]
+  );
         console.error('Error creating post:', error);
         toast({ title: 'Error', description: 'Failed to create post.' });
       }
