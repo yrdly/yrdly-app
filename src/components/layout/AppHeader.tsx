@@ -22,7 +22,7 @@ import { NotificationsPanel } from './NotificationsPanel';
 import { SearchDialog } from '../SearchDialog';
 
 export function AppHeader() {
-  const { user } = useAuth();
+  const { user, userDetails } = useAuth();
   const router = useRouter();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
@@ -30,6 +30,9 @@ export function AppHeader() {
     await auth.signOut();
     router.push('/login');
   };
+
+  const avatarUrl = userDetails?.avatarUrl || user?.photoURL || `https://placehold.co/100x100.png`;
+  const displayName = userDetails?.name || user?.displayName || 'User';
 
   return (
     <>
@@ -63,8 +66,8 @@ export function AppHeader() {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="rounded-full">
                  <Avatar className="h-8 w-8">
-                   <AvatarImage src={user?.photoURL || `https://placehold.co/100x100.png`} alt={user?.displayName || 'User'} data-ai-hint="person portrait" />
-                   <AvatarFallback>{user?.displayName?.charAt(0) || 'U'}</AvatarFallback>
+                   <AvatarImage src={avatarUrl} alt={displayName} data-ai-hint="person portrait" />
+                   <AvatarFallback>{displayName.charAt(0)}</AvatarFallback>
                  </Avatar>
                </Button>
             </DropdownMenuTrigger>

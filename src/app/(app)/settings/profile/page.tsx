@@ -91,13 +91,22 @@ export default function ProfilePage() {
         setIsEditMode(false);
     }
 
+    import { updateProfile } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
+
+// ... imports
+
+// ... component definition
+
     const onSubmit = async (data: ProfileFormValues) => {
         if (!user) return;
         setFormLoading(true);
 
         try {
             let avatarUrl = userDetails?.avatarUrl;
+            let displayName = data.name;
 
+            // Step 1: Upload new avatar if one is selected
             if (data.avatar && data.avatar.length > 0) {
                 const file = data.avatar[0];
                 const fileExtension = file.name.split('.').pop();
@@ -107,9 +116,10 @@ export default function ProfilePage() {
                 avatarUrl = await getDownloadURL(storageRef);
             }
 
+            // Step 2: Update Firestore document
             const userRef = doc(db, 'users', user.uid);
             await updateDoc(userRef, {
-                name: data.name,
+                name: displayName,
                 bio: data.bio,
                 location: {
                     state: data.locationState,
@@ -118,14 +128,23 @@ export default function ProfilePage() {
                 avatarUrl: avatarUrl,
             });
 
+            // Step 3: Update Firebase Auth profile
+            await updateProfile(user, {
+                displayName: displayName,
+                photoURL: avatarUrl,
+            });
+
             toast({ title: 'Profile updated successfully!' });
             setIsEditMode(false);
         } catch (error) {
+            console.error("Profile update error:", error);
             toast({ variant: 'destructive', title: 'Error', description: 'Failed to update profile.' });
         } finally {
             setFormLoading(false);
         }
     };
+    
+// ... rest of the component
     
     if (authLoading) {
         return (
