@@ -59,7 +59,7 @@ export function AppHeader() {
             </Button>
           </Link>
           <NotificationsPanel />
-          <Link href="/settings">
+          <Link href="/settings/profile">
              <Button variant="ghost" size="icon" className="rounded-full">
                 <Avatar className="h-8 w-8">
                   <AvatarImage src={user?.photoURL || `https://placehold.co/100x100.png`} alt={user?.displayName || 'User'} data-ai-hint="person portrait" />

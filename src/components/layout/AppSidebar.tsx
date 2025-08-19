@@ -42,11 +42,14 @@ export function AppSidebar({ onProfileClick }: { onProfileClick: () => void }) {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
-              onClick={onProfileClick}
+              asChild
+              isActive={pathname.startsWith('/settings/profile')}
               tooltip={{ children: 'My Profile', side: 'right' }}
             >
-              <UserIcon />
-              <span>My Profile</span>
+              <Link href="/settings/profile">
+                <UserIcon />
+                <span>My Profile</span>
+              </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
           {menuItems.map((item) => (
@@ -73,7 +76,7 @@ export function AppSidebar({ onProfileClick }: { onProfileClick: () => void }) {
           <SidebarMenuItem>
              <SidebarMenuButton
                 asChild
-                isActive={pathname.startsWith('/settings')}
+                isActive={pathname.startsWith('/settings') && !pathname.startsWith('/settings/profile')}
                  tooltip={{ children: 'Settings', side: 'right' }}
               >
                 <Link href="/settings">
