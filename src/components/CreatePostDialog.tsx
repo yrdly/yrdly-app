@@ -241,7 +241,7 @@ const CreatePostDialogComponent = ({
     }
   }
   
-  const handleOpenChange = (newOpenState: boolean) => {
+  const handleOpenChange = React.useCallback((newOpenState: boolean) => {
     setOpen(newOpenState);
     if(onOpenChange) {
         onOpenChange(newOpenState);
@@ -249,7 +249,7 @@ const CreatePostDialogComponent = ({
      if (!newOpenState) {
         form.reset();
     }
-  }
+  }, [onOpenChange, form]);
   
   const finalTitle = title || (isEditMode ? `Edit ${postType}` : `Create ${postType}`);
   const finalDescription = description || (isEditMode ? `Make changes to your ${postType.toLowerCase()} here.` : `Share something with your neighborhood.`);

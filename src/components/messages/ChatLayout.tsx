@@ -200,13 +200,13 @@ export function ChatLayout({
   }, 2000);
 
 
-  const handleTyping = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+  const handleTyping = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
       setNewMessage(e.target.value);
       debouncedUpdateTyping.cancel();
       debouncedUpdateTyping(true);
-  };
+  }, [debouncedUpdateTyping]);
   
-  const handleSendMessage = async (e: React.FormEvent) => {
+  const handleSendMessage = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     if ((newMessage.trim() === "" && !imageFile) || !selectedConversation) return;
 
@@ -256,7 +256,7 @@ export function ChatLayout({
       console.error("Error sending message: ", error);
       setUploadProgress(null);
     }
-  };
+  }, [newMessage, imageFile, selectedConversation, currentUser.id, debouncedUpdateTyping]);
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -266,13 +266,13 @@ export function ChatLayout({
     }
   };
 
-  const removeImagePreview = () => {
+  const removeImagePreview = useCallback(() => {
       setImageFile(null);
       setImagePreview(null);
       if(fileInputRef.current) {
           fileInputRef.current.value = "";
       }
-  }
+  }, []);
 
   return (
       <>

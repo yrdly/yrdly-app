@@ -54,7 +54,7 @@ export function CommentSection({ postId }: CommentSectionProps) {
         return () => unsubscribe();
     }, [postId]);
 
-    const handlePostComment = async (e: FormEvent) => {
+    const handlePostComment = useCallback(async (e: FormEvent) => {
         e.preventDefault();
         if (!currentUser || !userDetails || newComment.trim() === '') return;
 
@@ -89,9 +89,9 @@ export function CommentSection({ postId }: CommentSectionProps) {
             console.error("Error posting comment: ", error);
             toast({ variant: 'destructive', title: 'Error', description: 'Could not post comment.' });
         }
-    };
+    }, [currentUser, userDetails, newComment, postId, replyingTo, toast]);
 
-    const handleReaction = async (commentId: string, emoji: string) => {
+    const handleReaction = useCallback(async (commentId: string, emoji: string) => {
         if (!currentUser) return;
         const commentRef = doc(db, 'posts', postId, 'comments', commentId);
 
@@ -116,7 +116,7 @@ export function CommentSection({ postId }: CommentSectionProps) {
             console.error("Error handling reaction: ", error);
             toast({ variant: "destructive", title: "Error", description: "Could not add reaction." });
         }
-    };
+    }, [currentUser, postId, toast]);
     
     const openProfile = async (userId: string) => {
         if (userId === currentUser?.uid) {

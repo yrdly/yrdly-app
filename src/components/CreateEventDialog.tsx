@@ -35,6 +35,7 @@ import { PlusCircle } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { useAuth } from "@/hooks/use-auth";
 import { useState, useEffect, memo } from "react";
+import * as React from 'react';
 import { collection, addDoc, serverTimestamp, doc, updateDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "@/lib/firebase";
@@ -172,13 +173,13 @@ export const CreateEventDialog = memo(function CreateEventDialog({ children, onO
     }
   }
 
-  const handleOpenChange = (newOpenState: boolean) => {
+  const handleOpenChange = React.useCallback((newOpenState: boolean) => {
     setOpen(newOpenState);
-    if(onOpenChange) onOpenChange(newOpenState);
+    if(onOpen-Change) onOpenChange(newOpenState);
     if (!newOpenState) {
         form.reset();
     }
-  }
+  }, [onOpenChange, form]);
   
   const finalTitle = isEditMode ? "Edit Event" : "Create Event";
   const finalDescription = isEditMode ? "Make changes to your event." : "Plan and share your neighborhood event.";
