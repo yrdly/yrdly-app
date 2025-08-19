@@ -9,16 +9,23 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
 } from '@/components/ui/sidebar';
-import { Home, ShoppingCart, Calendar, Briefcase, MessageSquare, Settings, Users, Map, User as UserIcon } from 'lucide-react';
+import { Home, ShoppingCart, Calendar, Briefcase, MessageSquare, Settings, Users, Map, User as UserIcon, LogOut } from 'lucide-react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
+import { auth } from '@/lib/firebase';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 
 export function AppSidebar({ onProfileClick }: { onProfileClick: () => void }) {
   const pathname = usePathname();
   const { pendingRequestCount } = useAuth();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    await auth.signOut();
+    router.push('/login');
+  };
 
   const menuItems = [
     { href: '/home', label: 'Newsfeed', icon: Home },
@@ -83,6 +90,15 @@ export function AppSidebar({ onProfileClick }: { onProfileClick: () => void }) {
                   <Settings />
                   <span>Settings</span>
                 </Link>
+              </SidebarMenuButton>
+          </SidebarMenuItem>
+           <SidebarMenuItem>
+             <SidebarMenuButton
+                onClick={handleLogout}
+                tooltip={{ children: 'Log out', side: 'right' }}
+              >
+                <LogOut />
+                <span>Log out</span>
               </SidebarMenuButton>
           </SidebarMenuItem>
          </SidebarMenu>

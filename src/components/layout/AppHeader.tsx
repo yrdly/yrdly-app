@@ -2,7 +2,7 @@
 "use client";
 
 import { useState } from 'react';
-import { Search, LogOut, MessageCircle, Map, Settings } from 'lucide-react';
+import { Search, LogOut, MessageCircle, Map, Settings, User as UserIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -29,7 +29,7 @@ export function AppHeader() {
   const handleLogout = async () => {
     await auth.signOut();
     router.push('/login');
-  }
+  };
 
   return (
     <>
@@ -59,14 +59,37 @@ export function AppHeader() {
             </Button>
           </Link>
           <NotificationsPanel />
-          <Link href="/settings/profile">
-             <Button variant="ghost" size="icon" className="rounded-full">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={user?.photoURL || `https://placehold.co/100x100.png`} alt={user?.displayName || 'User'} data-ai-hint="person portrait" />
-                  <AvatarFallback>{user?.displayName?.charAt(0) || 'U'}</AvatarFallback>
-                </Avatar>
-              </Button>
-          </Link>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="rounded-full">
+                 <Avatar className="h-8 w-8">
+                   <AvatarImage src={user?.photoURL || `https://placehold.co/100x100.png`} alt={user?.displayName || 'User'} data-ai-hint="person portrait" />
+                   <AvatarFallback>{user?.displayName?.charAt(0) || 'U'}</AvatarFallback>
+                 </Avatar>
+               </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>My Account</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link href="/settings/profile">
+                  <UserIcon className="mr-2 h-4 w-4" />
+                  <span>Profile</span>
+                </Link>
+              </DropdownMenuItem>
+               <DropdownMenuItem asChild>
+                 <Link href="/settings">
+                   <Settings className="mr-2 h-4 w-4" />
+                   <span>Settings</span>
+                 </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={handleLogout}>
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Log out</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </header>
       <SearchDialog open={isSearchOpen} onOpenChange={setIsSearchOpen} />
