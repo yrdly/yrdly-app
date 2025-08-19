@@ -7,9 +7,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
-import { db, storage } from '@/lib/firebase';
+import { db, storage, auth } from '@/lib/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { updateProfile } from 'firebase/auth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -91,13 +92,6 @@ export default function ProfilePage() {
         setIsEditMode(false);
     }
 
-    import { updateProfile } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
-
-// ... imports
-
-// ... component definition
-
     const onSubmit = async (data: ProfileFormValues) => {
         if (!user) return;
         setFormLoading(true);
@@ -143,8 +137,6 @@ import { auth } from '@/lib/firebase';
             setFormLoading(false);
         }
     };
-    
-// ... rest of the component
     
     if (authLoading) {
         return (
