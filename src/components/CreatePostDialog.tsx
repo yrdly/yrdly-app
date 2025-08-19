@@ -63,28 +63,26 @@ type CreatePostDialogProps = {
     description?: string;
 }
 
-const formSchema = z.object({
-  text: z.string().min(1, "Title can't be empty.").max(500),
+const getFormSchema = (isEditMode: boolean, postType?: 'Post' | 'Business') => z.object({
+  text: z.string().min(1, "Text can't be empty.").max(500),
   description: z.string().optional(),
   category: z.enum(["General", "Event", "For Sale", "Business"]),
   price: z.preprocess(
-      (val) => (val === "" ? undefined : Number(val)),
+      (val) => (val === "" || val === null || val === undefined ? undefined : Number(val)),
       z.number().positive("Price must be positive.").optional()
   ),
   image: z.any().optional(),
-  // Business specific
   name: z.string().optional(),
   businessCategory: z.string().optional(),
   location: z.custom<LocationValue>().optional(),
 
 }).superRefine((data, ctx) => {
-    const isBusiness = data.category === 'Business';
-    // This is a simplified check. A more robust way might be needed if posts can also have names.
-    const isEditMode = (data as any).isEditMode || false; 
-
-    // Check for existing images only matters in edit mode.
-    const hasExistingImages = isEditMode && (data as any).postToEdit?.imageUrls && (data as any).postToEdit.imageUrls.length > 0;
-    const hasNewImage = typeof window !== 'undefined' && data.image && data.image.length > 0;
+    const isBusiness = postType === 'Business';
+    
+    // In edit mode, postToEdit should be available to check for existing images.
+    // This is a proxy since we can't pass postToEdit directly to the schema.
+    const hasExistingImages = isEditMode; 
+    const hasNewImage = data.image && data.image.length > 0;
 
     if (isBusiness) {
       if (!data.name) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['name'], message: "Business name can't be empty." });
@@ -97,7 +95,6 @@ const formSchema = z.object({
        if (!hasNewImage && !hasExistingImages) {
           ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['image'], message: 'An image is required for "For Sale" items.' });
       }
-      // Price is optional, so no validation needed here unless it's not a positive number (handled by z.number().positive())
     }
 });
 
@@ -120,8 +117,8 @@ const CreatePostDialogComponent = ({
   
   const isEditMode = !!postToEdit;
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+  const form = useForm<z.infer<ReturnType<typeof getFormSchema>>>({
+    resolver: zodResolver(getFormSchema(isEditMode, postType)),
     defaultValues: {
       text: "",
       description: "",
@@ -136,6 +133,7 @@ const CreatePostDialogComponent = ({
 
    useEffect(() => {
     if (open) {
+        form.reset(); // Reset form state and errors
         if (isEditMode && postToEdit) {
             if (postType === 'Business' && 'ownerId' in postToEdit) { // It's a Business
                 form.reset({
@@ -152,6 +150,7 @@ const CreatePostDialogComponent = ({
                     category: postToEdit.category,
                     price: postToEdit.price || undefined,
                     image: undefined,
+                    description: postToEdit.description || "",
                 });
             }
         } else {
@@ -170,7 +169,7 @@ const CreatePostDialogComponent = ({
   }, [postToEdit, preselectedCategory, form, isEditMode, open, postType]);
 
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: z.infer<ReturnType<typeof getFormSchema>>) {
     if (!user) {
         toast({ variant: 'destructive', title: 'Not authenticated' });
         return;
@@ -205,7 +204,7 @@ const CreatePostDialogComponent = ({
                 await updateBusiness(postToEdit.id, businessData);
                 toast({ title: 'Business updated!' });
             } else {
-                await createBusiness(businessData as Omit<Business, 'id' | 'ownerId'>);
+                await createBusiness(businessData as Omit<Business, 'id' | 'ownerId' | 'createdAt'>);
                 toast({ title: 'Business added!' });
             }
             
@@ -215,11 +214,13 @@ const CreatePostDialogComponent = ({
                 description: values.description,
                 category: values.category,
                 imageUrls: imageUrls,
-                imageUrl: imageUrls[0] || "",
+                imageUrl: imageUrls.length > 0 ? imageUrls[0] : (postToEdit?.imageUrl || ""),
             };
 
             if(values.category === 'For Sale' && values.price) {
                 postData.price = values.price;
+            } else if (values.category === 'For Sale') {
+                postData.price = 0; // Explicitly set to 0 for "Free"
             }
 
             if (isEditMode && postToEdit) {
@@ -246,6 +247,9 @@ const CreatePostDialogComponent = ({
     setOpen(newOpenState);
     if(onOpenChange) {
         onOpenChange(newOpenState);
+    }
+     if (!newOpenState) {
+        form.reset();
     }
   }
   
@@ -507,3 +511,5 @@ const CreatePostDialogComponent = ({
 };
 
 export const CreatePostDialog = memo(CreatePostDialogComponent);
+
+    
