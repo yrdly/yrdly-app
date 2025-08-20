@@ -27,7 +27,6 @@ import {
 import { db, storage } from "@/lib/firebase";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useDebouncedCallback } from "use-debounce";
 import { UserProfileDialog } from "../UserProfileDialog";
 import Image from "next/image";
@@ -74,7 +73,6 @@ export function ChatLayout({
   currentUser,
   selectedConversationId,
 }: ChatLayoutProps) {
-  const router = useRouter();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -161,7 +159,8 @@ export function ChatLayout({
   }, [selectedConversationId, conversations]);
 
   const handleConversationSelect = (conv: Conversation) => {
-      router.push(`/messages/${conv.id}`);
+      setSelectedConversation(conv);
+      setShowChat(true);
   }
 
   const handleBackToList = () => {
@@ -252,7 +251,7 @@ export function ChatLayout({
   }, [messages, isTyping]);
 
 
-  const handleTyping = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+  const handleTyping = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
       setNewMessage(e.target.value);
       // Temporarily remove typing status updates to debug focus loss
       // sendTypingStatus(true);
@@ -459,29 +458,19 @@ imageUrl = await getDownloadURL(uploadTask.ref);
                     </div>
                 )}
                 {uploadProgress !== null && <Progress value={uploadProgress} className="mb-2" />}
-                <form onSubmit={handleSendMessage} className="flex items-center gap-2">
-                    <input type="file" accept="image/*" ref={fileInputRef} onChange={handleImageSelect} className="hidden" />
-                    <Button type="button" variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()}>
-                        <ImagePlus className="h-5 w-5" />
-                    </Button>
-                    <Textarea
+                <div>
+                    <input
+                        type="text"
                         placeholder="Type a message..."
                         value={newMessage}
                         onChange={handleTyping}
-                        onBlur={() => debouncedStopTyping.flush()}
-                        className="flex-1 resize-none"
-                        rows={1}
                         onKeyDown={(e) => {
                             if (e.key === "Enter" && !e.shiftKey) {
                                 e.preventDefault();
-                                handleSendMessage(e);
                             }
                         }}
                     />
-                    <Button type="submit" size="icon" disabled={(!newMessage.trim() && !imageFile) || uploadProgress !== null}>
-                        <SendHorizonal className="h-5 w-5" />
-                    </Button>
-                </form>
+                </div>
             </div>
         </div>
     );
