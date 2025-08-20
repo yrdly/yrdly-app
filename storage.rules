@@ -1,44 +1,40 @@
+
 rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    // Rules for specific paths must come BEFORE the general catch-all rule.
-    
-    // Allow users to upload their own avatar.
-    // They can read anyone's avatar.
+
+    // --- Specific Paths First ---
+
+    // Allow users to write to their own avatar directory.
     match /avatars/{userId}/{allPaths=**} {
-      allow read;
-      allow write: if request.auth != null && request.auth.uid == userId;
+        allow write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Allow users to upload images for their own posts.
-    // Anyone can read post images.
+    // Allow users to write to their own post image directory.
     match /posts/{userId}/{allPaths=**} {
-      allow read;
-      allow write: if request.auth != null && request.auth.uid == userId;
+        allow write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Allow users to upload images for their own businesses.
-    // Anyone can read business images.
-    match /businesses/{ownerId}/{allPaths=**} {
-        allow read;
-        allow write: if request.auth != null && request.auth.uid == ownerId;
+    // Allow users to write to their own event image directory.
+    match /event_images/{userId}/{allPaths=**} {
+        allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Allow users to write to their own business image directory.
+    match /businesses/{userId}/{allPaths=**} {
+        allow write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Allow authenticated users to upload images in any chat.
-    // For now, any authenticated user can read any chat image.
-    // This could be restricted further later if needed.
+    // Allow authenticated users to write to chat image directories.
     match /chat_images/{conversationId}/{allPaths=**} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
+        allow write: if request.auth != null;
     }
 
-    // Fallback rule: Deny all other reads and writes by default.
-    // This rule is not strictly necessary if the paths above cover all cases,
-    // as the default is to deny, but it makes the security posture explicit.
+    // --- General Read Access Last ---
+    // Allow public read access to all files.
     match /{allPaths=**} {
-      allow read: if false;
-      allow write: if false;
+      allow read;
     }
   }
 }
