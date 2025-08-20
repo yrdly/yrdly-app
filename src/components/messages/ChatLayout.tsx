@@ -254,9 +254,10 @@ export function ChatLayout({
 
   const handleTyping = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
       setNewMessage(e.target.value);
-      sendTypingStatus(true); // Send true immediately
-      debouncedStopTyping(); // Start/reset debounce for sending false
-  }, [sendTypingStatus, debouncedStopTyping]);
+      // Temporarily remove typing status updates to debug focus loss
+      // sendTypingStatus(true);
+      // debouncedStopTyping();
+  }, []);
   
   const handleSendMessage = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
