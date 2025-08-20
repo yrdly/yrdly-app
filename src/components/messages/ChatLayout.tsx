@@ -472,7 +472,8 @@ imageUrl = await getDownloadURL(uploadTask.ref);
                         onKeyDown={(e) => {
                             if (e.key === "Enter" && !e.shiftKey) {
                                 e.preventDefault();
-                                handleSendMessage(e);
+                                // Temporarily remove handleSendMessage to debug navigation
+                                // handleSendMessage(e);
                             }
                         }}
                     />
