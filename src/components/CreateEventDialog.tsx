@@ -84,6 +84,7 @@ export const CreateEventDialog = memo(function CreateEventDialog({ children, onO
     },
   });
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (open) {
         if (isEditMode && postToEdit) {
@@ -174,6 +175,7 @@ export const CreateEventDialog = memo(function CreateEventDialog({ children, onO
     }
   }
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const handleOpenChange = useCallback((newOpenState: boolean) => {
     setOpen(newOpenState);
     if(onOpenChange) onOpenChange(newOpenState);

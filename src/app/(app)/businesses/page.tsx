@@ -153,7 +153,7 @@ function EmptyBusinesses() {
                 <Button>
                     <Plus className="mr-2 h-4 w-4" /> Add Business
                 </Button>
-            </CreatePostDialog>
+            </CreateBusinessDialog>
         </div>
     )
 }
@@ -190,7 +190,7 @@ export default function BusinessesPage() {
             <Button>
                 <Plus className="mr-2 h-4 w-4" /> Add Your Business
             </Button>
-        </CreatePostDialog>
+        </CreateBusinessDialog>
        </div>
 
         <div className="relative">

@@ -466,7 +466,7 @@ imageUrl = await getDownloadURL(uploadTask.ref);
                         placeholder="Type a message..."
                         value={newMessage}
                         onChange={handleTyping}
-                        onBlur={() => debouncedUpdateTyping(false)}
+                        onBlur={() => debouncedStopTyping.flush()}
                         className="flex-1 resize-none"
                         rows={1}
                         onKeyDown={(e) => {

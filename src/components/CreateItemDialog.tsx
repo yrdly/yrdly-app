@@ -82,6 +82,7 @@ const CreateItemDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
     },
   });
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (open) {
         if (isEditMode && postToEdit) {
@@ -153,6 +154,7 @@ const CreateItemDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
     }
   }
   
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const handleOpenChange = useCallback((newOpenState: boolean) => {
     setOpen(newOpenState);
     if(onOpenChange) {
