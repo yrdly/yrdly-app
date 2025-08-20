@@ -35,14 +35,14 @@ import {
 import { PlusCircle } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { useAuth } from "@/hooks/use-auth";
-import { useState, useEffect, memo, useCallback } from "react";
+import { useState, useEffect, memo, useCallback, useMemo } from "react";
 import * as React from 'react';
 import { LocationInput, LocationValue } from "./LocationInput";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { usePosts } from "@/hooks/use-posts";
 import type { Post } from "@/types";
 
-const formSchema = z.object({
+const getFormSchema = (isEditMode: boolean, postToEdit?: Post) => z.object({
   title: z.string().min(1, "Event title can't be empty.").max(100),
   description: z.string().min(1, "Event description can't be empty.").max(1000),
   location: z.custom<LocationValue>().refine(value => value && value.address.length > 0, {
@@ -67,6 +67,8 @@ const CreateEventDialogComponent = memo(function CreateEventDialog({ children, o
   const isMobile = useIsMobile();
   const isEditMode = !!postToEdit;
 
+  const formSchema = useMemo(() => getFormSchema(isEditMode, postToEdit), [isEditMode, postToEdit]);
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -80,31 +82,31 @@ const CreateEventDialogComponent = memo(function CreateEventDialog({ children, o
     },
   });
 
-  useEffect(() => {
+  useEffect(() => { // eslint-disable-next-line react-hooks/exhaustive-deps
     if (open) {
-        if (isEditMode && postToEdit) {
-          form.reset({
-            title: postToEdit.title || "",
-            description: postToEdit.text || "",
-            location: postToEdit.eventLocation,
-            eventDate: postToEdit.eventDate || "",
-            eventTime: postToEdit.eventTime || "",
-            eventLink: postToEdit.eventLink || "",
-            image: postToEdit.imageUrls || [],
-          });
-        } else {
-            form.reset({
-                title: "",
-                description: "",
-                location: { address: "" },
-                eventDate: "",
-                eventTime: "",
-                eventLink: "",
-                image: undefined,
-            });
-        }
+      if (isEditMode && postToEdit) {
+        form.reset({
+          title: postToEdit.title,
+          description: postToEdit.description,
+          location: postToEdit.eventLocation,
+          eventDate: postToEdit.eventDate,
+          eventTime: postToEdit.eventTime,
+          eventLink: postToEdit.eventLink,
+          image: postToEdit.imageUrls || [],
+        });
+      } else if (!isEditMode) {
+        form.reset({
+          title: "",
+          description: "",
+          location: { address: "" },
+          eventDate: "",
+          eventTime: "",
+          eventLink: "",
+          image: undefined,
+        });
+      }
     }
-  }, [isEditMode, postToEdit, open, form]);
+  }, [open, isEditMode, postToEdit, form.reset]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);

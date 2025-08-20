@@ -34,7 +34,7 @@ export const usePosts = () => {
     return () => unsubscribe();
   }, []);
 
-  const uploadImages = async (
+  const uploadImages = useCallback(async (
     files: FileList,
     path: 'posts' | 'event_images' | 'businesses' | 'avatars'
   ): Promise<string[]> => {
@@ -48,7 +48,7 @@ export const usePosts = () => {
         })
     );
     return uploadedUrls;
-  }
+  }, [user]);
 
   const createPost = useCallback(
     async (
@@ -95,7 +95,7 @@ export const usePosts = () => {
         toast({ variant: 'destructive', title: 'Error', description: 'Failed to save post.' });
       }
     },
-    [user, userDetails, toast]
+    [user, userDetails, toast, uploadImages]
   );
 
   const createBusiness = useCallback(
@@ -138,7 +138,7 @@ export const usePosts = () => {
         toast({ variant: 'destructive', title: 'Error', description: 'Failed to save business.' });
       }
     },
-    [user, toast]
+    [user, toast, uploadImages]
   );
 
   const deletePost = useCallback(

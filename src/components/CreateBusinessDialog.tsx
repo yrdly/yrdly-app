@@ -35,17 +35,18 @@ import {
 import { PlusCircle } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { useAuth } from "@/hooks/use-auth";
-import { useState, useEffect, memo, useCallback } from "react";
+import { useState, useEffect, memo, useCallback, useMemo } from "react";
 import * as React from 'react';
 import { usePosts } from "@/hooks/use-posts";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { LocationInput, LocationValue } from "./LocationInput";
 import type { Business } from "@/types";
 
+
 const getFormSchema = (isEditMode: boolean, postToEdit?: Business) => z.object({
   name: z.string().min(1, "Business name can't be empty."),
-  businessCategory: z.string().min(1, "Category can't be empty."),
-  text: z.string().optional(),
+  category: z.string().min(1, "Category can't be empty."),
+  description: z.string().optional(),
   location: z.custom<LocationValue>().refine(value => value && value.address.length > 0, {
     message: "Location is required.",
   }),
@@ -65,47 +66,48 @@ const CreateBusinessDialogComponent = ({ children, postToEdit, onOpenChange }: C
   const isMobile = useIsMobile();
   const isEditMode = !!postToEdit;
 
-  const formSchema = getFormSchema(isEditMode, postToEdit);
+  const formSchema = useMemo(() => getFormSchema(isEditMode, postToEdit), [isEditMode, postToEdit]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
-      businessCategory: "",
-      text: "",
+      category: "",
+      description: "",
       location: { address: "" },
       image: undefined,
     },
   });
 
-  useEffect(() => {
+  useEffect(() => { // eslint-disable-next-line react-hooks/exhaustive-deps
     if (open) {
-        if (isEditMode && postToEdit) {
-            form.reset({
-                name: postToEdit.name,
-                businessCategory: postToEdit.category,
-                text: postToEdit.description,
-                location: postToEdit.location,
-                image: postToEdit.imageUrls || [],
-            });
-        } else {
-            form.reset({
-                name: "",
-                businessCategory: "",
-                text: "",
-                location: { address: "" },
-                image: undefined,
-            });
-        }
+      if (isEditMode && postToEdit) {
+        form.reset({
+          name: postToEdit.name,
+          category: postToEdit.category,
+          description: postToEdit.description,
+          location: postToEdit.location,
+          image: postToEdit.imageUrls || [],
+        });
+      } else if (!isEditMode) {
+        form.reset({
+          name: "",
+          category: "",
+          description: "",
+          location: { address: "" },
+          image: undefined,
+        });
+      }
     }
-  }, [postToEdit, isEditMode, open, form]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, isEditMode, postToEdit, form.reset]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
     const businessData: Omit<Business, 'id' | 'ownerId' | 'createdAt'> = {
         name: values.name,
-        category: values.businessCategory,
-        description: values.text || '',
+        category: values.category,
+        description: values.description || '',
         location: values.location,
         imageUrls: [], // Will be handled in createBusiness
     };
@@ -142,7 +144,7 @@ const CreateBusinessDialogComponent = ({ children, postToEdit, onOpenChange }: C
             />
             <FormField
                 control={formInstance.control}
-                name="businessCategory"
+                name="category"
                 render={({ field }) => (
                 <FormItem>
                     <FormLabel>Category</FormLabel>
@@ -153,7 +155,7 @@ const CreateBusinessDialogComponent = ({ children, postToEdit, onOpenChange }: C
             />
             <FormField
                 control={formInstance.control}
-                name="text"
+                name="description"
                 render={({ field }) => (
                 <FormItem>
                     <FormLabel>Description</FormLabel>

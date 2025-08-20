@@ -35,7 +35,7 @@ import {
 import { PlusCircle } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { useAuth } from "@/hooks/use-auth";
-import { useState, useEffect, memo, useCallback } from "react";
+import { useState, useEffect, memo, useCallback, useMemo } from "react";
 import * as React from 'react';
 import { usePosts } from "@/hooks/use-posts";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -64,7 +64,7 @@ const CreateItemDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
   const isMobile = useIsMobile();
   const isEditMode = !!postToEdit;
 
-  const formSchema = getFormSchema(isEditMode, postToEdit);
+  const formSchema = useMemo(() => getFormSchema(isEditMode, postToEdit), [isEditMode, postToEdit]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -76,25 +76,25 @@ const CreateItemDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
     },
   });
 
-  useEffect(() => {
+  useEffect(() => { // eslint-disable-next-line react-hooks/exhaustive-deps
     if (open) {
-        if (isEditMode && postToEdit) {
-            form.reset({
-                text: postToEdit.text,
-                description: postToEdit.description || "",
-                price: postToEdit.price || undefined,
-                image: postToEdit.imageUrls || [],
-            });
-        } else {
-            form.reset({
-                text: "",
-                description: "",
-                price: undefined,
-                image: undefined,
-            });
-        }
+      if (isEditMode && postToEdit) {
+        form.reset({
+          text: postToEdit.text,
+          description: postToEdit.description,
+          price: postToEdit.price,
+          image: postToEdit.imageUrls || [],
+        });
+      } else if (!isEditMode) {
+        form.reset({
+          text: "",
+          description: "",
+          price: undefined,
+          image: undefined,
+        });
+      }
     }
-  }, [postToEdit, isEditMode, open, form]);
+  }, [open, isEditMode, postToEdit, form.reset]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
