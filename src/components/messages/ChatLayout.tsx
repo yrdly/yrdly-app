@@ -251,7 +251,7 @@ export function ChatLayout({
   }, [messages, isTyping]);
 
 
-  const handleTyping = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+  const handleTyping = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
       setNewMessage(e.target.value);
       sendTypingStatus(true); // Send true immediately
       debouncedStopTyping(); // Start/reset debounce for sending false
@@ -457,30 +457,19 @@ imageUrl = await getDownloadURL(uploadTask.ref);
                     </div>
                 )}
                 {uploadProgress !== null && <Progress value={uploadProgress} className="mb-2" />}
-                <form onSubmit={handleSendMessage} className="flex items-center gap-2">
-                    <input type="file" accept="image/*" ref={fileInputRef} onChange={handleImageSelect} className="hidden" />
-                    <Button type="button" variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()}>
-                        <ImagePlus className="h-5 w-5" />
-                    </Button>
-                    <Textarea
+                <div>
+                    <input
+                        type="text"
                         placeholder="Type a message..."
                         value={newMessage}
                         onChange={handleTyping}
-                        onBlur={() => debouncedStopTyping.flush()}
-                        className="flex-1 resize-none"
-                        rows={1}
                         onKeyDown={(e) => {
                             if (e.key === "Enter" && !e.shiftKey) {
                                 e.preventDefault();
-                                // Temporarily remove handleSendMessage to debug navigation
-                                // handleSendMessage(e);
                             }
                         }}
                     />
-                    <Button type="submit" size="icon" disabled={(!newMessage.trim() && !imageFile) || uploadProgress !== null}>
-                        <SendHorizonal className="h-5 w-5" />
-                    </Button>
-                </form>
+                </div>
             </div>
         </div>
     );
