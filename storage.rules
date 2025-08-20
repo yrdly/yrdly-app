@@ -34,7 +34,7 @@ service firebase.storage {
     // Rule for event images
     match /event_images/{userId}/{allPaths=**} {
       allow read;
-      allow write: if isOwner(userId);
+      allow write: if isAuthenticated();
     }
 
     // Rule for chat images
