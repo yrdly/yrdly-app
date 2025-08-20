@@ -65,7 +65,7 @@ export function WelcomeBanner() {
               <AlertDescription className="mt-2">
                 <p className="mb-4">A complete profile helps you connect with more neighbors. Add your bio and location to get the most out of Yrdly.</p>
                 <div className="flex gap-2">
-                    <Button asChild variant="default" size="sm" className="bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"><Link href="/settings">Go to Settings</Link></Button>
+                    <Button asChild variant="default" size="sm" className="bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"><Link href="/settings/profile">Go to Settings</Link></Button>
                 </div>
               </AlertDescription>
             </Alert>
