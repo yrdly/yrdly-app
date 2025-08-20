@@ -42,7 +42,7 @@ import {
 import { PlusCircle } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { useAuth } from "@/hooks/use-auth";
-import { useState, useEffect, memo } from "react";
+import { useState, useEffect, memo, useCallback } from "react";
 import * as React from 'react';
 import { collection, addDoc, updateDoc, doc, serverTimestamp } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
@@ -79,8 +79,8 @@ const getFormSchema = (isEditMode: boolean, postType?: 'Post' | 'Business') => z
 }).superRefine((data, ctx) => {
     const isBusiness = postType === 'Business';
     
-    const hasExistingImages = isEditMode; 
-    const hasNewImage = data.image && data.image.length > 0;
+    const hasExistingImages = isEditMode && postToEdit?.imageUrls && postToEdit.imageUrls.length > 0;
+    const hasNewImage = data.image && data.image instanceof FileList && data.image.length > 0;
 
     if (isBusiness) {
       if (!data.name) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['name'], message: "Business name can't be empty." });
@@ -115,8 +115,10 @@ const CreatePostDialogComponent = ({
   
   const isEditMode = !!postToEdit;
 
-  const form = useForm<z.infer<ReturnType<typeof getFormSchema>>>({
-    resolver: zodResolver(getFormSchema(isEditMode, postType)),
+  const formSchema = getFormSchema(isEditMode, postType);
+
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
     defaultValues: {
       text: "",
       description: "",
@@ -167,7 +169,7 @@ const CreatePostDialogComponent = ({
   }, [postToEdit, preselectedCategory, form, isEditMode, open, postType]);
 
 
-  async function onSubmit(values: z.infer<ReturnType<typeof getFormSchema>>) {
+  async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!user) {
         toast({ variant: 'destructive', title: 'Not authenticated' });
         return;
@@ -241,7 +243,7 @@ const CreatePostDialogComponent = ({
     }
   }
   
-  const handleOpenChange = React.useCallback((newOpenState: boolean) => {
+  const handleOpenChange = useCallback((newOpenState: boolean) => {
     setOpen(newOpenState);
     if(onOpenChange) {
         onOpenChange(newOpenState);

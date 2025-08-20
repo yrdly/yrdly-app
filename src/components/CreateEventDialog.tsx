@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useForm } from "react-hook-form";
@@ -34,7 +35,7 @@ import {
 import { PlusCircle } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { useAuth } from "@/hooks/use-auth";
-import { useState, useEffect, memo } from "react";
+import { useState, useEffect, memo, useCallback } from "react";
 import * as React from 'react';
 import { collection, addDoc, serverTimestamp, doc, updateDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
@@ -173,7 +174,7 @@ export const CreateEventDialog = memo(function CreateEventDialog({ children, onO
     }
   }
 
-  const handleOpenChange = React.useCallback((newOpenState: boolean) => {
+  const handleOpenChange = useCallback((newOpenState: boolean) => {
     setOpen(newOpenState);
     if(onOpenChange) onOpenChange(newOpenState);
     if (!newOpenState) {

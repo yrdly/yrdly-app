@@ -250,7 +250,7 @@ export default function NeighborsPage() {
         );
     }, [allNeighbors, userDetails]);
     
-    const handleProfileDialogClose = (wasChanged: boolean) => {
+    const handleProfileDialogClose = useCallback((wasChanged: boolean) => {
         if (wasChanged) {
             // The userDetails listener in useAuth should handle the main state update.
             // But we can optimistically filter the user out if they were blocked.
@@ -260,7 +260,7 @@ export default function NeighborsPage() {
             }
         }
         setSelectedUser(null)
-    }
+    }, [selectedUser]);
 
     return (
         <div className="max-w-4xl mx-auto space-y-6">
