@@ -1,40 +1,46 @@
-
 rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
 
-    // --- Specific Paths First ---
+    // Function to check if the user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
 
-    // Allow users to write to their own avatar directory.
+    // Function to check if the user is the owner of the resource
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Rule for user avatars
     match /avatars/{userId}/{allPaths=**} {
-        allow write: if request.auth != null && request.auth.uid == userId;
+      allow read;
+      allow write: if isOwner(userId);
     }
 
-    // Allow users to write to their own post image directory.
+    // Rule for post images
     match /posts/{userId}/{allPaths=**} {
-        allow write: if request.auth != null && request.auth.uid == userId;
+      allow read;
+      allow write: if isOwner(userId);
     }
 
-    // Allow users to write to their own event image directory.
-    match /event_images/{userId}/{allPaths=**} {
-        allow write: if request.auth != null && request.auth.uid == userId;
+    // Rule for business images
+    match /businesses/{userId}/{allPaths=**} {
+      allow read;
+      allow write: if isOwner(userId);
     }
     
-    // Allow users to write to their own business image directory.
-    match /businesses/{userId}/{allPaths=**} {
-        allow write: if request.auth != null && request.auth.uid == userId;
-    }
-
-    // Allow authenticated users to write to chat image directories.
-    match /chat_images/{conversationId}/{allPaths=**} {
-        allow write: if request.auth != null;
-    }
-
-    // --- General Read Access Last ---
-    // Allow public read access to all files.
-    match /{allPaths=**} {
+    // Rule for event images
+    match /event_images/{userId}/{allPaths=**} {
       allow read;
+      allow write: if isOwner(userId);
+    }
+
+    // Rule for chat images
+    match /chat_images/{conversationId}/{allPaths=**} {
+      allow read;
+      allow write: if isAuthenticated();
     }
   }
 }
