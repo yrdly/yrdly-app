@@ -28,7 +28,6 @@ import { db, storage } from "@/lib/firebase";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useDebouncedCallback } from "use-debounce";
 import { UserProfileDialog } from "../UserProfileDialog";
 import Image from "next/image";
 import { Progress } from "../ui/progress";
@@ -80,28 +79,11 @@ export function ChatLayout({
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const scrollAreaRef = useRef<HTMLDivElement>(null);
-  const [isTyping, setIsTyping] = useState(false);
   const [profileUser, setProfileUser] = useState<User | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const sendTypingStatus = useCallback(async (isTyping: boolean) => {
-      if (!selectedConversation) return;
-      const conversationRef = doc(db, 'conversations', selectedConversation.id);
-      try {
-          await updateDoc(conversationRef, {
-              [`typing.${currentUser.id}`]: isTyping
-          });
-      } catch (e) {
-          console.error("Error updating typing status", e)
-      }
-  }, [selectedConversation, currentUser.id]);
-
-  const debouncedStopTyping = useDebouncedCallback(() => {
-      sendTypingStatus(false);
-  }, 2000);
 
   const [showChat, setShowChat] = useState(false);
 
@@ -167,8 +149,6 @@ export function ChatLayout({
   const handleBackToList = () => {
       setSelectedConversation(null);
       setShowChat(false);
-      // Optional: if you are using query params to manage state
-      // router.push('/messages'); 
   }
 
   const markMessagesAsRead = useCallback(async (conversationId: string) => {
@@ -177,7 +157,6 @@ export function ChatLayout({
         'lastMessage.readBy': arrayUnion(currentUser.id)
     });
   }, [currentUser.id]);
-
 
   // Listen for messages in the selected conversation
   useEffect(() => {
@@ -225,41 +204,22 @@ export function ChatLayout({
       
       setMessages(msgs);
     });
-    
-    const convRef = doc(db, "conversations", selectedConversation.id);
-    const unsubscribeConversation = onSnapshot(convRef, (doc) => {
-        const data = doc.data();
-        const participantTyping = data?.typing && data.typing[selectedConversation.participant.id];
-        // Only update if the typing status actually changed
-        if (participantTyping !== isTyping) {
-            setIsTyping(!!participantTyping);
-        }
-    });
 
     return () => {
         unsubscribeMessages();
-        unsubscribeConversation();
-        debouncedStopTyping.cancel();
-        sendTypingStatus(false); // Ensure typing status is false on unmount
     };
-  }, [selectedConversation, currentUser, markMessagesAsRead, debouncedStopTyping, sendTypingStatus, isTyping]);
+  }, [selectedConversation, currentUser, markMessagesAsRead]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
     if (scrollAreaRef.current) {
       scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
     }
-  }, [messages, isTyping]);
-
+  }, [messages]);
 
   const handleTyping = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
       setNewMessage(e.target.value);
-      // Only send typing status if not already typing to prevent unnecessary updates
-      if (!isTyping) {
-          sendTypingStatus(true);
-      }
-      debouncedStopTyping(); // Start/reset debounce for sending false
-  }, [sendTypingStatus, debouncedStopTyping, isTyping]);
+  }, []);
   
   const handleSendMessage = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -299,10 +259,8 @@ export function ChatLayout({
                 timestamp: serverTimestamp(),
                 readBy: [currentUser.id]
             },
-            [`typing.${currentUser.id}`]: false,
         });
         
-        debouncedStopTyping.cancel(); // Cancel any pending stop typing
         setNewMessage("");
         setImageFile(null);
         setImagePreview(null);
@@ -311,7 +269,7 @@ export function ChatLayout({
       console.error("Error sending message: ", error);
       setUploadProgress(null);
     }
-  }, [newMessage, imageFile, selectedConversation, currentUser.id, debouncedStopTyping]);
+  }, [newMessage, imageFile, selectedConversation, currentUser.id]);
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -438,17 +396,6 @@ export function ChatLayout({
                             </div>
                         </div>
                     ))}
-                    {isTyping && (
-                        <div className="flex gap-3 justify-start">
-                            <Avatar className="h-8 w-8">
-                                <AvatarImage src={selectedConversation.participant.avatarUrl} />
-                                <AvatarFallback>{selectedConversation.participant.name.charAt(0)}</AvatarFallback>
-                            </Avatar>
-                            <div className="rounded-lg px-4 py-2 bg-card border animate-pulse">
-                                typing...
-                            </div>
-                        </div>
-                    )}
                 </div>
             </ScrollArea>
             <div className="p-4 border-t bg-card">
@@ -470,7 +417,6 @@ export function ChatLayout({
                         placeholder="Type a message..."
                         value={newMessage}
                         onChange={handleTyping}
-                        onBlur={() => debouncedStopTyping.flush()}
                         className="flex-1 resize-none"
                         rows={1}
                         onKeyDown={(e) => {
