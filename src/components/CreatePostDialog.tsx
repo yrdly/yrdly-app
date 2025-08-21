@@ -70,8 +70,7 @@ const CreatePostDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
     },
   });
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
     if (open) {
       if (isEditMode && postToEdit) {
         form.reset({
@@ -104,8 +103,6 @@ const CreatePostDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
   const finalTitle = isEditMode ? "Edit Post" : "Create Post";
   const finalDescription = isEditMode ? "Make changes to your post here." : "Share something with your neighborhood.";
 
-  const imageField = form.register('image');
-
   const FormContent = memo(function FormContent({ formInstance }: { formInstance: UseFormReturn<z.infer<typeof formSchema>> }) {
     return (
         <div className="space-y-4 px-1">
@@ -129,7 +126,7 @@ const CreatePostDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
             <FormField
                 control={formInstance.control}
                 name="image"
-                render={() => (
+                render={({ field: { onChange, value, ...rest } }) => (
                 <FormItem>
                     <FormLabel>Add images</FormLabel>
                     <FormControl>
@@ -137,7 +134,8 @@ const CreatePostDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
                             type="file"
                             accept="image/*"
                             multiple
-                            {...imageField}
+                            onChange={(e) => onChange(e.target.files)}
+                            {...rest}
                         />
                     </FormControl>
                     <FormMessage />
@@ -153,7 +151,6 @@ const CreatePostDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
     );
   });
   FormContent.displayName = "FormContent";
-
 
   const Trigger = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>((props, ref) => {
     const { userDetails } = useAuth();

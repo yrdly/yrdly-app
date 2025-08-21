@@ -79,7 +79,7 @@ const CreateBusinessDialogComponent = ({ children, postToEdit, onOpenChange }: C
     },
   });
 
-  useEffect(() => { // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
     if (open) {
       if (isEditMode && postToEdit) {
         form.reset({
@@ -99,7 +99,6 @@ const CreateBusinessDialogComponent = ({ children, postToEdit, onOpenChange }: C
         });
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, isEditMode, postToEdit, form.reset]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
@@ -125,8 +124,6 @@ const CreateBusinessDialogComponent = ({ children, postToEdit, onOpenChange }: C
 
   const finalTitle = isEditMode ? "Edit Business" : "Add a Business";
   const finalDescription = isEditMode ? "Make changes to your business here." : "Add your business to the neighborhood directory.";
-
-  const imageField = form.register('image');
 
   const FormContent = memo(function FormContent({ formInstance }: { formInstance: UseFormReturn<z.infer<typeof formSchema>> }) {
     return (
@@ -184,7 +181,7 @@ const CreateBusinessDialogComponent = ({ children, postToEdit, onOpenChange }: C
             <FormField
                 control={formInstance.control}
                 name="image"
-                render={() => (
+                render={({ field: { onChange, value, ...rest } }) => (
                 <FormItem>
                     <FormLabel>
                         Add images <span className="text-destructive">*</span>
@@ -194,7 +191,8 @@ const CreateBusinessDialogComponent = ({ children, postToEdit, onOpenChange }: C
                             type="file"
                             accept="image/*"
                             multiple
-                            {...imageField}
+                            onChange={(e) => onChange(e.target.files)}
+                            {...rest}
                         />
                     </FormControl>
                     <FormMessage />

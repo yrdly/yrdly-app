@@ -229,10 +229,10 @@ export function ChatLayout({
     const convRef = doc(db, "conversations", selectedConversation.id);
     const unsubscribeConversation = onSnapshot(convRef, (doc) => {
         const data = doc.data();
-        if(data?.typing && data.typing[selectedConversation.participant.id]) {
-            setIsTyping(true);
-        } else {
-            setIsTyping(false);
+        const participantTyping = data?.typing && data.typing[selectedConversation.participant.id];
+        // Only update if the typing status actually changed
+        if (participantTyping !== isTyping) {
+            setIsTyping(!!participantTyping);
         }
     });
 
@@ -242,7 +242,7 @@ export function ChatLayout({
         debouncedStopTyping.cancel();
         sendTypingStatus(false); // Ensure typing status is false on unmount
     };
-  }, [selectedConversation, currentUser, markMessagesAsRead, debouncedStopTyping, sendTypingStatus]);
+  }, [selectedConversation, currentUser, markMessagesAsRead, debouncedStopTyping, sendTypingStatus, isTyping]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -254,9 +254,12 @@ export function ChatLayout({
 
   const handleTyping = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
       setNewMessage(e.target.value);
-      sendTypingStatus(true); // Send true immediately
+      // Only send typing status if not already typing to prevent unnecessary updates
+      if (!isTyping) {
+          sendTypingStatus(true);
+      }
       debouncedStopTyping(); // Start/reset debounce for sending false
-  }, [sendTypingStatus, debouncedStopTyping]);
+  }, [sendTypingStatus, debouncedStopTyping, isTyping]);
   
   const handleSendMessage = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -271,7 +274,7 @@ export function ChatLayout({
             setUploadProgress(0);
             const storageRef = ref(storage, `chat_images/${selectedConversation.id}/${Date.now()}_${imageFile.name}`);
             const uploadTask = await uploadBytes(storageRef, imageFile);
-imageUrl = await getDownloadURL(uploadTask.ref);
+            imageUrl = await getDownloadURL(uploadTask.ref);
             setUploadProgress(100);
         }
 
