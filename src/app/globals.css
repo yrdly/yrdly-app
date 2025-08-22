@@ -69,7 +69,7 @@
   
   /* Fixed header spacing - accounts for 64px header height + extra space */
   .header-safe {
-    padding-top: 6rem; /* 96px */
+    padding-top: 7rem; /* 112px - increased for better clearance */
   }
   
   /* Fixed bottom navigation spacing - accounts for 64px bottom nav height + extra space */
@@ -96,7 +96,7 @@
   
   /* Specific spacing for mobile layout */
   .mobile-layout {
-    padding-top: 6rem; /* 96px for header */
+    padding-top: 7rem; /* 112px for header + extra space */
     padding-bottom: 8rem; /* 128px for bottom nav */
     min-height: calc(100vh - 12rem);
   }
@@ -104,6 +104,12 @@
   /* Ensure buttons and interactive elements are accessible */
   .interactive-safe {
     margin-bottom: 1rem; /* Extra space for interactive elements */
+  }
+  
+  /* Aggressive header spacing to prevent any overlap */
+  .header-spacing {
+    padding-top: 8rem; /* 128px - very aggressive spacing */
+    margin-top: 1rem; /* Additional margin for safety */
   }
 }
 
