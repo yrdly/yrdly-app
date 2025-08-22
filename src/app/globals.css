@@ -78,6 +78,54 @@
 }
 
 @layer utilities {
+  .safe-area-inset {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+  
+  /* Fixed header spacing - accounts for 64px header height + extra space */
+  .header-safe {
+    padding-top: 6rem; /* 96px */
+  }
+  
+  /* Fixed bottom navigation spacing - accounts for 64px bottom nav height + extra space */
+  .bottom-nav-safe {
+    padding-bottom: 8rem; /* 128px */
+  }
+  
+  /* Combined spacing for both header and bottom nav */
+  .mobile-safe {
+    padding-top: 6rem; /* 96px - header */
+    padding-bottom: 8rem; /* 128px - bottom nav */
+  }
+  
+  /* Ensure content doesn't get hidden behind fixed elements */
+  .content-safe {
+    position: relative;
+    z-index: 1;
+  }
+  
+  /* Prevent content from being hidden under fixed elements */
+  .no-overlap {
+    min-height: calc(100vh - 12rem); /* 100vh - header - bottom nav */
+  }
+  
+  /* Specific spacing for mobile layout */
+  .mobile-layout {
+    padding-top: 6rem; /* 96px for header */
+    padding-bottom: 8rem; /* 128px for bottom nav */
+    min-height: calc(100vh - 12rem);
+  }
+  
+  /* Ensure buttons and interactive elements are accessible */
+  .interactive-safe {
+    margin-bottom: 1rem; /* Extra space for interactive elements */
+  }
+}
+
+@layer utilities {
     .animate-fade-in {
         animation: fadeIn 0.2s ease-in-out;
     }
