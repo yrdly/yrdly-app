@@ -50,6 +50,9 @@ import {
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { UserProfileDialog } from "@/components/UserProfileDialog";
+import { OnlineStatusService } from "@/lib/online-status";
+import { AvatarOnlineIndicator } from "@/components/ui/online-indicator";
+import { cn } from "@/lib/utils";
 
 const NeighborSkeleton = () => (
     <Card>
@@ -77,6 +80,44 @@ export default function NeighborsPage() {
     const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
     const [activeTab, setActiveTab] = useState("all");
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
+    const [onlineStatuses, setOnlineStatuses] = useState<{ [userId: string]: boolean }>({});
+
+    // Initialize online status tracking for current user
+    useEffect(() => {
+        if (currentUser?.uid) {
+            OnlineStatusService.getInstance().initialize(currentUser.uid);
+            
+            return () => {
+                OnlineStatusService.getInstance().cleanup();
+            };
+        }
+    }, [currentUser?.uid]);
+
+    // Track online status of friends
+    useEffect(() => {
+        if (!currentUser?.uid) return;
+
+        const friends = allNeighbors.filter(neighbor => 
+            neighbor.friends?.includes(currentUser.uid) || 
+            userDetails?.friends?.includes(neighbor.uid)
+        );
+
+        const unsubscribeFunctions: (() => void)[] = [];
+
+        friends.forEach(friend => {
+            const unsubscribe = OnlineStatusService.listenToUserOnlineStatus(friend.uid, (status) => {
+                setOnlineStatuses(prev => ({
+                    ...prev,
+                    [friend.uid]: status.isOnline
+                }));
+            });
+            unsubscribeFunctions.push(unsubscribe);
+        });
+
+        return () => {
+            unsubscribeFunctions.forEach(unsubscribe => unsubscribe());
+        };
+    }, [currentUser?.uid, allNeighbors, userDetails?.friends]);
 
     useEffect(() => {
         if (!currentUser) return;
@@ -366,11 +407,42 @@ export default function NeighborsPage() {
                             {friends.map((friend) => (
                                 <Card key={friend.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedUser(friend)}>
                                     <CardContent className="p-4 flex items-center gap-4">
-                                        <Avatar className="h-12 w-12 border"><AvatarImage src={friend.avatarUrl} alt={friend.name} /><AvatarFallback>{friend.name.charAt(0)}</AvatarFallback></Avatar>
-                                        <div className="flex-1 space-y-1">
-                                            <h3 className="font-semibold text-base">{friend.name}</h3>
-                                            {friend.location && (<div className="flex items-center text-xs text-muted-foreground"><MapPin className="h-3 w-3 mr-1" /><span>{displayLocation(friend.location)}</span></div>)}
+                                        <div className="relative">
+                                            <Avatar className="h-12 w-12 border">
+                                                <AvatarImage src={friend.avatarUrl} alt={friend.name} />
+                                                <AvatarFallback>{friend.name.charAt(0)}</AvatarFallback>
+                                            </Avatar>
+                                            <AvatarOnlineIndicator 
+                                                isOnline={onlineStatuses[friend.uid] || false} 
+                                            />
                                         </div>
+                                        <div className="flex-1 space-y-1">
+                                            <div className="flex items-center gap-2">
+                                                <h3 className="font-semibold text-base">{friend.name}</h3>
+                                                <div className={cn(
+                                                    "w-2 h-2 rounded-full",
+                                                    onlineStatuses[friend.uid] 
+                                                        ? "bg-green-500" 
+                                                        : "bg-gray-400"
+                                                )} />
+                                            </div>
+                                            {friend.location && (
+                                                <div className="flex items-center text-xs text-muted-foreground">
+                                                    <MapPin className="h-3 w-3 mr-1" />
+                                                    <span>{displayLocation(friend.location)}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <Button 
+                                            size="sm" 
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleMessage(e, friend.uid);
+                                            }}
+                                        >
+                                            <MessageSquare className="mr-2 h-4 w-4" /> 
+                                            Message
+                                        </Button>
                                     </CardContent>
                                 </Card>
                             ))}

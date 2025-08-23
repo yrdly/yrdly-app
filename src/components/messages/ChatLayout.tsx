@@ -31,6 +31,8 @@ import { useRouter } from "next/navigation";
 import { UserProfileDialog } from "../UserProfileDialog";
 import Image from "next/image";
 import { Progress } from "../ui/progress";
+import { OnlineStatusService } from "@/lib/online-status";
+import { AvatarOnlineIndicator } from "../ui/online-indicator";
 
 // Helper function to format date for display
 const formatMessageDate = (timestamp: any) => {
@@ -117,8 +119,41 @@ export function ChatLayout({
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
   const [showChat, setShowChat] = useState(false);
+  const [onlineStatuses, setOnlineStatuses] = useState<{ [userId: string]: boolean }>({});
+
+  // Initialize online status tracking for current user
+  useEffect(() => {
+    if (currentUser?.id) {
+      OnlineStatusService.getInstance().initialize(currentUser.id);
+      
+      return () => {
+        OnlineStatusService.getInstance().cleanup();
+      };
+    }
+  }, [currentUser?.id]);
+
+  // Track online status of conversation participants
+  useEffect(() => {
+    if (!currentUser?.id) return;
+
+    const participants = conversations.map(conv => conv.participant);
+    const unsubscribeFunctions: (() => void)[] = [];
+
+    participants.forEach(participant => {
+      const unsubscribe = OnlineStatusService.listenToUserOnlineStatus(participant.id, (status) => {
+        setOnlineStatuses(prev => ({
+          ...prev,
+          [participant.id]: status.isOnline
+        }));
+      });
+      unsubscribeFunctions.push(unsubscribe);
+    });
+
+    return () => {
+      unsubscribeFunctions.forEach(unsubscribe => unsubscribe());
+    };
+  }, [currentUser?.id, conversations]);
 
   // Listen for real-time updates to conversations
   useEffect(() => {
@@ -359,12 +394,25 @@ export function ChatLayout({
                             )}
                             onClick={() => handleConversationSelect(conv)}
                         >
-                            <Avatar>
-                                <AvatarImage src={conv.participant.avatarUrl} alt={conv.participant.name} />
-                                <AvatarFallback>{conv.participant.name.charAt(0)}</AvatarFallback>
-                            </Avatar>
+                            <div className="relative">
+                                <Avatar>
+                                    <AvatarImage src={conv.participant.avatarUrl} alt={conv.participant.name} />
+                                    <AvatarFallback>{conv.participant.name.charAt(0)}</AvatarFallback>
+                                </Avatar>
+                                <AvatarOnlineIndicator 
+                                    isOnline={onlineStatuses[conv.participant.id] || false} 
+                                />
+                            </div>
                             <div className="flex-1 truncate">
-                                <p className="font-semibold">{conv.participant.name}</p>
+                                <div className="flex items-center gap-2">
+                                    <p className="font-semibold">{conv.participant.name}</p>
+                                    <div className={cn(
+                                        "w-2 h-2 rounded-full",
+                                        onlineStatuses[conv.participant.id] 
+                                            ? "bg-green-500" 
+                                            : "bg-gray-400"
+                                    )} />
+                                </div>
                                 <p className={cn("text-sm truncate", isUnread ? "text-foreground font-medium" : "text-muted-foreground")}>
                                     {conv.lastMessage?.text}
                                 </p>
@@ -413,11 +461,24 @@ export function ChatLayout({
                     <ArrowLeft className="h-5 w-5" />
                 </Button>
                 <button className="flex items-center gap-2" onClick={() => setProfileUser(selectedConversation.participant)}>
-                    <Avatar>
-                        <AvatarImage src={selectedConversation.participant.avatarUrl} alt={selectedConversation.participant.name} />
-                        <AvatarFallback>{selectedConversation.participant.name.charAt(0)}</AvatarFallback>
-                    </Avatar>
-                    <p className="font-semibold">{selectedConversation.participant.name}</p>
+                    <div className="relative">
+                        <Avatar>
+                            <AvatarImage src={selectedConversation.participant.avatarUrl} alt={selectedConversation.participant.name} />
+                            <AvatarFallback>{selectedConversation.participant.name.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                        <AvatarOnlineIndicator 
+                            isOnline={onlineStatuses[selectedConversation.participant.id] || false} 
+                        />
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <p className="font-semibold">{selectedConversation.participant.name}</p>
+                        <div className={cn(
+                            "w-2 h-2 rounded-full",
+                            onlineStatuses[selectedConversation.participant.id] 
+                                ? "bg-green-500" 
+                                : "bg-gray-400"
+                        )} />
+                    </div>
                 </button>
             </div>
             <ScrollArea ref={scrollAreaRef} className="flex-1 p-4 bg-gray-50 dark:bg-gray-900 min-h-0">
