@@ -2,7 +2,7 @@
 "use client";
 
 import type { Conversation, User, Message } from "../../types";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -304,6 +304,23 @@ export function ChatLayout({
     }
   }, [newMessage, imageFile, selectedConversation, currentUser.id]);
 
+  // Memoize the chat input to prevent unnecessary re-renders
+  const ChatInput = useMemo(() => (
+    <Textarea
+      placeholder="Type a message..."
+      value={newMessage}
+      onChange={handleTyping}
+      className="flex-1 resize-none"
+      rows={1}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          handleSendMessage(e);
+        }
+      }}
+    />
+  ), [newMessage, handleTyping, handleSendMessage]);
+
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
         const file = e.target.files[0];
@@ -463,19 +480,7 @@ export function ChatLayout({
                     <Button type="button" variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()}>
                         <ImagePlus className="h-5 w-5" />
                     </Button>
-                    <Textarea
-                        placeholder="Type a message..."
-                        value={newMessage}
-                        onChange={handleTyping}
-                        className="flex-1 resize-none"
-                        rows={1}
-                        onKeyDown={(e) => {
-                            if (e.key === "Enter" && !e.shiftKey) {
-                                e.preventDefault();
-                                handleSendMessage(e);
-                            }
-                        }}
-                    />
+                    {ChatInput}
                     <Button type="submit" size="icon" disabled={(!newMessage.trim() && !imageFile) || uploadProgress !== null}>
                         <SendHorizonal className="h-5 w-5" />
                     </Button>
