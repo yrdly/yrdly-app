@@ -1,11 +1,17 @@
 
+"use client";
+
 import { ChatLayout, NoFriendsEmptyState } from '@/components/messages/ChatLayout';
 import { MessagesPageClient } from './MessagesPageClient';
+import { use } from 'react';
+
+// Force dynamic rendering to avoid prerender issues
+export const dynamic = 'force-dynamic';
 
 // For Next.js 15 compatibility, params is now async
-export default async function MessagesPage({ params }: { params?: Promise<{ convId?: string }> }) {
-    // Await the params for Next.js 15
-    const resolvedParams = await params;
+export default function MessagesPage({ params }: { params?: Promise<{ convId?: string }> }) {
+    // Use React's use() hook for client components
+    const resolvedParams = params ? use(params) : undefined;
     const selectedConversationId = resolvedParams?.convId;
     
     console.log("MessagesPage rendered. Params:", resolvedParams);
