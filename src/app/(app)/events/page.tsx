@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 
 // Force dynamic rendering to avoid prerender issues
 export const dynamic = 'force-dynamic';
+
 import { Plus, CalendarDays } from "lucide-react";
 import { CreateEventDialog } from "@/components/CreateEventDialog";
 import { useState, useEffect } from "react";

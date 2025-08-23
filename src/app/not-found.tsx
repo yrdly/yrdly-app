@@ -1,6 +1,11 @@
+"use client";
+
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Home } from 'lucide-react'
+
+// Force dynamic rendering to avoid prerender issues
+export const dynamic = 'force-dynamic';
 
 export default function NotFound() {
   return (

@@ -200,9 +200,15 @@ export function EventCard({ event }: EventCardProps) {
           {event.eventLink && (
             <div className="flex items-center text-sm">
               <LinkIcon className="mr-2 h-4 w-4 text-muted-foreground" />
-              <a href={event.eventLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline truncate" onClick={(e) => e.stopPropagation()}>
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  window.open(event.eventLink, '_blank', 'noopener,noreferrer');
+                }}
+                className="text-blue-600 hover:underline truncate text-left bg-transparent border-none p-0 cursor-pointer"
+              >
                 {event.eventLink}
-              </a>
+              </button>
             </div>
           )}
         </CardContent>
