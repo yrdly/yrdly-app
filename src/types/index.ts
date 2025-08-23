@@ -110,6 +110,7 @@ export interface Message {
     text?: string; // Make text optional
     imageUrl?: string; // Add imageUrl
     timestamp: string; // Should be string for display
+    originalTimestamp?: any; // Original Firestore timestamp for date comparison
     isRead: boolean;
 }
 
