@@ -2,6 +2,9 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
+
+// Force dynamic rendering to avoid prerender issues
+export const dynamic = 'force-dynamic';
 import {
     collection,
     query,
@@ -259,7 +262,7 @@ export default function NeighborsPage() {
     }, [selectedUser]);
 
     return (
-        <div className="max-w-4xl mx-auto space-y-6">
+        <div className="max-w-4xl mx-auto space-y-6 pb-8 first-content-safe">
             {selectedUser && <UserProfileDialog user={selectedUser} open={!!selectedUser} onOpenChange={handleProfileDialogClose} />}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
@@ -328,7 +331,7 @@ export default function NeighborsPage() {
                     {loading ? (
                         <div className="space-y-4"><NeighborSkeleton /><NeighborSkeleton /><NeighborSkeleton /></div>
                     ) : filteredAndSortedNeighbors.length > 0 ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pb-20">
                             {filteredAndSortedNeighbors.map((neighbor) => {
                                 const status = getFriendshipStatus(neighbor.uid);
                                 return (
@@ -359,7 +362,7 @@ export default function NeighborsPage() {
                     {loading ? (
                          <div className="space-y-4"><NeighborSkeleton /><NeighborSkeleton /><NeighborSkeleton /></div>
                     ) : friends.length > 0 ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4 pb-20">
                             {friends.map((friend) => (
                                 <Card key={friend.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedUser(friend)}>
                                     <CardContent className="p-4 flex items-center gap-4">

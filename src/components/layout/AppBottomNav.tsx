@@ -23,13 +23,15 @@ export function AppBottomNav() {
         {navLinks.map(({ href, icon: Icon, label }) => {
           const isActive = pathname.startsWith(href);
           return (
-            <Link href={href} key={href} legacyBehavior>
-              <a className="flex flex-col items-center justify-center text-center w-full h-full">
-                <Icon className={cn("h-6 w-6 mb-1", isActive ? "text-primary" : "text-muted-foreground")} />
-                <span className={cn("text-xs", isActive ? "text-primary font-semibold" : "text-muted-foreground")}>
-                  {label}
-                </span>
-              </a>
+            <Link 
+              href={href} 
+              key={href} 
+              className="flex flex-col items-center justify-center text-center w-full h-full"
+            >
+              <Icon className={cn("h-6 w-6 mb-1", isActive ? "text-primary" : "text-muted-foreground")} />
+              <span className={cn("text-xs", isActive ? "text-primary font-semibold" : "text-muted-foreground")}>
+                {label}
+              </span>
             </Link>
           );
         })}

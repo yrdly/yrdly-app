@@ -32,6 +32,39 @@ import { UserProfileDialog } from "../UserProfileDialog";
 import Image from "next/image";
 import { Progress } from "../ui/progress";
 
+// Helper function to format date for display
+const formatMessageDate = (timestamp: any) => {
+  if (!timestamp) return "";
+  
+  const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+  const messageDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  
+  if (messageDate.getTime() === today.getTime()) {
+    return "Today";
+  } else if (messageDate.getTime() === yesterday.getTime()) {
+    return "Yesterday";
+  } else {
+    return date.toLocaleDateString('en-US', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+  }
+};
+
+// Helper function to check if two timestamps are on different dates
+const isDifferentDate = (timestamp1: any, timestamp2: any) => {
+  if (!timestamp1 || !timestamp2) return false;
+  
+  const date1 = timestamp1.toDate ? timestamp1.toDate() : new Date(timestamp1);
+  const date2 = timestamp2.toDate ? timestamp2.toDate() : new Date(timestamp2);
+  
+  return date1.toDateString() !== date2.toDateString();
+};
 
 interface NoFriendsEmptyStateProps {
     title?: string;
@@ -192,11 +225,11 @@ export function ChatLayout({
             text: msgData.text,
             imageUrl: msgData.imageUrl,
             sender,
-            timestamp:
-              msgData.timestamp?.toDate().toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              }) || "...",
+            timestamp: msgData.timestamp?.toDate().toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            }) || "...",
+            originalTimestamp: msgData.timestamp, // Keep original timestamp for date comparison
             isRead: msgData.read,
           };
         })
@@ -372,30 +405,47 @@ export function ChatLayout({
             </div>
             <ScrollArea ref={scrollAreaRef} className="flex-1 p-4 bg-gray-50 dark:bg-gray-900 min-h-0">
                 <div className="space-y-4">
-                    {messages.map((msg) => (
-                        <div
-                            key={msg.id}
-                            className={cn("flex gap-3", msg.sender.id === currentUser.id ? "justify-end" : "justify-start")}
-                        >
-                            {msg.sender.id !== currentUser.id && (
-                                <Avatar className="h-8 w-8">
-                                    <AvatarImage src={msg.sender.avatarUrl} />
-                                    <AvatarFallback>{msg.sender.name.charAt(0)}</AvatarFallback>
-                                </Avatar>
-                            )}
-                            <div className={cn("rounded-lg px-3 py-2 max-w-xs lg:max-w-md break-words", msg.sender.id === currentUser.id ? "bg-primary text-primary-foreground" : "bg-card border")}>
-                                {msg.imageUrl && (
-                                    <div className="relative w-48 h-48 mb-2">
-                                        <Image src={msg.imageUrl} alt="Chat image" layout="fill" className="rounded-md object-cover" />
+                    {messages.map((msg, index) => {
+                        const showDateSeparator = index === 0 || 
+                            (messages[index - 1] && 
+                             isDifferentDate(
+                                 messages[index - 1].originalTimestamp, 
+                                 msg.originalTimestamp
+                             ));
+                        
+                        return (
+                            <div key={msg.id}>
+                                {showDateSeparator && (
+                                    <div className="flex justify-center my-4">
+                                        <div className="bg-muted text-muted-foreground px-3 py-1 rounded-full text-xs font-medium">
+                                            {formatMessageDate(msg.originalTimestamp)}
+                                        </div>
                                     </div>
                                 )}
-                                {msg.text && <p>{msg.text}</p>}
-                                <p className={cn("text-xs opacity-70 mt-1", msg.sender.id === currentUser.id ? "text-right" : "text-left")}>
-                                    {msg.timestamp}
-                                </p>
+                                <div
+                                    className={cn("flex gap-3", msg.sender.id === currentUser.id ? "justify-end" : "justify-start")}
+                                >
+                                    {msg.sender.id !== currentUser.id && (
+                                        <Avatar className="h-8 w-8">
+                                            <AvatarImage src={msg.sender.avatarUrl} />
+                                            <AvatarFallback>{msg.sender.name.charAt(0)}</AvatarFallback>
+                                        </Avatar>
+                                    )}
+                                    <div className={cn("rounded-lg px-3 py-2 max-w-xs lg:max-w-md break-words", msg.sender.id === currentUser.id ? "bg-primary text-primary-foreground" : "bg-card border")}>
+                                        {msg.imageUrl && (
+                                            <div className="relative w-48 h-48 mb-2">
+                                                <Image src={msg.imageUrl} alt="Chat image" layout="fill" className="rounded-md object-cover" />
+                                            </div>
+                                        )}
+                                        {msg.text && <p>{msg.text}</p>}
+                                        <p className={cn("text-xs opacity-70 mt-1", msg.sender.id === currentUser.id ? "text-right" : "text-left")}>
+                                            {msg.timestamp}
+                                        </p>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             </ScrollArea>
             <div className="p-4 border-t bg-card">
