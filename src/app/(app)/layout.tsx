@@ -61,7 +61,7 @@ function ProtectedLayout({ children }: { children: React.ReactNode }) {
               <AppHeader />
           </div>
           {/* Enhanced spacing for mobile layout with proper header and bottom nav clearance */}
-          <main className="header-spacing pb-32 p-4 sm:p-6 lg:p-8 md:pt-6 md:pb-8 safe-area-inset">
+          <main className="pt-40 pb-32 p-4 sm:p-6 lg:p-8 md:pt-6 md:pb-8 safe-area-inset">
             {children}
           </main>
           <AppBottomNav />
