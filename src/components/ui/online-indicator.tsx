@@ -14,6 +14,9 @@ export function OnlineIndicator({
   className,
   showLabel = false 
 }: OnlineIndicatorProps) {
+  // Don't render anything if user is offline
+  if (!isOnline) return null;
+  
   const sizeClasses = {
     sm: 'w-2 h-2',
     md: 'w-3 h-3',
@@ -30,22 +33,16 @@ export function OnlineIndicator({
     <div className={cn("flex items-center gap-2", className)}>
       <div
         className={cn(
-          "rounded-full border-2 border-background",
-          sizeClasses[size],
-          isOnline 
-            ? "bg-green-500" 
-            : "bg-gray-400"
+          "rounded-full border-2 border-background bg-green-500",
+          sizeClasses[size]
         )}
       />
       {showLabel && (
         <span className={cn(
-          "font-medium",
-          labelSizeClasses[size],
-          isOnline 
-            ? "text-green-600 dark:text-green-400" 
-            : "text-gray-500 dark:text-gray-400"
+          "font-medium text-green-600 dark:text-green-400",
+          labelSizeClasses[size]
         )}>
-          {isOnline ? 'Online' : 'Offline'}
+          Online
         </span>
       )}
     </div>
@@ -60,11 +57,13 @@ export function AvatarOnlineIndicator({
   isOnline: boolean; 
   className?: string;
 }) {
+  // Don't render anything if user is offline
+  if (!isOnline) return null;
+  
   return (
     <div
       className={cn(
-        "absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-background",
-        isOnline ? "bg-green-500" : "bg-gray-400",
+        "absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-background bg-green-500",
         className
       )}
     />
