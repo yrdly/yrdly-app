@@ -1,7 +1,7 @@
 
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, OAuthProvider } from 'firebase/auth';
-import { getFirestore, enableNetwork, disableNetwork, enableIndexedDbPersistence } from 'firebase/firestore';
+import { getFirestore, enableNetwork, disableNetwork, initializeFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import { getFunctions } from 'firebase/functions';
 
@@ -17,21 +17,16 @@ const firebaseConfig = {
 
 // Initialize Firebase
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+
+// Initialize Firestore with new cache settings
+const db = initializeFirestore(app, {
+  cacheSizeBytes: 50 * 1024 * 1024, // 50MB cache
+  experimentalForceLongPolling: false,
+});
+
 const auth = getAuth(app);
-const db = getFirestore(app);
 const storage = getStorage(app);
 const functions = getFunctions(app);
-
-// Enable offline persistence
-enableIndexedDbPersistence(db).catch((err) => {
-  if (err.code === 'failed-precondition') {
-    // Multiple tabs open, persistence can only be enabled in one tab at a time
-    console.log('Persistence failed - multiple tabs open');
-  } else if (err.code === 'unimplemented') {
-    // Browser doesn't support persistence
-    console.log('Persistence not supported by browser');
-  }
-});
 
 // Network control functions
 export const enableFirestoreNetwork = () => enableNetwork(db);

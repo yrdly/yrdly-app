@@ -43,7 +43,7 @@ import type { Post } from "@/types";
 
 const getFormSchema = (isEditMode: boolean, postToEdit?: Post) => z.object({
   text: z.string().min(1, "Text can't be empty.").max(500),
-  image: z.any().optional(),
+  imageFiles: z.any().optional(),
 });
 
 type CreatePostDialogProps = {
@@ -67,7 +67,7 @@ const CreatePostDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
     resolver: zodResolver(formSchema),
     defaultValues: {
       text: "",
-      image: undefined,
+      imageFiles: undefined,
     },
   });
 
@@ -82,12 +82,12 @@ const CreatePostDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
       if (isEditMode && postToEdit) {
         stableFormReset({
           text: postToEdit.text,
-          image: postToEdit.imageUrls || [],
+          imageFiles: postToEdit.imageUrls || [],
         });
       } else if (!isEditMode) {
         stableFormReset({
           text: "",
-          image: undefined,
+          imageFiles: undefined,
         });
       }
     }
@@ -95,7 +95,9 @@ const CreatePostDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
-    await createPost(values, postToEdit?.id);
+    // Only pass imageFiles if images are actually selected
+    const imageFiles = values.imageFiles && values.imageFiles.length > 0 ? values.imageFiles : undefined;
+    await createPost(values, postToEdit?.id, imageFiles);
     setLoading(false);
     handleOpenChange(false);
   }
@@ -132,7 +134,7 @@ const CreatePostDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
             />
             <FormField
                 control={formInstance.control}
-                name="image"
+                name="imageFiles"
                 render={({ field: { onChange, value, ...rest } }) => (
                 <FormItem>
                     <FormLabel>Add images</FormLabel>
