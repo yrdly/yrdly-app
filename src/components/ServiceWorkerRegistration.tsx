@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useOffline } from '@/hooks/use-offline';
 
 export function ServiceWorkerRegistration() {
@@ -8,13 +8,7 @@ export function ServiceWorkerRegistration() {
   const [isInstalling, setIsInstalling] = useState(false);
   const { triggerSync } = useOffline();
 
-  useEffect(() => {
-    if ('serviceWorker' in navigator) {
-      registerServiceWorker();
-    }
-  }, []);
-
-  const registerServiceWorker = async () => {
+  const registerServiceWorker = useCallback(async () => {
     try {
       const registration = await navigator.serviceWorker.register('/sw.js');
       console.log('Service Worker registered successfully:', registration);
@@ -52,7 +46,13 @@ export function ServiceWorkerRegistration() {
     } catch (error) {
       console.error('Service Worker registration failed:', error);
     }
-  };
+  }, [triggerSync]);
+
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      registerServiceWorker();
+    }
+  }, [registerServiceWorker]);
 
   const updateServiceWorker = async () => {
     if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {

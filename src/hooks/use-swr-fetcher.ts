@@ -21,7 +21,8 @@ export const firestoreFetcher = async (key: string) => {
     options.forEach(option => {
       const [key, value] = option.split(':');
       if (key === 'orderBy') {
-        parsedOptions.orderBy = value;
+        const [field, direction] = value.split(',');
+        parsedOptions.orderBy = { field, direction: direction || 'asc' };
       } else if (key === 'limit') {
         parsedOptions.limit = parseInt(value);
       } else if (key === 'where') {
@@ -35,7 +36,8 @@ export const firestoreFetcher = async (key: string) => {
     let q: Query | CollectionReference = collection(db, collectionName);
     
     if (parsedOptions.orderBy) {
-      q = query(q, orderBy(parsedOptions.orderBy));
+      const orderDirection = (parsedOptions.orderBy.direction === 'desc' ? 'desc' : 'asc') as 'asc' | 'desc';
+      q = query(q, orderBy(parsedOptions.orderBy.field, orderDirection));
     }
     
     if (parsedOptions.limit) {
@@ -86,7 +88,9 @@ export const realtimeFetcher = (key: string, callback: (data: any) => void) => {
       options.forEach(option => {
         const [key, value] = option.split(':');
         if (key === 'orderBy') {
-          q = query(q, orderBy(value));
+          const [field, direction] = value.split(',');
+          const orderDirection = (direction === 'desc' ? 'desc' : 'asc') as 'asc' | 'desc';
+          q = query(q, orderBy(field, orderDirection));
         } else if (key === 'limit') {
           q = query(q, limit(parseInt(value)));
         }
@@ -133,7 +137,7 @@ export const createSWRKey = {
     if (filters?.category) key += `|category:${filters.category}`;
     if (filters?.userId) key += `|userId:${filters.userId}`;
     if (filters?.limit) key += `|limit:${filters.limit}`;
-    key += '|orderBy:timestamp';
+    key += '|orderBy:timestamp,desc';
     return key;
   }
 };

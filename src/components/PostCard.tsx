@@ -384,6 +384,7 @@ export function PostCard({ post }: PostCardProps) {
                 alt="Post image"
                 fill
                 className="object-cover"
+                priority
                 data-ai-hint="neighborhood street"
             />
             </div>

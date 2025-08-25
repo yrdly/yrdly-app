@@ -39,7 +39,7 @@ function ProtectedLayout({ children }: { children: React.ReactNode }) {
             alt="Yrdly Logo" 
             width={96} 
             height={96} 
-            className="animate-pulse"
+            className="animate-pulse w-24 h-24"
             priority
         />
       </div>
