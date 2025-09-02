@@ -1,10 +1,13 @@
 "use client";
 
 import { ChatLayout, NoFriendsEmptyState } from '@/components/messages/ChatLayout';
+import { MarketplaceChatLayout } from '@/components/messages/MarketplaceChatLayout';
 import { useAuth } from '@/hooks/use-auth';
 import { useState, useEffect, useMemo } from 'react';
 import type { User } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { MessageCircle, ShoppingBag } from 'lucide-react';
 
 const MessagesLoading = () => (
     <div className="p-4 space-y-4">
@@ -60,7 +63,26 @@ export function MessagesPageClient({ selectedConversationId }: { selectedConvers
 
     return (
         <div className="h-[calc(100vh_-_8rem)] md:h-auto pt-16">
-            <ChatLayout currentUser={currentUser} selectedConversationId={selectedConversationId} />
+            <Tabs defaultValue="neighbors" className="h-full">
+                <div className="p-4 border-b">
+                    <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="neighbors" className="flex items-center gap-2">
+                            <MessageCircle className="h-4 w-4" />
+                            Neighbor Chats
+                        </TabsTrigger>
+                        <TabsTrigger value="marketplace" className="flex items-center gap-2">
+                            <ShoppingBag className="h-4 w-4" />
+                            Marketplace Chats
+                        </TabsTrigger>
+                    </TabsList>
+                </div>
+                <TabsContent value="neighbors" className="h-[calc(100%-4rem)] mt-0">
+                    <ChatLayout currentUser={currentUser} selectedConversationId={selectedConversationId} />
+                </TabsContent>
+                <TabsContent value="marketplace" className="h-[calc(100%-4rem)] mt-0">
+                    <MarketplaceChatLayout currentUser={currentUser} selectedChatId={selectedConversationId} />
+                </TabsContent>
+            </Tabs>
         </div>
     );
 }
