@@ -8,7 +8,7 @@
     "genkit:watch": "genkit start -- tsx --watch src/ai/dev.ts",
     "build": "next build",
     "build:mobile": "next build && npm run copy:mobile",
-    "copy:mobile": "mkdir -p out && cp -r .next/* out/ && cp -r .next/static out/ 2>/dev/null || echo 'Files copied'",
+    "copy:mobile": "if exist out rmdir /s /q out && mkdir out && copy public\\index.html out\\index.html && echo Mobile build ready for Capacitor",
     "cap:sync": "npx cap sync",
     "start": "next start",
     "android": "npm run build:mobile && npx cap sync android && npx cap open android",
