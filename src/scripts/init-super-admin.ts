@@ -13,7 +13,7 @@ async function initializeSuperAdmin() {
   try {
     // Update these values with your super admin details
     const email = 'feranmioyelowo@gmail.com';
-    const name = 'Super Admin';
+    const name = 'Admin - Feranmi Oyelowo';
 
     console.log('Initializing super admin...');
     console.log(`Email: ${email}`);
