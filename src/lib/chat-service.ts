@@ -108,7 +108,7 @@ export class ChatService {
       messages.push({
         id: doc.id,
         ...data,
-        timestamp: (data.timestamp as Timestamp).toDate()
+        timestamp: data.timestamp ? (data.timestamp as Timestamp).toDate() : new Date()
       } as ChatMessage);
     });
 
@@ -131,9 +131,9 @@ export class ChatService {
       chats.push({
         id: doc.id,
         ...data,
-        lastActivity: (data.lastActivity as Timestamp).toDate(),
-        createdAt: (data.createdAt as Timestamp).toDate(),
-        updatedAt: (data.updatedAt as Timestamp).toDate()
+        lastActivity: data.lastActivity ? (data.lastActivity as Timestamp).toDate() : new Date(),
+        createdAt: data.createdAt ? (data.createdAt as Timestamp).toDate() : new Date(),
+        updatedAt: data.updatedAt ? (data.updatedAt as Timestamp).toDate() : new Date()
       } as ItemChat);
     });
 
@@ -156,9 +156,9 @@ export class ChatService {
       chats.push({
         id: doc.id,
         ...data,
-        lastActivity: (data.lastActivity as Timestamp).toDate(),
-        createdAt: (data.createdAt as Timestamp).toDate(),
-        updatedAt: (data.updatedAt as Timestamp).toDate()
+        lastActivity: data.lastActivity ? (data.lastActivity as Timestamp).toDate() : new Date(),
+        createdAt: data.createdAt ? (data.createdAt as Timestamp).toDate() : new Date(),
+        updatedAt: data.updatedAt ? (data.updatedAt as Timestamp).toDate() : new Date()
       } as ItemChat);
     });
 
@@ -203,7 +203,7 @@ export class ChatService {
         messages.push({
           id: doc.id,
           ...data,
-          timestamp: (data.timestamp as Timestamp).toDate()
+          timestamp: data.timestamp ? (data.timestamp as Timestamp).toDate() : new Date()
         } as ChatMessage);
       });
 
