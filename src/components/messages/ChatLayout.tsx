@@ -3,6 +3,7 @@
 
 import type { Conversation, User, Message } from "../../types";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useTheme } from "next-themes";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -33,6 +34,11 @@ import Image from "next/image";
 import { Progress } from "../ui/progress";
 import { OnlineStatusService } from "@/lib/online-status";
 import { AvatarOnlineIndicator } from "../ui/online-indicator";
+
+// Utility function to get chat wallpaper based on theme
+const getChatWallpaper = (isDark: boolean) => {
+  return isDark ? '/chatwallpaper2.jpg' : '/chatwallpaper1.jpg';
+};
 
 // Helper function to format date for display
 const formatMessageDate = (timestamp: any) => {
@@ -109,6 +115,7 @@ export function ChatLayout({
   selectedConversationId,
 }: ChatLayoutProps) {
   const router = useRouter();
+  const { theme } = useTheme();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -210,14 +217,14 @@ export function ChatLayout({
     }
   }, [selectedConversationId, conversations]);
 
-  const handleConversationSelect = (conv: Conversation) => {
+  const handleConversationSelect = useCallback((conv: Conversation) => {
       router.push(`/messages/${conv.id}`);
-  }
+  }, [router]);
 
-  const handleBackToList = () => {
+  const handleBackToList = useCallback(() => {
       setSelectedConversation(null);
       setShowChat(false);
-  }
+  }, []);
 
   const markMessagesAsRead = useCallback(async (conversationId: string) => {
     const conversationRef = doc(db, 'conversations', conversationId);
@@ -341,13 +348,13 @@ export function ChatLayout({
 
   // Chat input is now inlined to prevent focus loss
 
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
         const file = e.target.files[0];
         setImageFile(file);
         setImagePreview(URL.createObjectURL(file));
     }
-  };
+  }, []);
 
   const removeImagePreview = useCallback(() => {
       setImageFile(null);
@@ -454,8 +461,20 @@ export function ChatLayout({
                     </div>
                 </button>
             </div>
-            <ScrollArea ref={scrollAreaRef} className="flex-1 p-4 bg-gray-50 dark:bg-gray-900 min-h-0">
-                <div className="space-y-4">
+            <ScrollArea 
+              ref={scrollAreaRef} 
+              className="flex-1 p-4 min-h-0 relative"
+              style={{
+                backgroundImage: `url(${getChatWallpaper(theme === 'dark')})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                backgroundRepeat: 'no-repeat',
+                backgroundAttachment: 'fixed'
+              }}
+            >
+              {/* Semi-transparent overlay for text readability */}
+              <div className="absolute inset-0 bg-black/10 dark:bg-black/20 pointer-events-none" />
+                <div className="space-y-4 relative z-10">
                     {messages.map((msg, index) => {
                         const showDateSeparator = index === 0 || 
                             (messages[index - 1] && 
@@ -534,7 +553,7 @@ export function ChatLayout({
             </div>
         </div>
     );
-  }, [selectedConversation, messages, currentUser.uid, onlineStatuses, handleBackToList, setProfileUser, imagePreview, uploadProgress, handleSendMessage, newMessage, imageFile, handleTyping, removeImagePreview, handleImageSelect, fileInputRef, scrollAreaRef]);
+  }, [selectedConversation, messages, currentUser.uid, onlineStatuses, handleBackToList, setProfileUser, imagePreview, uploadProgress, handleSendMessage, newMessage, imageFile, handleTyping, removeImagePreview, handleImageSelect, fileInputRef, scrollAreaRef, theme]);
 
   return (
       <>

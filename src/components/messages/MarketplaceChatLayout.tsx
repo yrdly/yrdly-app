@@ -2,6 +2,7 @@
 
 import type { ItemChat, ChatMessage } from "../../types/chat";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useTheme } from "next-themes";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -20,6 +21,11 @@ import { AvatarOnlineIndicator } from "../ui/online-indicator";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import type { User } from "@/types";
+
+// Utility function to get chat wallpaper based on theme
+const getChatWallpaper = (isDark: boolean) => {
+  return isDark ? '/chatwallpaper2.jpg' : '/chatwallpaper1.jpg';
+};
 
 // Helper function to format date for display
 const formatMessageDate = (timestamp: Date) => {
@@ -62,6 +68,7 @@ export function MarketplaceChatLayout({
 }: MarketplaceChatLayoutProps) {
   const router = useRouter();
   const { user } = useAuth();
+  const { theme } = useTheme();
   const [chats, setChats] = useState<ItemChat[]>([]);
   const [selectedChat, setSelectedChat] = useState<ItemChat | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -136,14 +143,14 @@ export function MarketplaceChatLayout({
     }
   }, [selectedChatId, chats]);
 
-  const handleChatSelect = (chat: ItemChat) => {
+  const handleChatSelect = useCallback((chat: ItemChat) => {
     router.push(`/messages/marketplace/${chat.id}`);
-  };
+  }, [router]);
 
-  const handleBackToList = () => {
+  const handleBackToList = useCallback(() => {
     setSelectedChat(null);
     setShowChat(false);
-  };
+  }, []);
 
   // Load buyer information when chat is selected
   useEffect(() => {
@@ -206,17 +213,17 @@ export function MarketplaceChatLayout({
       console.error("Error sending message: ", error);
       setUploadProgress(null);
     }
-  }, [newMessage, imageFile, selectedChat, user]); // Include all dependencies
+  }, [newMessage, imageFile, selectedChat, user]);
 
   // Chat input is now inlined to prevent focus loss
 
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setImageFile(file);
       setImagePreview(URL.createObjectURL(file));
     }
-  };
+  }, []);
 
   const removeImagePreview = useCallback(() => {
     setImageFile(null);
@@ -226,7 +233,7 @@ export function MarketplaceChatLayout({
     }
   }, []);
 
-  const ChatList = () => (
+  const ChatList = useMemo(() => (
     <div className="h-full flex flex-col">
       <div className="p-4 border-b">
         <h2 className="text-xl font-bold mb-4">Marketplace Chats</h2>
@@ -283,9 +290,9 @@ export function MarketplaceChatLayout({
         )}
       </ScrollArea>
     </div>
-  );
+  ), [chats, selectedChat, currentUser.uid, handleChatSelect]);
 
-  const ChatView = () => {
+  const ChatView = useMemo(() => {
     if (!selectedChat || !buyer) {
       return (
         <div className="hidden md:flex flex-1 items-center justify-center text-muted-foreground p-8">
@@ -332,8 +339,20 @@ export function MarketplaceChatLayout({
             </div>
           </div>
         </div>
-        <ScrollArea ref={scrollAreaRef} className="flex-1 p-4 bg-gray-50 dark:bg-gray-900 min-h-0">
-          <div className="space-y-4">
+        <ScrollArea 
+          ref={scrollAreaRef} 
+          className="flex-1 p-4 min-h-0 relative"
+          style={{
+            backgroundImage: `url(${getChatWallpaper(theme === 'dark')})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+            backgroundAttachment: 'fixed'
+          }}
+        >
+          {/* Semi-transparent overlay for text readability */}
+          <div className="absolute inset-0 bg-black/10 dark:bg-black/20 pointer-events-none" />
+          <div className="space-y-4 relative z-10">
             {messages.map((msg, index) => {
               const showDateSeparator = index === 0 || 
                 (messages[index - 1] && 
@@ -415,15 +434,15 @@ export function MarketplaceChatLayout({
         </div>
       </div>
     );
-  };
+  }, [selectedChat, buyer, handleBackToList, onlineStatuses, messages, currentUser.uid, theme, imagePreview, uploadProgress, handleSendMessage, newMessage, imageFile, handleTyping, removeImagePreview, handleImageSelect, fileInputRef, scrollAreaRef]);
 
   return (
     <Card className="h-full w-full flex">
       <div className={cn("w-full md:w-1/3 border-r", { 'hidden md:flex': showChat })}>
-        <ChatList />
+        {ChatList}
       </div>
       <div className={cn("w-full md:w-2/3", { 'hidden md:flex': !showChat })}>
-        <ChatView />
+        {ChatView}
       </div>
     </Card>
   );

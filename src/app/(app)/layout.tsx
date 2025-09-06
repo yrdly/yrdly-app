@@ -16,6 +16,7 @@ import type { User } from '@/types';
 import { useDeepLinking } from '@/hooks/use-deep-linking';
 import { ServiceWorkerRegistration } from '@/components/ServiceWorkerRegistration';
 import { OfflineStatus } from '@/components/OfflineStatus';
+import { EmailVerificationGuard } from '@/components/EmailVerificationGuard';
 
 function ProtectedLayout({ children }: { children: React.ReactNode }) {
   const { user, userDetails, loading } = useAuth();
@@ -51,7 +52,7 @@ function ProtectedLayout({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <>
+    <EmailVerificationGuard>
       <ServiceWorkerRegistration />
       {profileUser && (
         <UserProfileDialog 
@@ -76,7 +77,7 @@ function ProtectedLayout({ children }: { children: React.ReactNode }) {
           <OfflineStatus />
         </SidebarInset>
       </SidebarProvider>
-    </>
+    </EmailVerificationGuard>
   );
 }
 
