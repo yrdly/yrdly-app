@@ -75,6 +75,7 @@ export function MarketplaceChatLayout({
   const [newMessage, setNewMessage] = useState("");
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const [buyer, setBuyer] = useState<User | null>(null);
+  const [buyers, setBuyers] = useState<{ [buyerId: string]: User }>({});
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
@@ -115,7 +116,7 @@ export function MarketplaceChatLayout({
     };
   }, [currentUser?.uid, chats]);
 
-  // Load seller chats
+  // Load seller chats and buyer information
   useEffect(() => {
     if (!currentUser?.uid) return;
 
@@ -123,6 +124,23 @@ export function MarketplaceChatLayout({
       try {
         const sellerChats = await ChatService.getSellerChats(currentUser.uid);
         setChats(sellerChats);
+        
+        // Load buyer information for all chats
+        const buyerIds = [...new Set(sellerChats.map(chat => chat.buyerId))];
+        const buyersData: { [buyerId: string]: User } = {};
+        
+        for (const buyerId of buyerIds) {
+          try {
+            const buyerDoc = await getDoc(doc(db, 'users', buyerId));
+            if (buyerDoc.exists()) {
+              buyersData[buyerId] = { id: buyerDoc.id, ...buyerDoc.data() } as User;
+            }
+          } catch (error) {
+            console.error(`Error loading buyer ${buyerId}:`, error);
+          }
+        }
+        
+        setBuyers(buyersData);
       } catch (error) {
         console.error("Error loading seller chats:", error);
       }
@@ -246,6 +264,7 @@ export function MarketplaceChatLayout({
         {chats.length > 0 ? (
           chats.map((chat) => {
             const isUnread = chat.lastMessage?.senderId !== currentUser.uid && !chat.lastMessage?.isRead;
+            const buyer = buyers[chat.buyerId];
             return (
               <div
                 key={chat.id}
@@ -257,14 +276,17 @@ export function MarketplaceChatLayout({
               >
                 <div className="relative">
                   <Avatar>
-                    <AvatarImage src={chat.itemImageUrl} alt={chat.itemTitle} />
+                    <AvatarImage src={buyer?.avatarUrl} alt={buyer?.name || 'Buyer'} />
                     <AvatarFallback>
-                      <ShoppingBag className="h-4 w-4" />
+                      {buyer?.name?.charAt(0) || 'B'}
                     </AvatarFallback>
                   </Avatar>
+                  <AvatarOnlineIndicator 
+                    isOnline={onlineStatuses[chat.buyerId] || false} 
+                  />
                 </div>
                 <div className="flex-1 truncate">
-                  <p className="font-semibold">{chat.itemTitle}</p>
+                  <p className="font-semibold">{buyer?.name || 'Unknown Buyer'}</p>
                   <p className={cn("text-sm truncate", isUnread ? "text-foreground font-medium" : "text-muted-foreground")}>
                     {chat.lastMessage?.content || "No messages yet"}
                   </p>
@@ -290,7 +312,7 @@ export function MarketplaceChatLayout({
         )}
       </ScrollArea>
     </div>
-  ), [chats, selectedChat, currentUser.uid, handleChatSelect]);
+  ), [chats, selectedChat, currentUser.uid, handleChatSelect, buyers, onlineStatuses]);
 
   const ChatView = useMemo(() => {
     if (!selectedChat || !buyer) {
@@ -313,29 +335,46 @@ export function MarketplaceChatLayout({
 
     return (
       <div className="flex flex-col h-full">
-        <div className="flex items-center gap-4 p-3 border-b">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="md:hidden"
-            onClick={handleBackToList}
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="flex items-center gap-2">
-            <div className="relative">
-              <Avatar>
-                <AvatarImage src={buyer.avatarUrl} alt={buyer.name} />
-                <AvatarFallback>{buyer.name.charAt(0)}</AvatarFallback>
-              </Avatar>
-              <AvatarOnlineIndicator 
-                isOnline={onlineStatuses[buyer.uid] || false} 
-              />
+        <div className="border-b">
+          <div className="flex items-center gap-4 p-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="md:hidden"
+              onClick={handleBackToList}
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <Avatar>
+                  <AvatarImage src={buyer.avatarUrl} alt={buyer.name} />
+                  <AvatarFallback>{buyer.name.charAt(0)}</AvatarFallback>
+                </Avatar>
+                <AvatarOnlineIndicator 
+                  isOnline={onlineStatuses[buyer.uid] || false} 
+                />
+              </div>
+              <div>
+                <p className="font-semibold">{buyer.name}</p>
+                <p className="text-sm text-muted-foreground">Buyer</p>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <p className="font-semibold">{buyer.name}</p>
-              <span className="text-sm text-muted-foreground">•</span>
-              <p className="text-sm text-muted-foreground">{selectedChat.itemTitle}</p>
+          </div>
+          <div className="px-3 pb-3">
+            <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+              <div className="relative w-12 h-12 rounded-lg overflow-hidden">
+                <Image 
+                  src={selectedChat.itemImageUrl} 
+                  alt={selectedChat.itemTitle}
+                  fill
+                  className="object-cover"
+                />
+              </div>
+              <div className="flex-1">
+                <p className="font-medium text-sm">About this item:</p>
+                <p className="font-semibold text-foreground">{selectedChat.itemTitle}</p>
+              </div>
             </div>
           </div>
         </div>

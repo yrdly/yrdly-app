@@ -24,7 +24,7 @@ export class BrevoEmailService {
     // Set sender information
     sendSmtpEmail.sender = { 
       name: 'Yrdly', 
-      email: process.env.BREVO_FROM_EMAIL || 'noreply@yrdly.com' 
+      email: process.env.BREVO_FROM_EMAIL || 'noreply@yrdly.ng' 
     };
     
     // Set recipient
@@ -35,7 +35,7 @@ export class BrevoEmailService {
     
     // Set reply-to (optional)
     sendSmtpEmail.replyTo = { 
-      email: 'support@yrdly.com', 
+      email: 'support@yrdly.ng', 
       name: 'Yrdly Support' 
     };
     
@@ -46,6 +46,56 @@ export class BrevoEmailService {
     } catch (error) {
       console.error('Error sending verification email via Brevo:', error);
       throw new Error('BREVO_SEND_FAILED');
+    }
+  }
+
+  /**
+   * Send event confirmation email using Brevo
+   */
+  static async sendEventConfirmationEmail(data: {
+    attendeeEmail: string;
+    attendeeName: string;
+    eventName: string;
+    eventDate?: string;
+    eventTime?: string;
+    eventLocation?: string;
+    eventDescription?: string;
+    eventLink?: string;
+  }) {
+    // Check if Brevo API key is configured
+    if (!process.env.BREVO_API_KEY || process.env.BREVO_API_KEY === 'your_brevo_api_key_here') {
+      console.warn('Brevo API key not configured, cannot send event confirmation email');
+      throw new Error('BREVO_NOT_CONFIGURED');
+    }
+
+    const sendSmtpEmail = new brevo.SendSmtpEmail();
+    
+    sendSmtpEmail.subject = `🎉 You're attending: ${data.eventName}!`;
+    sendSmtpEmail.htmlContent = this.getEventConfirmationEmailHTML(data);
+    sendSmtpEmail.textContent = this.getEventConfirmationEmailText(data);
+    
+    sendSmtpEmail.sender = { 
+      name: 'Yrdly', 
+      email: process.env.BREVO_FROM_EMAIL || 'noreply@yrdly.ng' 
+    };
+    
+    sendSmtpEmail.to = [{ 
+      email: data.attendeeEmail, 
+      name: data.attendeeName 
+    }];
+    
+    sendSmtpEmail.replyTo = { 
+      email: 'support@yrdly.ng', 
+      name: 'Yrdly Support' 
+    };
+    
+    try {
+      const result = await apiInstance.sendTransacEmail(sendSmtpEmail);
+      console.log('Event confirmation email sent successfully via Brevo:', result);
+      return result;
+    } catch (error) {
+      console.error('Error sending event confirmation email via Brevo:', error);
+      throw new Error('Failed to send event confirmation email. Please try again.');
     }
   }
 
@@ -61,7 +111,7 @@ export class BrevoEmailService {
     
     sendSmtpEmail.sender = { 
       name: 'Yrdly', 
-      email: process.env.BREVO_FROM_EMAIL || 'noreply@yrdly.com' 
+      email: process.env.BREVO_FROM_EMAIL || 'noreply@yrdly.ng' 
     };
     
     sendSmtpEmail.to = [{ 
@@ -218,7 +268,7 @@ export class BrevoEmailService {
           
           <div class="footer">
             <p>This email was sent to <strong>${email}</strong></p>
-            <p>If you have any questions, please contact our support team at support@yrdly.com</p>
+            <p>If you have any questions, please contact our support team at support@yrdly.ng</p>
             <p>&copy; 2024 Yrdly. All rights reserved.</p>
           </div>
         </div>
@@ -256,7 +306,7 @@ The Yrdly Team
 
 ---
 This email was sent to ${email}
-If you have any questions, please contact our support team at support@yrdly.com
+If you have any questions, please contact our support team at support@yrdly.ng
 © 2024 Yrdly. All rights reserved.
     `;
   }
@@ -341,7 +391,7 @@ If you have any questions, please contact our support team at support@yrdly.com
           
           <div class="footer">
             <p>This email was sent to <strong>${email}</strong></p>
-            <p>If you have any questions, please contact our support team at support@yrdly.com</p>
+            <p>If you have any questions, please contact our support team at support@yrdly.ng</p>
             <p>&copy; 2024 Yrdly. All rights reserved.</p>
           </div>
         </div>
@@ -367,8 +417,177 @@ ${resetLink}
 
 🔒 Security Note: This password reset link will expire in 1 hour for your security. If you didn't request this reset, please ignore this email.
 
-If you have any questions, please contact our support team at support@yrdly.com
+If you have any questions, please contact our support team at support@yrdly.ng
 
+© 2024 Yrdly. All rights reserved.
+    `;
+  }
+
+  /**
+   * Get HTML content for event confirmation email
+   */
+  private static getEventConfirmationEmailHTML(data: {
+    attendeeName: string;
+    eventName: string;
+    eventDate?: string;
+    eventTime?: string;
+    eventLocation?: string;
+    eventDescription?: string;
+    eventLink?: string;
+  }): string {
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Event Confirmation - Yrdly</title>
+        <style>
+          body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; 
+            margin: 0; padding: 0; background-color: #f8fafc; 
+            line-height: 1.6;
+          }
+          .container { 
+            max-width: 600px; margin: 0 auto; background-color: #ffffff; 
+            border-radius: 12px; overflow: hidden; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1); 
+          }
+          .header { 
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%); 
+            padding: 50px 30px; text-align: center; 
+          }
+          .logo { 
+            color: white; font-size: 32px; font-weight: bold; margin-bottom: 10px; 
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+          }
+          .tagline { 
+            color: rgba(255,255,255,0.95); font-size: 18px; font-weight: 300; 
+          }
+          .content { padding: 50px 40px; }
+          .title { 
+            font-size: 28px; font-weight: bold; color: #1f2937; margin-bottom: 20px; 
+            text-align: center;
+          }
+          .message { 
+            font-size: 16px; color: #4b5563; line-height: 1.7; margin-bottom: 30px; 
+          }
+          .event-details { 
+            background-color: #f0fdf4; border: 2px solid #bbf7d0; 
+            border-radius: 12px; padding: 30px; margin: 30px 0; 
+          }
+          .event-details h3 { 
+            color: #065f46; margin-bottom: 20px; font-size: 20px; 
+            text-align: center;
+          }
+          .detail-row { 
+            display: flex; margin-bottom: 15px; align-items: center; 
+          }
+          .detail-label { 
+            font-weight: bold; color: #065f46; min-width: 100px; 
+          }
+          .detail-value { 
+            color: #374151; flex: 1; 
+          }
+          .calendar-button { 
+            display: inline-block; 
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%); 
+            color: white; text-decoration: none; padding: 18px 36px; 
+            border-radius: 10px; font-weight: bold; font-size: 16px; 
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+            transition: all 0.3s ease;
+            margin: 20px 10px;
+          }
+          .calendar-button:hover { 
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.6);
+          }
+          .footer { 
+            background-color: #f8fafc; padding: 40px 30px; text-align: center; 
+            color: #6b7280; font-size: 14px; border-top: 1px solid #e5e7eb;
+          }
+          .button-container { 
+            text-align: center; margin: 40px 0; 
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <div class="logo">🎉 Event Confirmed!</div>
+            <div class="tagline">You're all set for this event</div>
+          </div>
+          
+          <div class="content">
+            <h1 class="title">You're Attending: ${data.eventName}</h1>
+            
+            <p class="message">
+              Hi ${data.attendeeName}!<br><br>
+              Great news! You've successfully RSVP'd to <strong>${data.eventName}</strong>. We're excited to see you there!
+            </p>
+            
+            <div class="event-details">
+              <h3>📅 Event Details</h3>
+              ${data.eventDate ? `<div class="detail-row"><span class="detail-label">📅 Date:</span><span class="detail-value">${data.eventDate}</span></div>` : ''}
+              ${data.eventTime ? `<div class="detail-row"><span class="detail-label">🕐 Time:</span><span class="detail-value">${data.eventTime}</span></div>` : ''}
+              ${data.eventLocation ? `<div class="detail-row"><span class="detail-label">📍 Location:</span><span class="detail-value">${data.eventLocation}</span></div>` : ''}
+              ${data.eventDescription ? `<div class="detail-row"><span class="detail-label">📝 Description:</span><span class="detail-value">${data.eventDescription}</span></div>` : ''}
+            </div>
+            
+            <div class="button-container">
+              ${data.eventLink ? `<a href="${data.eventLink}" class="calendar-button">View Event Details</a>` : ''}
+              <a href="https://yrdly.com/events" class="calendar-button">Browse More Events</a>
+            </div>
+            
+            <p class="message" style="text-align: center; font-style: italic; color: #6b7280;">
+              Can't wait to see you there!<br>
+              <strong>The Yrdly Team</strong>
+            </p>
+          </div>
+          
+          <div class="footer">
+            <p>This confirmation was sent to <strong>${data.attendeeName}</strong></p>
+            <p>If you have any questions about this event, please contact the event organizer or our support team at support@yrdly.ng</p>
+            <p>&copy; 2024 Yrdly. All rights reserved.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+  }
+
+  /**
+   * Get text content for event confirmation email
+   */
+  private static getEventConfirmationEmailText(data: {
+    attendeeName: string;
+    eventName: string;
+    eventDate?: string;
+    eventTime?: string;
+    eventLocation?: string;
+    eventDescription?: string;
+    eventLink?: string;
+  }): string {
+    return `
+🎉 Event Confirmation - You're Attending: ${data.eventName}
+
+Hi ${data.attendeeName}!
+
+Great news! You've successfully RSVP'd to ${data.eventName}. We're excited to see you there!
+
+📅 Event Details:
+${data.eventDate ? `📅 Date: ${data.eventDate}` : ''}
+${data.eventTime ? `🕐 Time: ${data.eventTime}` : ''}
+${data.eventLocation ? `📍 Location: ${data.eventLocation}` : ''}
+${data.eventDescription ? `📝 Description: ${data.eventDescription}` : ''}
+
+${data.eventLink ? `View Event Details: ${data.eventLink}` : ''}
+
+Can't wait to see you there!
+The Yrdly Team
+
+---
+This confirmation was sent to ${data.attendeeName}
+If you have any questions about this event, please contact the event organizer or our support team at support@yrdly.ng
 © 2024 Yrdly. All rights reserved.
     `;
   }

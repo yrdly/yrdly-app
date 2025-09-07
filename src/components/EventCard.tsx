@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { CreateEventDialog } from "./CreateEventDialog";
 import { useToast } from "@/hooks/use-toast";
-import { EmailService } from "@/lib/email-service";
+import { sendEventConfirmationEmail } from "@/lib/email-actions";
 
 interface EventCardProps {
   event: PostType;
@@ -82,25 +82,26 @@ export function EventCard({ event }: EventCardProps) {
       } else {
         await updateDoc(eventRef, { attendees: arrayUnion(user.uid) });
         
-        // Send confirmation email to the user
+        // Send confirmation email to the attendee (the person who just RSVP'd)
         if (user.email) {
-          const emailSent = await EmailService.sendEventConfirmation({
+          const emailResult = await sendEventConfirmationEmail({
+            attendeeEmail: user.email, // Send to the person attending, not the event creator
+            attendeeName: user.displayName || 'User',
             eventName: event.title || 'Event',
             eventDate: event.eventDate,
             eventTime: event.eventTime,
             eventLocation: event.eventLocation?.address,
             eventDescription: event.text,
             eventLink: event.eventLink,
-            userName: user.displayName || 'User',
-            userEmail: user.email,
           });
 
-          if (emailSent) {
+          if (emailResult.success) {
             toast({
               title: "Event confirmation sent!",
               description: "Check your email for event details.",
             });
           } else {
+            console.error('Failed to send event confirmation email:', emailResult.error);
             toast({
               title: "Attendance confirmed",
               description: "You're now attending this event!",
