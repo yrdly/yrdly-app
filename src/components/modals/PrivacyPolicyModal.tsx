@@ -113,7 +113,7 @@ export function PrivacyPolicyModal({ open, onOpenChange }: PrivacyPolicyModalPro
             </section>
 
             <section>
-              <h3 className="font-semibold text-lg mb-3">8. Children's Privacy</h3>
+              <h3 className="font-semibold text-lg mb-3">8. Children&apos;s Privacy</h3>
               <p className="text-muted-foreground leading-relaxed">
                 Our service is not intended for children under 13 years of age. We do not knowingly collect personal 
                 information from children under 13. If we become aware that we have collected personal information 
@@ -125,7 +125,7 @@ export function PrivacyPolicyModal({ open, onOpenChange }: PrivacyPolicyModalPro
               <h3 className="font-semibold text-lg mb-3">9. Changes to This Policy</h3>
               <p className="text-muted-foreground leading-relaxed">
                 We may update this Privacy Policy from time to time. We will notify you of any changes by posting 
-                the new Privacy Policy on this page and updating the "Last updated" date. You are advised to review 
+                the new Privacy Policy on this page and updating the &quot;Last updated&quot; date. You are advised to review 
                 this Privacy Policy periodically for any changes.
               </p>
             </section>

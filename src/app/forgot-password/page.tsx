@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -35,7 +35,7 @@ const passwordResetSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address." }),
 });
 
-export default function ForgotPasswordPage() {
+function ForgotPasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
@@ -96,7 +96,7 @@ export default function ForgotPasswordPage() {
                 </div>
                 <CardTitle className="text-2xl font-semibold text-balance">Check your email</CardTitle>
                 <CardDescription className="text-muted-foreground">
-                  We've sent a password reset link to <strong>{form.getValues("email")}</strong>
+                  We&apos;ve sent a password reset link to <strong>{form.getValues("email")}</strong>
                 </CardDescription>
               </div>
             </CardHeader>
@@ -104,7 +104,7 @@ export default function ForgotPasswordPage() {
             <CardContent className="space-y-6">
               <div className="text-center space-y-4">
                 <p className="text-sm text-muted-foreground">
-                  Didn't receive the email? Check your spam folder or try again.
+                  Didn&apos;t receive the email? Check your spam folder or try again.
                 </p>
 
                 <Button variant="outline" onClick={() => setIsSubmitted(false)} className="w-full h-11">
@@ -136,7 +136,7 @@ export default function ForgotPasswordPage() {
             <div className="space-y-2">
               <CardTitle className="text-2xl font-semibold text-balance">Forgot your password?</CardTitle>
               <CardDescription className="text-muted-foreground">
-                No worries! Enter your email and we'll send you a reset link.
+                No worries! Enter your email and we&apos;ll send you a reset link.
               </CardDescription>
             </div>
           </CardHeader>
@@ -178,5 +178,26 @@ export default function ForgotPasswordPage() {
         </Card>
       </div>
     </div>
+  );
+}
+
+export default function ForgotPasswordPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <Card>
+            <CardHeader className="text-center">
+              <div className="flex justify-center mb-4">
+                <YrdlyLogo />
+              </div>
+              <CardTitle className="text-2xl font-semibold text-balance">Loading...</CardTitle>
+            </CardHeader>
+          </Card>
+        </div>
+      </div>
+    }>
+      <ForgotPasswordForm />
+    </Suspense>
   );
 }

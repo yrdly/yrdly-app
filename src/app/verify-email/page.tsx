@@ -177,7 +177,7 @@ function VerifyEmailContent() {
               </div>
               <CardTitle className="text-2xl font-semibold text-balance">Verify Your Email</CardTitle>
               <CardDescription className="text-muted-foreground">
-                We've sent a verification link to <strong>{email}</strong>
+                We&apos;ve sent a verification link to <strong>{email}</strong>
               </CardDescription>
             </div>
           </CardHeader>
@@ -191,7 +191,7 @@ function VerifyEmailContent() {
                   <li>1. Check your email inbox</li>
                   <li>2. Look for an email from Yrdly</li>
                   <li>3. Click the verification link</li>
-                  <li>4. Return here and click "I've verified my email"</li>
+                  <li>4. Return here and click &quot;I&apos;ve verified my email&quot;</li>
                 </ol>
               </AlertDescription>
             </Alert>
@@ -202,7 +202,7 @@ function VerifyEmailContent() {
                 className="w-full h-11 font-medium"
               >
                 <CheckCircle className="w-4 h-4 mr-2" />
-                I've verified my email
+                I&apos;ve verified my email
               </Button>
 
               <Button 
@@ -231,7 +231,7 @@ function VerifyEmailContent() {
             </div>
 
             <div className="text-center text-sm text-muted-foreground">
-              <p>Didn't receive the email?</p>
+              <p>Didn&apos;t receive the email?</p>
               <ul className="mt-1 space-y-1">
                 <li>• Check your spam/junk folder</li>
                 <li>• Make sure {email} is correct</li>

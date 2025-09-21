@@ -70,12 +70,13 @@ export default function SignupPage() {
 
 
   // Check if all form fields are filled
+  const watchedValues = form.watch();
   const isFormComplete = React.useMemo(() => {
     const values = form.getValues();
     return values.name.length >= 2 && 
            values.email.includes('@') && 
            values.password.length >= 6;
-  }, [form.watch()]);
+  }, [form]);
 
   const handleSocialSignIn = async (provider: AuthProvider | OAuthProvider) => {
     if (!agreed) {
@@ -192,7 +193,7 @@ export default function SignupPage() {
               <CardTitle className="text-2xl font-semibold text-balance">Create your account</CardTitle>
               <CardDescription className="text-muted-foreground">Get started with Yrdly today</CardDescription>
             </div>
-          </CardHeader>
+        </CardHeader>
 
           <CardContent className="space-y-6">
             {/* Social Signup Buttons */}
@@ -225,64 +226,64 @@ export default function SignupPage() {
                   />
                 </svg>
                 Continue with Google
-              </Button>
+                </Button>
             </div>
 
             <div className="relative">
-              <div className="absolute inset-0 flex items-center">
+                <div className="absolute inset-0 flex items-center">
                 <Separator />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
                 <span className="bg-card px-2 text-muted-foreground">Or continue with email</span>
-              </div>
+                </div>
             </div>
 
             {/* Signup Form */}
-            <Form {...form}>
+          <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
                       <FormLabel>Full name</FormLabel>
-                      <FormControl>
+                    <FormControl>
                         <Input
                           placeholder="Enter your full name"
                           {...field}
                           className="h-11"
                         />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
                         <Input
                           placeholder="Enter your email"
                           {...field}
                           className="h-11"
                         />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-                <FormField
-                  control={form.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Password</FormLabel>
-                      <FormControl>
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Password</FormLabel>
+                    <FormControl>
                         <div className="relative">
                           <Input
                             type={showPassword ? "text" : "password"}
@@ -309,12 +310,12 @@ export default function SignupPage() {
                             <span className="sr-only">{showPassword ? "Hide password" : "Show password"}</span>
                           </Button>
                         </div>
-                      </FormControl>
+                    </FormControl>
                       <p className="text-xs text-muted-foreground">Must be at least 6 characters long</p>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
                 {/* Terms Agreement */}
                 <div className="space-y-3 pt-2">
@@ -335,7 +336,7 @@ export default function SignupPage() {
                           setAgreed(!agreed);
                         }}
                       >
-                        I agree to Yrdly's{" "}
+                        I agree to Yrdly&apos;s{" "}
                         <button
                           type="button"
                           onClick={(e) => {
@@ -349,7 +350,7 @@ export default function SignupPage() {
                       </Label>
                       <div className="mt-1">
                         <Label 
-                          htmlFor="terms" 
+                  htmlFor="terms"
                           className="text-sm font-normal cursor-pointer leading-relaxed"
                           onClick={() => {
                             setAgreed(!agreed);
@@ -375,21 +376,21 @@ export default function SignupPage() {
                       )}
                     </div>
                   </div>
-                </div>
+              </div>
 
-                {error && (
-                  <Alert variant="destructive">
+               {error && (
+                 <Alert variant="destructive">
                     <AlertCircle className="h-4 w-4" />
                     <AlertTitle>Error</AlertTitle>
                     <AlertDescription>{error}</AlertDescription>
-                  </Alert>
-                )}
+                </Alert>
+              )}
 
                 <Button type="submit" className="w-full h-11 font-medium" disabled={loading || !agreed}>
                   {loading ? "Creating account..." : "Create account"}
-                </Button>
-              </form>
-            </Form>
+              </Button>
+            </form>
+          </Form>
 
             <div className="text-center text-sm text-muted-foreground">
               Already have an account?{" "}
@@ -397,8 +398,8 @@ export default function SignupPage() {
                 Sign in
               </Link>
             </div>
-          </CardContent>
-        </Card>
+        </CardContent>
+      </Card>
 
         {/* Modals */}
         <TermsOfServiceModal 
