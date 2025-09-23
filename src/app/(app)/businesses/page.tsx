@@ -50,11 +50,11 @@ function BusinessCard({ business }: { business: Business }) {
 
     return (
         <Card className="overflow-hidden flex flex-col h-full">
-            {business.imageUrls && business.imageUrls.length > 0 ? (
-                business.imageUrls.length > 1 ? (
+            {business.image_urls && business.image_urls.length > 0 ? (
+                business.image_urls.length > 1 ? (
                     <Carousel className="w-full">
                         <CarouselContent>
-                            {business.imageUrls.map((url, index) => (
+                            {business.image_urls.map((url, index) => (
                                 <CarouselItem key={index}>
                                     <AspectRatio ratio={16 / 9}>
                                         <Image
@@ -73,7 +73,7 @@ function BusinessCard({ business }: { business: Business }) {
                 ) : (
                     <AspectRatio ratio={16 / 9}>
                         <Image
-                            src={business.imageUrls[0]}
+                            src={business.image_urls[0]}
                             alt={`${business.name} image 1`}
                             fill
                             className="object-cover"
@@ -93,7 +93,7 @@ function BusinessCard({ business }: { business: Business }) {
                     <CardTitle className="text-lg">{business.name}</CardTitle>
                     <CardDescription>{business.category}</CardDescription>
                 </div>
-                {user?.uid === business.ownerId && (
+                {user?.uid === business.owner_id && (
                     <AlertDialog>
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>

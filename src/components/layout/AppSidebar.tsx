@@ -14,13 +14,14 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-supabase-auth';
 import { AuthService } from '@/lib/auth-service';
+import { useFriendRequests } from '@/hooks/use-friend-requests';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 
 export function AppSidebar({ onProfileClick }: { onProfileClick: () => void }) {
   const pathname = usePathname();
-  const { pendingRequestCount } = useAuth();
   const router = useRouter();
+  const { pendingCount } = useFriendRequests();
 
   const handleLogout = async () => {
     const { error } = await AuthService.signOut();
@@ -35,7 +36,7 @@ export function AppSidebar({ onProfileClick }: { onProfileClick: () => void }) {
     { href: '/events', label: 'Events', icon: Calendar },
     { href: '/marketplace', label: 'Marketplace', icon: ShoppingCart },
     { href: '/businesses', label: 'Businesses', icon: Briefcase },
-    { href: '/neighbors', label: 'Community', icon: Users, badge: pendingRequestCount > 0 ? pendingRequestCount : null },
+    { href: '/neighbors', label: 'Community', icon: Users, badge: pendingCount > 0 ? pendingCount : null },
     { href: '/messages', label: 'Messages', icon: MessageSquare },
   ];
 
@@ -73,7 +74,11 @@ export function AppSidebar({ onProfileClick }: { onProfileClick: () => void }) {
                     <item.icon />
                     <span>{item.label}</span>
                   </div>
-                  {item.badge != null && item.badge > 0 && <Badge className="h-6 w-6 flex items-center justify-center">{item.badge}</Badge>}
+                  {item.badge != null && item.badge > 0 && (
+                    <Badge className="h-6 w-6 flex items-center justify-center text-xs">
+                      {item.badge}
+                    </Badge>
+                  )}
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>

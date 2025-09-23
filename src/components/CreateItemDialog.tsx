@@ -93,7 +93,7 @@ const CreateItemDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
             text: postToEdit.text,
             description: postToEdit.description,
             price: postToEdit.price,
-            image: postToEdit.imageUrls || [],
+            image: postToEdit.image_urls || [],
           });
         } else if (!isEditMode) {
           stableFormReset({
@@ -236,9 +236,9 @@ const CreateItemDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
                                 </FormItem>
                                 )}
                             />
-                            {postToEdit?.imageUrls && postToEdit.imageUrls.length > 0 && (
+                            {postToEdit?.image_urls && postToEdit.image_urls.length > 0 && (
                                 <div className="text-sm text-muted-foreground">
-                                    Current images: {postToEdit.imageUrls.length}. Upload more to add to the list.
+                                    Current images: {postToEdit.image_urls.length}. Upload more to add to the list.
                                 </div>
                             )}
                         </div>
@@ -337,9 +337,9 @@ const CreateItemDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
                         </FormItem>
                         )}
                     />
-                    {postToEdit?.imageUrls && postToEdit.imageUrls.length > 0 && (
+                    {postToEdit?.image_urls && postToEdit.image_urls.length > 0 && (
                         <div className="text-sm text-muted-foreground">
-                            Current images: {postToEdit.imageUrls.length}. Upload more to add to the list.
+                            Current images: {postToEdit.image_urls.length}. Upload more to add to the list.
                         </div>
                     )}
                 </div>

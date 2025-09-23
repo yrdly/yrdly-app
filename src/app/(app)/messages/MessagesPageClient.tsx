@@ -1,6 +1,6 @@
 "use client";
 
-import { ChatLayout, NoFriendsEmptyState } from '@/components/messages/ChatLayout';
+import { ChatLayoutSimple } from '@/components/messages/ChatLayoutSimple';
 import { MarketplaceChatLayout } from '@/components/messages/MarketplaceChatLayout';
 import { useAuth } from '@/hooks/use-auth';
 import { useState, useEffect, useMemo } from 'react';
@@ -54,12 +54,14 @@ export function MessagesPageClient({ selectedConversationId }: { selectedConvers
     }
 
     if (!currentUser) {
-         return <NoFriendsEmptyState 
-            title="Please log in"
-            description="You need to be logged in to view your messages."
-            buttonText="Login"
-            buttonLink="/login"
-        />;
+         return (
+            <div className="flex items-center justify-center h-full">
+                <div className="text-center">
+                    <h2 className="text-xl font-semibold mb-2">Please log in</h2>
+                    <p className="text-gray-600">You need to be logged in to view your messages.</p>
+                </div>
+            </div>
+        );
     }
 
     // No need for conversations.length === 0 check here, ChatLayout handles it
@@ -80,7 +82,7 @@ export function MessagesPageClient({ selectedConversationId }: { selectedConvers
                     </TabsList>
                 </div>
                 <TabsContent value="neighbors" className="h-[calc(100%-3rem)] mt-0">
-                    <ChatLayout currentUser={currentUser} selectedConversationId={selectedConversationId} />
+                    <ChatLayoutSimple selectedConversationId={selectedConversationId} />
                 </TabsContent>
                 <TabsContent value="marketplace" className="h-[calc(100%-3rem)] mt-0">
                     <MarketplaceChatLayout currentUser={currentUser} selectedChatId={selectedConversationId} />

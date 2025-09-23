@@ -23,9 +23,9 @@ export function EnhancedItemCard({ item, onEditItem, onDeleteItem }: EnhancedIte
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const isOwner = user?.uid === item.userId;
-  const hasImages = item.imageUrls && item.imageUrls.length > 0;
-  const firstImage = hasImages && item.imageUrls ? item.imageUrls[0] : '/placeholder-item.jpg';
+  const isOwner = user?.uid === item.user_id;
+  const hasImages = item.image_urls && item.image_urls.length > 0;
+  const firstImage = hasImages && item.image_urls ? item.image_urls[0] : '/placeholder-item.jpg';
 
   const handleDelete = async () => {
     if (!onDeleteItem) return;
@@ -141,7 +141,7 @@ export function EnhancedItemCard({ item, onEditItem, onDeleteItem }: EnhancedIte
             {/* Author */}
             <div className="flex items-center space-x-2 text-sm text-gray-600">
               <User className="w-4 h-4" />
-              <span>{item.authorName || 'Unknown Seller'}</span>
+              <span>{item.author_name || 'Unknown Seller'}</span>
             </div>
 
             {/* Date */}
@@ -161,8 +161,8 @@ export function EnhancedItemCard({ item, onEditItem, onDeleteItem }: EnhancedIte
                 itemId={item.id}
                 itemTitle={item.title || item.text || 'Unknown Item'}
                 price={item.price}
-                sellerId={item.userId}
-                sellerName={item.authorName || 'Unknown Seller'}
+                sellerId={item.user_id}
+                sellerName={item.author_name || 'Unknown Seller'}
               />
             )}
 
@@ -172,8 +172,8 @@ export function EnhancedItemCard({ item, onEditItem, onDeleteItem }: EnhancedIte
                 itemId={item.id}
                 itemTitle={item.title || item.text || 'Unknown Item'}
                 itemImageUrl={firstImage}
-                sellerId={item.userId}
-                sellerName={item.authorName || 'Unknown Seller'}
+                sellerId={item.user_id}
+                sellerName={item.author_name || 'Unknown Seller'}
               />
             )}
 

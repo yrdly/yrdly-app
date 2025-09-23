@@ -1,37 +1,56 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import {
-  collection,
-  addDoc,
-  serverTimestamp,
-  query,
-  orderBy,
-  onSnapshot,
-  doc,
-  updateDoc,
-  deleteDoc,
-  Timestamp,
-} from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { db, storage } from '@/lib/firebase';
-import { useAuth } from '@/hooks/use-auth';
+// Removed Firebase imports - now using Supabase
+import { useAuth } from '@/hooks/use-supabase-auth';
+import { supabase } from '@/lib/supabase';
+import { StorageService } from '@/lib/storage-service';
 import { Post, Business } from '@/types';
 import { useToast } from './use-toast';
 
 export const usePosts = () => {
-  const { user, userDetails } = useAuth();
+  const { user, profile } = useAuth();
   const { toast } = useToast();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const q = query(collection(db, 'posts'), orderBy('timestamp', 'desc'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const postsData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Post));
-      setPosts(postsData);
-      setLoading(false);
-    });
-    return () => unsubscribe();
+    const fetchPosts = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('posts')
+          .select('*')
+          .order('timestamp', { ascending: false });
+
+        if (error) {
+          console.error('Error fetching posts:', error);
+          return;
+        }
+
+        setPosts(data as Post[]);
+        setLoading(false);
+      } catch (error) {
+        console.error('Error fetching posts:', error);
+        setLoading(false);
+      }
+    };
+
+    fetchPosts();
+
+    // Set up real-time subscription
+    const channel = supabase
+      .channel('posts')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'posts' 
+      }, () => {
+        fetchPosts();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const uploadImages = useCallback(async (
@@ -41,13 +60,15 @@ export const usePosts = () => {
     if (!user) return [];
     const uploadedUrls = await Promise.all(
         Array.from(files).map(async (file) => {
-            const storagePath = `${path}/${user.uid}/${Date.now()}_${file.name}`;
-            const storageRef = ref(storage, storagePath);
-            await uploadBytes(storageRef, file);
-            return getDownloadURL(storageRef);
+            const { url, error } = await StorageService.uploadPostImage(user.id, file);
+            if (error) {
+                console.error('Upload error:', error);
+                return null;
+            }
+            return url;
         })
     );
-    return uploadedUrls;
+    return uploadedUrls.filter(url => url !== null) as string[];
   }, [user]);
 
   const createPost = useCallback(
@@ -56,13 +77,13 @@ export const usePosts = () => {
       postIdToUpdate?: string,
       imageFiles?: FileList
     ) => {
-      if (!user || !userDetails) {
+      if (!user || !profile) {
         toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in.' });
         return;
       }
 
       try {
-        let imageUrls: string[] = postData.imageUrls || [];
+        let imageUrls: string[] = postData.image_urls || [];
         if (imageFiles && imageFiles.length > 0) {
             const uploadedUrls = await uploadImages(imageFiles, postData.category === 'Event' ? 'event_images' : 'posts');
             imageUrls = postIdToUpdate ? [...imageUrls, ...uploadedUrls] : uploadedUrls;
@@ -77,23 +98,32 @@ export const usePosts = () => {
 
         const finalPostData = {
           ...cleanedPostData,
-          userId: user.uid,
-          authorName: userDetails.name || 'Anonymous',
-          authorImage: userDetails.avatarUrl || '',
-          imageUrls: imageUrls.length > 0 ? imageUrls : [],
-          timestamp: postIdToUpdate ? postData.timestamp : Timestamp.now(),
+          user_id: user.id,
+          author_name: profile.name || 'Anonymous',
+          author_image: profile.avatar_url || '',
+          image_urls: imageUrls.length > 0 ? imageUrls : [],
+          timestamp: postIdToUpdate ? postData.timestamp : new Date().toISOString(),
+          category: postData.category || 'General', // Ensure category is always provided
         };
 
         if (postIdToUpdate) {
-            const postRef = doc(db, 'posts', postIdToUpdate);
-            await updateDoc(postRef, finalPostData);
+            const { error } = await supabase
+              .from('posts')
+              .update(finalPostData)
+              .eq('id', postIdToUpdate);
+            
+            if (error) throw error;
             toast({ title: 'Success', description: 'Post updated successfully.' });
         } else {
-            await addDoc(collection(db, 'posts'), {
+            const { error } = await supabase
+              .from('posts')
+              .insert({
                 ...finalPostData,
-                commentCount: 0,
-                likedBy: [],
-            });
+                comment_count: 0,
+                liked_by: [],
+              });
+            
+            if (error) throw error;
             toast({ title: 'Success', description: 'Post created successfully.' });
         }
       } catch (error) {
@@ -101,12 +131,12 @@ export const usePosts = () => {
         toast({ variant: 'destructive', title: 'Error', description: 'Failed to save post.' });
       }
     },
-    [user, userDetails, toast, uploadImages]
+    [user, profile, toast, uploadImages]
   );
 
   const createBusiness = useCallback(
     async (
-      businessData: Omit<Business, 'id' | 'ownerId' | 'createdAt'>,
+      businessData: Omit<Business, 'id' | 'owner_id' | 'created_at'>,
       businessIdToUpdate?: string,
       imageFiles?: FileList
     ) => {
@@ -116,7 +146,7 @@ export const usePosts = () => {
       }
 
       try {
-        let imageUrls: string[] = businessData.imageUrls || [];
+        let imageUrls: string[] = businessData.image_urls || [];
         if (imageFiles && imageFiles.length > 0) {
             const uploadedUrls = await uploadImages(imageFiles, 'businesses');
             imageUrls = businessIdToUpdate ? [...imageUrls, ...uploadedUrls] : uploadedUrls;
@@ -124,19 +154,27 @@ export const usePosts = () => {
 
         const finalBusinessData = {
             ...businessData,
-            ownerId: user.uid,
+            owner_id: user.id,
             imageUrls,
         }
 
         if (businessIdToUpdate) {
-            const businessRef = doc(db, 'businesses', businessIdToUpdate);
-            await updateDoc(businessRef, finalBusinessData);
+            const { error } = await supabase
+                .from('businesses')
+                .update(finalBusinessData)
+                .eq('id', businessIdToUpdate);
+            
+            if (error) throw error;
             toast({ title: 'Success', description: 'Business updated successfully.' });
         } else {
-            await addDoc(collection(db, 'businesses'), {
-                ...finalBusinessData,
-                createdAt: serverTimestamp(),
-            });
+            const { error } = await supabase
+                .from('businesses')
+                .insert({
+                    ...finalBusinessData,
+                    created_at: new Date().toISOString(),
+                });
+            
+            if (error) throw error;
             toast({ title: 'Success', description: 'Business added successfully.' });
         }
       } catch (error) {
@@ -154,8 +192,12 @@ export const usePosts = () => {
             return;
         }
         try {
-            const postRef = doc(db, 'posts', postId);
-            await deleteDoc(postRef);
+            const { error } = await supabase
+                .from('posts')
+                .delete()
+                .eq('id', postId);
+            
+            if (error) throw error;
             toast({ title: 'Success', description: 'Post deleted successfully.' });
         } catch (error) {
             console.error('Error deleting post:', error);
@@ -172,8 +214,12 @@ export const usePosts = () => {
             return;
         }
         try {
-            const businessRef = doc(db, 'businesses', businessId);
-            await deleteDoc(businessRef);
+            const { error } = await supabase
+                .from('businesses')
+                .delete()
+                .eq('id', businessId);
+            
+            if (error) throw error;
             toast({ title: 'Success', description: 'Business deleted successfully.' });
         } catch (error) {
             console.error('Error deleting business:', error);

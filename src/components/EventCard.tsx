@@ -128,7 +128,7 @@ export function EventCard({ event }: EventCardProps) {
   };
 
   const handleDelete = async () => {
-    if (!user || !event.id || user.uid !== event.userId) return;
+    if (!user || !event.id || user.uid !== event.user_id) return;
     try {
         await deleteDoc(doc(db, "posts", event.id));
         toast({ title: "Event deleted", description: "Your event has been successfully removed." });
@@ -164,14 +164,14 @@ export function EventCard({ event }: EventCardProps) {
         <CardHeader>
            <div className="flex items-center space-x-3 mb-4">
                <Avatar>
-                   <AvatarImage src={event.authorImage} alt={event.authorName} data-ai-hint="person portrait"/>
-                   <AvatarFallback>{event.authorName.charAt(0)}</AvatarFallback>
+                   <AvatarImage src={event.author_image} alt={event.author_name} data-ai-hint="person portrait"/>
+                   <AvatarFallback>{event.author_name.charAt(0)}</AvatarFallback>
                </Avatar>
                <div className="flex-1">
-                  <p className="text-sm font-semibold">{event.authorName}</p>
-                  <p className="text-xs text-muted-foreground">{timeAgo(event.timestamp?.toDate())}</p>
+                  <p className="text-sm font-semibold">{event.author_name}</p>
+                  <p className="text-xs text-muted-foreground">{timeAgo(event.timestamp ? new Date(event.timestamp) : null)}</p>
                </div>
-               {user?.uid === event.userId && (
+               {user?.uid === event.user_id && (
                  <AlertDialog>
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>

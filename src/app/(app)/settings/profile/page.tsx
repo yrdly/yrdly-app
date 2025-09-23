@@ -8,12 +8,11 @@ export const dynamic = 'force-dynamic';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/hooks/use-supabase-auth';
 import { useToast } from '@/hooks/use-toast';
-import { db, storage, auth } from '@/lib/firebase';
-import { doc, updateDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { updateProfile } from 'firebase/auth';
+import { supabase } from '@/lib/supabase';
+import { StorageService } from '@/lib/storage-service';
+import { AuthService } from '@/lib/auth-service';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -38,7 +37,7 @@ const profileFormSchema = z.object({
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
 export default function ProfilePage() {
-    const { user, userDetails, loading: authLoading } = useAuth();
+    const { user, profile, loading: authLoading } = useAuth();
     const { toast } = useToast();
     const [isEditMode, setIsEditMode] = useState(false);
     const [formLoading, setFormLoading] = useState(false);
@@ -56,18 +55,18 @@ export default function ProfilePage() {
     });
 
     useEffect(() => {
-        if (userDetails) {
+        if (profile) {
             form.reset({
-                name: userDetails.name || '',
-                bio: userDetails.bio || '',
-                locationState: userDetails.location?.state || '',
-                locationLga: userDetails.location?.lga || '',
+                name: profile.name || '',
+                bio: profile.bio || '',
+                locationState: profile.location?.state || '',
+                locationLga: profile.location?.lga || '',
             });
-            if (userDetails.location?.state) {
-                setLgas(lgasByState[userDetails.location.state] || []);
+            if (profile.location?.state) {
+                setLgas(lgasByState[profile.location.state] || []);
             }
         }
-    }, [userDetails, form]);
+    }, [profile, form]);
 
     const handleStateChange = (state: string) => {
         form.setValue('locationState', state);
@@ -85,12 +84,12 @@ export default function ProfilePage() {
     }
     
     const resetFormAndExitEditMode = () => {
-        if (userDetails) {
+        if (profile) {
             form.reset({
-                name: userDetails.name || '',
-                bio: userDetails.bio || '',
-                locationState: userDetails.location?.state || '',
-                locationLga: userDetails.location?.lga || '',
+                name: profile.name || '',
+                bio: profile.bio || '',
+                locationState: profile.location?.state || '',
+                locationLga: profile.location?.lga || '',
             });
              setAvatarPreview(null);
         }
@@ -102,36 +101,51 @@ export default function ProfilePage() {
         setFormLoading(true);
 
         try {
-            let avatarUrl = userDetails?.avatarUrl;
+            let avatarUrl = profile?.avatar_url;
             let displayName = data.name;
 
             // Step 1: Upload new avatar if one is selected
             if (data.avatar && data.avatar.length > 0) {
                 const file = data.avatar[0];
-                const fileExtension = file.name.split('.').pop();
-                const fileName = `${user.uid}.${fileExtension}`;
-                const storageRef = ref(storage, `avatars/${user.uid}/${fileName}`);
-                await uploadBytes(storageRef, file);
-                avatarUrl = await getDownloadURL(storageRef);
+                const { url, error } = await StorageService.uploadUserAvatar(user.id, file);
+                if (error) {
+                    console.error('Avatar upload error:', error);
+                    throw error;
+                }
+                avatarUrl = url || "";
             }
 
-            // Step 2: Update Firestore document
-            const userRef = doc(db, 'users', user.uid);
-            await updateDoc(userRef, {
-                name: displayName,
-                bio: data.bio,
-                location: {
-                    state: data.locationState,
-                    lga: data.locationLga,
-                },
-                avatarUrl: avatarUrl,
+            // Step 2: Update Supabase user profile
+            const { error: updateError } = await supabase
+                .from('users')
+                .update({
+                    name: displayName,
+                    bio: data.bio,
+                    location: {
+                        state: data.locationState,
+                        lga: data.locationLga,
+                    },
+                    avatar_url: avatarUrl,
+                })
+                .eq('id', user.id);
+
+            if (updateError) {
+                console.error('Profile update error:', updateError);
+                throw updateError;
+            }
+
+            // Step 3: Update Supabase Auth profile
+            const { error: authError } = await supabase.auth.updateUser({
+                data: {
+                    name: displayName,
+                    avatar_url: avatarUrl,
+                }
             });
 
-            // Step 3: Update Firebase Auth profile
-            await updateProfile(user, {
-                displayName: displayName,
-                photoURL: avatarUrl,
-            });
+            if (authError) {
+                console.error('Auth profile update error:', authError);
+                throw authError;
+            }
 
             toast({ title: 'Profile updated successfully!' });
             setIsEditMode(false);
@@ -186,8 +200,8 @@ export default function ProfilePage() {
                                         render={({ field }) => (
                                             <FormItem className="flex items-center gap-4">
                                                 <Avatar className="h-16 w-16">
-                                                    <AvatarImage src={avatarPreview || userDetails?.avatarUrl} alt={userDetails?.name} />
-                                                    <AvatarFallback>{userDetails?.name?.charAt(0)}</AvatarFallback>
+                                                    <AvatarImage src={avatarPreview || profile?.avatar_url} alt={profile?.name} />
+                                                    <AvatarFallback>{profile?.name?.charAt(0)}</AvatarFallback>
                                                 </Avatar>
                                                 <div className="flex flex-col gap-2">
                                                     <FormLabel>Profile Picture</FormLabel>

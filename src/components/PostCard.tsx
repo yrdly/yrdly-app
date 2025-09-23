@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Heart, MessageCircle, Share2, MapPin, Briefcase, MoreHorizontal, Trash2, Edit } from "lucide-react";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth } from "@/hooks/use-supabase-auth";
 import { doc, arrayUnion, arrayRemove, onSnapshot, getDoc, deleteDoc, runTransaction, collection, query, where, addDoc, serverTimestamp, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Skeleton } from "./ui/skeleton";
@@ -55,8 +55,8 @@ export function PostCard({ post }: PostCardProps) {
   const { triggerHaptic } = useHaptics();
   const [author, setAuthor] = useState<User | null>(null);
   const [loadingAuthor, setLoadingAuthor] = useState(true);
-  const [likes, setLikes] = useState(post.likedBy?.length || 0);
-  const [commentCount, setCommentCount] = useState(post.commentCount || 0);
+  const [likes, setLikes] = useState(post.liked_by?.length || 0);
+  const [commentCount, setCommentCount] = useState(post.comment_count || 0);
   const [isLiked, setIsLiked] = useState(false);
   const [isCommentsOpen, setIsCommentsOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -64,19 +64,19 @@ export function PostCard({ post }: PostCardProps) {
   useEffect(() => {
     const fetchAuthor = async () => {
       setLoadingAuthor(true);
-      if (post.userId) {
+      if (post.user_id) {
         try {
-          const userDocRef = doc(db, "users", post.userId);
+          const userDocRef = doc(db, "users", post.user_id);
           const userDocSnap = await getDoc(userDocRef);
 
           if (userDocSnap.exists()) {
               setAuthor({ id: userDocSnap.id, ...userDocSnap.data() } as User);
           } else {
               setAuthor({ 
-                  id: post.userId, 
-                  uid: post.userId,
-                  name: post.authorName || 'Deleted User', 
-                  avatarUrl: post.authorImage || 'https://placehold.co/100x100.png'
+                  id: post.user_id, 
+                  uid: post.user_id,
+                  name: post.author_name || 'Deleted User', 
+                  avatarUrl: post.author_image || 'https://placehold.co/100x100.png'
               });
           }
         } catch (error) {
@@ -89,15 +89,15 @@ export function PostCard({ post }: PostCardProps) {
          setAuthor({ 
             id: 'unknown',
             uid: 'unknown',
-            name: post.authorName || 'Anonymous User', 
-            avatarUrl: post.authorImage || 'https://placehold.co/100x100.png'
+            name: post.author_name || 'Anonymous User', 
+            avatarUrl: post.author_image || 'https://placehold.co/100x100.png'
         });
         setLoadingAuthor(false);
       }
     };
 
     fetchAuthor();
-  }, [post.userId, post.authorName, post.authorImage]);
+  }, [post.user_id, post.author_name, post.author_image]);
 
   useEffect(() => {
     if (!post.id) return;
@@ -105,10 +105,10 @@ export function PostCard({ post }: PostCardProps) {
     const unsubscribe = onSnapshot(postRef, (docSnap) => {
         if(docSnap.exists()) {
             const postData = docSnap.data();
-            setLikes(postData.likedBy?.length || 0);
-            setCommentCount(postData.commentCount || 0);
-            if (currentUser && postData.likedBy) {
-              setIsLiked(postData.likedBy.includes(currentUser.uid));
+            setLikes(postData.liked_by?.length || 0);
+            setCommentCount(postData.comment_count || 0);
+            if (currentUser && postData.liked_by) {
+              setIsLiked(postData.liked_by.includes(currentUser.id));
             }
         }
     });
@@ -131,19 +131,19 @@ export function PostCard({ post }: PostCardProps) {
         }
 
         const postData = postDoc.data();
-        const currentLikedBy = postData.likedBy || [];
-        const userHasLiked = currentLikedBy.includes(currentUser.uid);
+        const currentLikedBy = postData.liked_by || [];
+        const userHasLiked = currentLikedBy.includes(currentUser.id);
 
         if (userHasLiked) {
-            transaction.update(postRef, { likedBy: arrayRemove(currentUser.uid) });
+            transaction.update(postRef, { liked_by: arrayRemove(currentUser.id) });
         } else {
-            transaction.update(postRef, { likedBy: arrayUnion(currentUser.uid) });
+            transaction.update(postRef, { liked_by: arrayUnion(currentUser.id) });
         }
     });
   };
 
   const handleDelete = async () => {
-    if (!currentUser || !post.id || currentUser.uid !== post.userId) return;
+    if (!currentUser || !post.id || currentUser.id !== post.user_id) return;
     try {
         await deleteDoc(doc(db, "posts", post.id));
         toast({ title: "Post deleted", description: "Your post has been successfully removed." });
@@ -196,12 +196,12 @@ export function PostCard({ post }: PostCardProps) {
   };
   
     const handleMessageSeller = async () => {
-        if (!currentUser || !author || currentUser.uid === author.uid) return;
+        if (!currentUser || !author || currentUser.id === author.id) return;
 
         // Trigger haptic feedback
         triggerHaptic('medium');
 
-        const sortedParticipantIds = [currentUser.uid, author.uid].sort();
+        const sortedParticipantIds = [currentUser.id, author.id].sort();
         
         const q = query(
             collection(db, "conversations"),
@@ -231,7 +231,7 @@ export function PostCard({ post }: PostCardProps) {
     };
 
   const openProfile = () => {
-    if (author && author.uid !== currentUser?.uid) {
+    if (author && author.id !== currentUser?.id) {
         setSelectedUser(author);
     }
   };
@@ -255,12 +255,12 @@ export function PostCard({ post }: PostCardProps) {
                 </Avatar>
                 <div>
                     <p className="font-semibold">{author?.name}</p>
-                    <p className="text-xs text-muted-foreground">Joined {timeAgo(author?.timestamp?.toDate())}</p>
+                    <p className="text-xs text-muted-foreground">Joined {timeAgo(author?.timestamp ? (typeof author.timestamp === 'string' ? new Date(author.timestamp) : author.timestamp.toDate()) : null)}</p>
                 </div>
             </button>
         </div>
 
-        {currentUser?.uid !== post.userId && (
+        {currentUser?.id !== post.user_id && (
             <Button className="w-full mt-4" onClick={handleMessageSeller}>
                 <MessageCircle className="mr-2 h-4 w-4" /> Message Seller
             </Button>
@@ -332,12 +332,12 @@ export function PostCard({ post }: PostCardProps) {
                     <button onClick={openProfile} className="cursor-pointer">
                         <p className="font-semibold hover:underline">{author.name}</p>
                     </button>
-                    <p className="text-xs text-muted-foreground">{timeAgo(post.timestamp?.toDate())}</p>
+                    <p className="text-xs text-muted-foreground">{timeAgo(post.timestamp ? new Date(post.timestamp) : null)}</p>
                 </div>
                 {getCategoryBadge(post.category)}
             </>
         ) : null}
-        {currentUser?.uid === post.userId && (
+        {currentUser?.id === post.user_id && (
              <AlertDialog>
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -377,10 +377,10 @@ export function PostCard({ post }: PostCardProps) {
       </CardHeader>
 
       <Collapsible open={isCommentsOpen} onOpenChange={setIsCommentsOpen}>
-        {post.imageUrls && post.imageUrls.length > 0 && (
+        {post.image_urls && post.image_urls.length > 0 && (
             <div className="relative w-full aspect-video">
             <Image
-                src={post.imageUrls[0]}
+                src={post.image_urls[0]}
                 alt="Post image"
                 fill
                 className="object-cover"

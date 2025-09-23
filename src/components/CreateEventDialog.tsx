@@ -102,7 +102,7 @@ const CreateEventDialogComponent = memo(function CreateEventDialog({ children, o
             eventDate: postToEdit.eventDate,
             eventTime: postToEdit.eventTime,
             eventLink: postToEdit.eventLink,
-            image: postToEdit.imageUrls || [],
+            image: postToEdit.image_urls || [],
           });
         } else if (!isEditMode) {
           stableFormReset({

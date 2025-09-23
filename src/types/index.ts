@@ -8,28 +8,28 @@ export interface Location {
 
 export interface Business {
   id: string;
-  ownerId: string;
+  owner_id: string;
   name: string;
   category: string;
   description: string;
   location: Location;
-  imageUrls?: string[];
-  createdAt: Timestamp;
+  image_urls?: string[];
+  created_at: string;
 }
 
 export type PostCategory = 'General' | 'Event' | 'For Sale' | 'Business';
 
 export interface Post {
   id: string;
-  userId: string;
-  authorName: string;
-  authorImage: string;
+  user_id: string;
+  author_name: string;
+  author_image: string;
   text: string;
   description?: string; // For marketplace listings
   imageUrl?: string;
-  imageUrls?: string[];
-  timestamp: Timestamp;
-  commentCount: number;
+  image_urls?: string[];
+  timestamp: string; // Supabase returns ISO string
+  comment_count: number;
   category: PostCategory;
   
   // Event-specific fields
@@ -43,7 +43,7 @@ export interface Post {
   // For Sale specific fields
   price?: number;
 
-  likedBy: string[];
+  liked_by: string[];
 }
 
 export interface Comment {

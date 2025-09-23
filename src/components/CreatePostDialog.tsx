@@ -44,6 +44,7 @@ import type { Post } from "@/types";
 const getFormSchema = (isEditMode: boolean, postToEdit?: Post) => z.object({
   text: z.string().min(1, "Text can't be empty.").max(500),
   imageFiles: z.any().optional(),
+  category: z.enum(['General', 'Event', 'For Sale', 'Business']).default('General'),
 });
 
 type CreatePostDialogProps = {
@@ -69,6 +70,7 @@ const CreatePostDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
     defaultValues: {
       text: "",
       imageFiles: undefined,
+      category: "General" as const,
     },
   });
 
@@ -85,12 +87,14 @@ const CreatePostDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
         if (isEditMode && postToEdit) {
           stableFormReset({
             text: postToEdit.text,
-            imageFiles: postToEdit.imageUrls || [],
+            imageFiles: postToEdit.image_urls || [],
+            category: postToEdit.category || "General",
           });
         } else if (!isEditMode) {
           stableFormReset({
             text: "",
             imageFiles: undefined,
+            category: "General",
           });
         }
       }, 0);
@@ -190,9 +194,9 @@ const CreatePostDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
                                 </FormItem>
                                 )}
                             />
-                            {postToEdit?.imageUrls && postToEdit.imageUrls.length > 0 && (
+                            {postToEdit?.image_urls && postToEdit.image_urls.length > 0 && (
                                 <div className="text-sm text-muted-foreground">
-                                    Current images: {postToEdit.imageUrls.length}. Upload more to add to the list.
+                                    Current images: {postToEdit.image_urls.length}. Upload more to add to the list.
                                 </div>
                             )}
                         </div>
@@ -261,9 +265,9 @@ const CreatePostDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
                         </FormItem>
                         )}
                     />
-                    {postToEdit?.imageUrls && postToEdit.imageUrls.length > 0 && (
+                    {postToEdit?.image_urls && postToEdit.image_urls.length > 0 && (
                         <div className="text-sm text-muted-foreground">
-                            Current images: {postToEdit.imageUrls.length}. Upload more to add to the list.
+                            Current images: {postToEdit.image_urls.length}. Upload more to add to the list.
                         </div>
                     )}
                 </div>

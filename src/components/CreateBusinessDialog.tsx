@@ -97,7 +97,7 @@ const CreateBusinessDialogComponent = ({ children, postToEdit, onOpenChange }: C
             category: postToEdit.category,
             description: postToEdit.description,
             location: postToEdit.location,
-            image: postToEdit.imageUrls || [],
+            image: postToEdit.image_urls || [],
           });
         } else if (!isEditMode) {
           stableFormReset({
@@ -116,12 +116,12 @@ const CreateBusinessDialogComponent = ({ children, postToEdit, onOpenChange }: C
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
-    const businessData: Omit<Business, 'id' | 'ownerId' | 'createdAt'> = {
+    const businessData: Omit<Business, 'id' | 'owner_id' | 'created_at'> = {
         name: values.name,
         category: values.category,
         description: values.description || '',
         location: values.location,
-        imageUrls: [], // Will be handled in createBusiness
+        image_urls: [], // Will be handled in createBusiness
     };
     await createBusiness(businessData, postToEdit?.id, values.image);
     setLoading(false);
@@ -245,9 +245,9 @@ const CreateBusinessDialogComponent = ({ children, postToEdit, onOpenChange }: C
                                 </FormItem>
                                 )}
                             />
-                            {postToEdit?.imageUrls && postToEdit.imageUrls.length > 0 && (
+                            {postToEdit?.image_urls && postToEdit.image_urls.length > 0 && (
                                 <div className="text-sm text-muted-foreground">
-                                    Current images: {postToEdit.imageUrls.length}. Upload more to add to the list.
+                                    Current images: {postToEdit.image_urls.length}. Upload more to add to the list.
                                 </div>
                             )}
                         </div>
@@ -351,9 +351,9 @@ const CreateBusinessDialogComponent = ({ children, postToEdit, onOpenChange }: C
                         </FormItem>
                         )}
                     />
-                    {postToEdit?.imageUrls && postToEdit.imageUrls.length > 0 && (
+                    {postToEdit?.image_urls && postToEdit.image_urls.length > 0 && (
                         <div className="text-sm text-muted-foreground">
-                            Current images: {postToEdit.imageUrls.length}. Upload more to add to the list.
+                            Current images: {postToEdit.image_urls.length}. Upload more to add to the list.
                         </div>
                     )}
                 </div>

@@ -30,8 +30,8 @@ export function WelcomeBanner() {
             return;
         }
 
-        if (user && user.metadata.creationTime) {
-            const creationDate = new Date(user.metadata.creationTime);
+        if (user && user.created_at) {
+            const creationDate = new Date(user.created_at);
             const now = new Date();
             const sevenDaysAgo = new Date(new Date().setDate(now.getDate() - 7));
             
@@ -78,7 +78,7 @@ export function WelcomeBanner() {
             <X className="h-4 w-4" />
           </button>
           <AlertTitle className="font-bold text-lg flex items-center gap-2">
-            Welcome to Yrdly, {user?.displayName?.split(' ')[0] || 'Neighbor'}! 👋
+            Welcome to Yrdly, {profile?.name?.split(' ')[0] || user?.email?.split('@')[0] || 'Neighbor'}! 👋
           </AlertTitle>
           <AlertDescription className="mt-2">
             <p className="mb-4">You&apos;re now part of your neighborhood network. Here&apos;s how to get started:</p>

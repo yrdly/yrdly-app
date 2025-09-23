@@ -32,7 +32,28 @@ export const supabaseAdmin = supabaseServiceKey
 
 // Database types (we'll generate these later)
 export type Database = {
-  // This will be populated with your actual database schema
+  public: {
+    Tables: {
+      users: {
+        Row: {
+          id: string;
+          name: string;
+          email: string | null;
+          avatar_url: string | null;
+          bio: string | null;
+          location: any;
+          friends: string[];
+          blocked_users: string[];
+          notification_settings: any;
+          is_online: boolean;
+          last_seen: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+      };
+    };
+    Enums: {};
+  };
 };
 
 export type Tables<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Row'];

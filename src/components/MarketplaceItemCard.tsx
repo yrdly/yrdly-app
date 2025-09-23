@@ -19,7 +19,7 @@ export function MarketplaceItemCard({ item }: MarketplaceItemCardProps) {
                 <CardContent className="p-0">
                     <div className="relative w-full aspect-square overflow-hidden">
                         <Image
-                            src={item.imageUrls?.[0] || `https://placehold.co/400x400.png`}
+                            src={item.image_urls?.[0] || `https://placehold.co/400x400.png`}
                             alt={item.text}
                             fill
                             className="object-cover group-hover:scale-105 transition-transform duration-300"

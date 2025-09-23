@@ -1,7 +1,7 @@
 
 "use client";
 
-import { ChatLayout, NoFriendsEmptyState } from '@/components/messages/ChatLayout';
+// Removed ChatLayout import - using MessagesPageClient instead
 import { MessagesPageClient } from './MessagesPageClient';
 import { use, Suspense } from 'react';
 
