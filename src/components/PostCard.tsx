@@ -95,14 +95,14 @@ export function PostCard({ post }: PostCardProps) {
         },
         (payload) => {
           console.log('Post update received:', payload);
-          if (payload.new) {
-            const postData = payload.new;
-            setLikes(postData.liked_by?.length || 0);
-            setCommentCount(postData.comment_count || 0);
-            if (currentUser && postData.liked_by) {
-              setIsLiked(postData.liked_by.includes(currentUser.id));
-            }
-          }
+                 if (payload.new) {
+                   const postData = payload.new as any;
+                   setLikes(postData.liked_by?.length || 0);
+                   setCommentCount(postData.comment_count || 0);
+                   if (currentUser && postData.liked_by) {
+                     setIsLiked(postData.liked_by.includes(currentUser.id));
+                   }
+                 }
         }
       )
       .subscribe();
@@ -137,7 +137,7 @@ export function PostCard({ post }: PostCardProps) {
       let newLikedBy;
       if (userHasLiked) {
         // Remove user from liked_by array
-        newLikedBy = currentLikedBy.filter(id => id !== currentUser.id);
+        newLikedBy = currentLikedBy.filter((id: string) => id !== currentUser.id);
       } else {
         // Add user to liked_by array
         newLikedBy = [...currentLikedBy, currentUser.id];

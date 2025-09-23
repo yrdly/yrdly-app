@@ -1,7 +1,7 @@
 "use client";
 
 import { MarketplaceChatLayout } from '@/components/messages/MarketplaceChatLayout';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/hooks/use-supabase-auth';
 import { useState, useEffect, useMemo } from 'react';
 import type { User } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -27,15 +27,15 @@ const MarketplaceChatLoading = () => (
 
 // Client component to handle the interactive parts
 export function MarketplaceChatPageClient({ chatId }: { chatId: string }) {
-    const { user, userDetails } = useAuth();
+    const { user, profile } = useAuth();
     const [loading, setLoading] = useState(true);
 
     const currentUser = useMemo(() => user ? {
-        id: user.uid,
-        uid: user.uid,
-        name: user.displayName || 'Anonymous',
-        avatarUrl: user.photoURL || `https://placehold.co/100x100.png`,
-    } as User : null, [user]);
+        id: user.id,
+        uid: user.id,
+        name: profile?.name || user.user_metadata?.name || user.email?.split('@')[0] || 'Anonymous',
+        avatarUrl: profile?.avatar_url || user.user_metadata?.avatar_url || `https://placehold.co/100x100.png`,
+    } as User : null, [user, profile]);
 
     // Simulate loading for a moment
     useEffect(() => {
@@ -62,7 +62,7 @@ export function MarketplaceChatPageClient({ chatId }: { chatId: string }) {
 
     return (
         <div className="h-[calc(100vh_-_4rem)] md:h-auto pt-16">
-            <MarketplaceChatLayout currentUser={currentUser} selectedChatId={chatId} />
+            <MarketplaceChatLayout selectedChatId={chatId} />
         </div>
     );
 }

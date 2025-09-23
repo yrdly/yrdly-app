@@ -78,9 +78,19 @@ export class SupabaseChatService {
         itemTitle: chat.item_title,
         itemImageUrl: chat.item_image_url,
         createdAt: new Date(chat.created_at),
-        lastMessageAt: new Date(chat.last_message_at),
-        lastMessage: chat.last_message,
-        unreadCount: chat.unread_count || 0,
+        lastActivity: new Date(chat.last_message_at),
+        isActive: true,
+        updatedAt: new Date(chat.last_message_at),
+        lastMessage: chat.last_message ? {
+          id: '',
+          chatId: chat.id,
+          senderId: '',
+          senderName: '',
+          content: chat.last_message,
+          timestamp: new Date(chat.last_message_at),
+          isRead: false,
+          messageType: 'text' as const,
+        } : undefined,
       }));
     } catch (error) {
       console.error('Error in getUserChats:', error);
@@ -110,9 +120,19 @@ export class SupabaseChatService {
         itemTitle: chat.item_title,
         itemImageUrl: chat.item_image_url,
         createdAt: new Date(chat.created_at),
-        lastMessageAt: new Date(chat.last_message_at),
-        lastMessage: chat.last_message,
-        unreadCount: chat.unread_count || 0,
+        lastActivity: new Date(chat.last_message_at),
+        isActive: true,
+        updatedAt: new Date(chat.last_message_at),
+        lastMessage: chat.last_message ? {
+          id: '',
+          chatId: chat.id,
+          senderId: '',
+          senderName: '',
+          content: chat.last_message,
+          timestamp: new Date(chat.last_message_at),
+          isRead: false,
+          messageType: 'text' as const,
+        } : undefined,
       }));
     } catch (error) {
       console.error('Error in getSellerChats:', error);
@@ -140,9 +160,10 @@ export class SupabaseChatService {
         senderId: message.sender_id,
         senderName: message.sender_name,
         content: message.content,
-        imageUrl: message.image_url,
-        createdAt: new Date(message.created_at),
+        timestamp: new Date(message.created_at),
         isRead: message.is_read || false,
+        messageType: message.image_url ? 'image' as const : 'text' as const,
+        metadata: message.image_url ? { imageUrl: message.image_url } : undefined,
       }));
     } catch (error) {
       console.error('Error in getChatMessages:', error);
