@@ -6,7 +6,7 @@ import { usePullToRefresh } from "@/hooks/use-pull-to-refresh";
 import { useHaptics } from "@/hooks/use-haptics";
 import { CreatePostDialog } from "@/components/CreatePostDialog";
 import { Card, CardContent } from "@/components/ui/card";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import type { Post as PostType } from "@/types";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -26,7 +26,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
 
   // Fetch posts from Supabase
-  const fetchPosts = async () => {
+  const fetchPosts = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('posts')
@@ -47,7 +47,7 @@ export default function Home() {
       console.error('Error fetching posts:', error);
       setLoading(false);
     }
-  };
+  }, []);
 
   // Pull-to-refresh functionality
   const { containerRef, isRefreshing } = usePullToRefresh({
@@ -70,7 +70,7 @@ export default function Home() {
     if (user) {
       fetchPosts();
     }
-  }, [user]);
+  }, [user, fetchPosts]);
 
   // Real-time subscription for live updates
   useEffect(() => {
@@ -92,7 +92,7 @@ export default function Home() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user]);
+  }, [user, fetchPosts]);
 
   return (
     <div ref={containerRef} className="space-y-6 pt-12 pb-20">

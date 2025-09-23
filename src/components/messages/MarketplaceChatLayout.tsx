@@ -106,7 +106,7 @@ export function MarketplaceChatLayout({
     const unsubscribeFunctions: (() => void)[] = [];
 
     participants.forEach(participant => {
-      const unsubscribe = OnlineStatusService.listenToUserOnlineStatus(participant.uid, (status) => {
+      const unsubscribe = OnlineStatusService.getInstance().listenToUserOnlineStatus(participant.uid, (status) => {
         setOnlineStatuses(prev => ({
           ...prev,
           [participant.uid]: status.isOnline

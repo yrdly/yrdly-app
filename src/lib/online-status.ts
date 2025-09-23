@@ -1,18 +1,11 @@
-import { doc, updateDoc, onSnapshot, setDoc, serverTimestamp, collection } from 'firebase/firestore';
-import { db } from './firebase';
-
-// Firestore reference for online status
-const getOnlineStatusRef = (userId: string) => doc(db, 'onlineStatus', userId);
-
-// Firestore reference for last seen
-const getLastSeenRef = (userId: string) => doc(db, 'users', userId);
+import { supabase } from './supabase';
 
 export class OnlineStatusService {
   private static instance: OnlineStatusService;
-  private onlineStatusRef: any;
-  private lastSeenRef: any;
   private userId: string | null = null;
   private isOnline = false;
+  private heartbeatInterval: NodeJS.Timeout | null = null;
+  private listeners: Map<string, (status: { isOnline: boolean; lastSeen: string | null }) => void> = new Map();
 
   private constructor() {}
 
@@ -26,11 +19,12 @@ export class OnlineStatusService {
   // Initialize online status tracking for a user
   initialize(userId: string) {
     this.userId = userId;
-    this.onlineStatusRef = getOnlineStatusRef(userId);
-    this.lastSeenRef = getLastSeenRef(userId);
     
     // Set user as online
     this.setOnlineStatus(true);
+    
+    // Start heartbeat to keep user online
+    this.startHeartbeat();
     
     // Listen for app visibility changes
     document.addEventListener('visibilitychange', this.handleVisibilityChange.bind(this));
@@ -45,116 +39,133 @@ export class OnlineStatusService {
 
   // Set online status
   private async setOnlineStatus(isOnline: boolean) {
-    if (!this.userId || !this.onlineStatusRef) return;
+    if (!this.userId) return;
 
     try {
-      await setDoc(this.onlineStatusRef, {
-        isOnline,
-        lastSeen: serverTimestamp(),
-        userId: this.userId
-      }, { merge: true });
+      const { error } = await supabase
+        .from('users')
+        .update({ 
+          is_online: isOnline,
+          last_seen: isOnline ? new Date().toISOString() : new Date().toISOString()
+        })
+        .eq('id', this.userId);
 
-      // Update last seen in users collection
-      await updateDoc(this.lastSeenRef, {
-        isOnline,
-        lastSeen: serverTimestamp()
-      });
+      if (error) {
+        console.error('Error updating online status:', error);
+        return;
+      }
 
       this.isOnline = isOnline;
+      
+      // Notify all listeners
+      this.listeners.forEach((callback) => {
+        callback({ 
+          isOnline, 
+          lastSeen: isOnline ? new Date().toISOString() : new Date().toISOString() 
+        });
+      });
     } catch (error) {
       console.error('Error updating online status:', error);
     }
   }
 
-  // Handle page visibility change
+  // Start heartbeat to keep user online
+  private startHeartbeat() {
+    // Clear existing heartbeat
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval);
+    }
+
+    // Update every 30 seconds to keep user online
+    this.heartbeatInterval = setInterval(() => {
+      if (this.isOnline && this.userId) {
+        this.setOnlineStatus(true);
+      }
+    }, 30000);
+  }
+
+  // Stop heartbeat
+  private stopHeartbeat() {
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval);
+      this.heartbeatInterval = null;
+    }
+  }
+
+  // Handle visibility change
   private handleVisibilityChange() {
     if (document.hidden) {
+      // Page is hidden, set as offline
       this.setOnlineStatus(false);
+      this.stopHeartbeat();
     } else {
+      // Page is visible, set as online
       this.setOnlineStatus(true);
+      this.startHeartbeat();
     }
   }
 
   // Handle page unload
   private handlePageUnload() {
     this.setOnlineStatus(false);
+    this.stopHeartbeat();
   }
 
-  // Handle network coming online
+  // Handle network online
   private handleNetworkOnline() {
-    if (!document.hidden) {
-      this.setOnlineStatus(true);
-    }
+    this.setOnlineStatus(true);
+    this.startHeartbeat();
   }
 
-  // Handle network going offline
+  // Handle network offline
   private handleNetworkOffline() {
     this.setOnlineStatus(false);
+    this.stopHeartbeat();
   }
 
-  // Get online status of a user
-  static async getUserOnlineStatus(userId: string): Promise<{ isOnline: boolean; lastSeen: any }> {
-    return new Promise((resolve) => {
-      const statusRef = getOnlineStatusRef(userId);
-      
-      const unsubscribe = onSnapshot(statusRef, (doc) => {
-        if (doc.exists()) {
-          const data = doc.data();
-          resolve({
-            isOnline: data?.isOnline || false,
-            lastSeen: data?.lastSeen
-          });
-        } else {
-          resolve({
-            isOnline: false,
-            lastSeen: null
-          });
-        }
-        unsubscribe();
-      }, (error) => {
-        console.error('Error getting online status:', error);
-        resolve({
-          isOnline: false,
-          lastSeen: null
-        });
-      });
-    });
-  }
+  // Listen to a user's online status
+  listenToUserOnlineStatus(userId: string, callback: (status: { isOnline: boolean; lastSeen: string | null }) => void) {
+    this.listeners.set(userId, callback);
 
-  // Listen to online status changes of a user
-  static listenToUserOnlineStatus(userId: string, callback: (status: { isOnline: boolean; lastSeen: any }) => void) {
-    const statusRef = getOnlineStatusRef(userId);
-    
-    return onSnapshot(statusRef, (doc) => {
-      if (doc.exists()) {
-        const data = doc.data();
-        const status = {
-          isOnline: data?.isOnline || false,
-          lastSeen: data?.lastSeen
-        };
-        callback(status);
-      } else {
+    // Set up real-time subscription for this user
+    const channel = supabase
+      .channel(`online_status_${userId}`)
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'users',
+        filter: `id=eq.${userId}`
+      }, (payload) => {
+        const newData = payload.new as any;
         callback({
-          isOnline: false,
-          lastSeen: null
+          isOnline: newData.is_online || false,
+          lastSeen: newData.last_seen || null
         });
-      }
-    }, (error) => {
-      console.error('Error listening to online status for', userId, ':', error);
-      callback({
-        isOnline: false,
-        lastSeen: null
-      });
-    });
+      })
+      .subscribe();
+
+    // Return unsubscribe function
+    return () => {
+      this.listeners.delete(userId);
+      supabase.removeChannel(channel);
+    };
   }
 
-  // Cleanup when user logs out
+  // Get current online status
+  getCurrentStatus() {
+    return {
+      isOnline: this.isOnline,
+      lastSeen: this.isOnline ? new Date().toISOString() : null
+    };
+  }
+
+  // Cleanup
   cleanup() {
-    if (this.userId) {
-      this.setOnlineStatus(false);
-      this.userId = null;
-    }
+    this.setOnlineStatus(false);
+    this.stopHeartbeat();
+    this.listeners.clear();
     
+    // Remove event listeners
     document.removeEventListener('visibilitychange', this.handleVisibilityChange.bind(this));
     window.removeEventListener('beforeunload', this.handlePageUnload.bind(this));
     window.removeEventListener('online', this.handleNetworkOnline.bind(this));
@@ -162,4 +173,5 @@ export class OnlineStatusService {
   }
 }
 
+// Export a singleton instance for backward compatibility
 export const onlineStatusService = OnlineStatusService.getInstance();

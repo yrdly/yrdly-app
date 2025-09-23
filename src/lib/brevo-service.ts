@@ -50,6 +50,50 @@ export class BrevoEmailService {
   }
 
   /**
+   * Send welcome email using Brevo
+   */
+  static async sendWelcomeEmail(email: string, userName: string, data: {
+    username: string;
+    location: string;
+  }) {
+    // Check if Brevo API key is configured
+    if (!process.env.BREVO_API_KEY || process.env.BREVO_API_KEY === 'your_brevo_api_key_here') {
+      console.warn('Brevo API key not configured, cannot send welcome email');
+      throw new Error('BREVO_NOT_CONFIGURED');
+    }
+
+    const sendSmtpEmail = new brevo.SendSmtpEmail();
+    
+    sendSmtpEmail.subject = '🎉 Welcome to Yrdly! Your neighborhood network awaits';
+    sendSmtpEmail.htmlContent = this.getWelcomeEmailHTML(data);
+    sendSmtpEmail.textContent = this.getWelcomeEmailText(data);
+    
+    sendSmtpEmail.sender = { 
+      name: 'Yrdly', 
+      email: process.env.BREVO_FROM_EMAIL || 'noreply@yrdly.ng' 
+    };
+    
+    sendSmtpEmail.to = [{ 
+      email: email, 
+      name: userName 
+    }];
+    
+    sendSmtpEmail.replyTo = { 
+      email: 'support@yrdly.ng', 
+      name: 'Yrdly Support' 
+    };
+    
+    try {
+      const result = await apiInstance.sendTransacEmail(sendSmtpEmail);
+      console.log('Welcome email sent successfully via Brevo:', result);
+      return result;
+    } catch (error) {
+      console.error('Error sending welcome email via Brevo:', error);
+      throw new Error('Failed to send welcome email. Please try again.');
+    }
+  }
+
+  /**
    * Send event confirmation email using Brevo
    */
   static async sendEventConfirmationEmail(data: {
@@ -588,6 +632,140 @@ The Yrdly Team
 ---
 This confirmation was sent to ${data.attendeeName}
 If you have any questions about this event, please contact the event organizer or our support team at support@yrdly.ng
+© 2024 Yrdly. All rights reserved.
+    `;
+  }
+
+  /**
+   * Get welcome email HTML template
+   */
+  private static getWelcomeEmailHTML(data: { username: string; location: string }): string {
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Welcome to Yrdly!</title>
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 0; background-color: #f8fafc; }
+          .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; }
+          .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 20px; text-align: center; }
+          .header h1 { color: #ffffff; margin: 0; font-size: 28px; font-weight: 700; }
+          .header p { color: #e2e8f0; margin: 10px 0 0 0; font-size: 16px; }
+          .content { padding: 40px 20px; }
+          .welcome-message { text-align: center; margin-bottom: 30px; }
+          .welcome-message h2 { color: #1a202c; font-size: 24px; margin: 0 0 15px 0; }
+          .welcome-message p { color: #4a5568; font-size: 16px; line-height: 1.6; margin: 0; }
+          .features { display: grid; grid-template-columns: 1fr; gap: 20px; margin: 30px 0; }
+          .feature { text-align: center; padding: 20px; background-color: #f7fafc; border-radius: 8px; }
+          .feature-icon { font-size: 32px; margin-bottom: 10px; }
+          .feature h3 { color: #2d3748; font-size: 18px; margin: 0 0 10px 0; }
+          .feature p { color: #4a5568; font-size: 14px; margin: 0; line-height: 1.5; }
+          .button-container { text-align: center; margin: 30px 0; }
+          .cta-button { display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; text-decoration: none; padding: 15px 30px; border-radius: 8px; font-weight: 600; font-size: 16px; }
+          .cta-button:hover { opacity: 0.9; }
+          .footer { background-color: #f7fafc; padding: 30px 20px; text-align: center; border-top: 1px solid #e2e8f0; }
+          .footer p { color: #4a5568; font-size: 14px; margin: 5px 0; }
+          .footer a { color: #667eea; text-decoration: none; }
+          @media (min-width: 600px) {
+            .features { grid-template-columns: repeat(2, 1fr); }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>🎉 Welcome to Yrdly!</h1>
+            <p>Your neighborhood network awaits</p>
+          </div>
+          
+          <div class="content">
+            <div class="welcome-message">
+              <h2>Hello ${data.username}!</h2>
+              <p>Welcome to Yrdly, your local community platform. We're excited to have you join the neighborhood network in ${data.location}!</p>
+            </div>
+            
+            <div class="features">
+              <div class="feature">
+                <div class="feature-icon">🏠</div>
+                <h3>Discover Your Feed</h3>
+                <p>See what's happening in your neighborhood - events, posts, and updates from your neighbors.</p>
+              </div>
+              
+              <div class="feature">
+                <div class="feature-icon">🛍️</div>
+                <h3>Local Marketplace</h3>
+                <p>Buy and sell items with people in your area. Safe, local, and convenient.</p>
+              </div>
+              
+              <div class="feature">
+                <div class="feature-icon">📅</div>
+                <h3>Community Events</h3>
+                <p>Find and create events happening in your neighborhood. Never miss out on local activities.</p>
+              </div>
+              
+              <div class="feature">
+                <div class="feature-icon">👥</div>
+                <h3>Connect with Neighbors</h3>
+                <p>Build relationships with the people who live around you. A stronger community starts here.</p>
+              </div>
+            </div>
+            
+            <div class="button-container">
+              <a href="https://yrdly.com/home" class="cta-button">Start Exploring Yrdly</a>
+            </div>
+            
+            <p style="text-align: center; font-style: italic; color: #6b7280;">
+              Ready to connect with your neighbors?<br>
+              <strong>The Yrdly Team</strong>
+            </p>
+          </div>
+          
+          <div class="footer">
+            <p>This welcome message was sent to <strong>${data.username}</strong></p>
+            <p>If you have any questions, please contact our support team at <a href="mailto:support@yrdly.ng">support@yrdly.ng</a></p>
+            <p>&copy; 2024 Yrdly. All rights reserved.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+  }
+
+  /**
+   * Get welcome email text template
+   */
+  private static getWelcomeEmailText(data: { username: string; location: string }): string {
+    return `
+🎉 Welcome to Yrdly!
+
+Hello ${data.username}!
+
+Welcome to Yrdly, your local community platform. We're excited to have you join the neighborhood network in ${data.location}!
+
+What you can do on Yrdly:
+
+🏠 Discover Your Feed
+   See what's happening in your neighborhood - events, posts, and updates from your neighbors.
+
+🛍️ Local Marketplace
+   Buy and sell items with people in your area. Safe, local, and convenient.
+
+📅 Community Events
+   Find and create events happening in your neighborhood. Never miss out on local activities.
+
+👥 Connect with Neighbors
+   Build relationships with the people who live around you. A stronger community starts here.
+
+Ready to get started? Visit: https://yrdly.com/home
+
+Ready to connect with your neighbors?
+The Yrdly Team
+
+---
+This welcome message was sent to ${data.username}
+If you have any questions, please contact our support team at support@yrdly.ng
 © 2024 Yrdly. All rights reserved.
     `;
   }

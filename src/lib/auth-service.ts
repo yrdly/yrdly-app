@@ -5,6 +5,7 @@ export interface AuthUser {
   id: string;
   email?: string;
   name?: string;
+  username?: string;
   avatar_url?: string;
   bio?: string;
   location?: {
@@ -25,6 +26,12 @@ export interface AuthUser {
   };
   is_online?: boolean;
   last_seen?: string;
+  // Onboarding fields
+  onboarding_status?: 'signup' | 'email_verification' | 'profile_setup' | 'welcome' | 'tour' | 'completed';
+  profile_completed?: boolean;
+  onboarding_completed_at?: string;
+  tour_completed?: boolean;
+  welcome_message_sent?: boolean;
   created_at?: string;
   updated_at?: string;
 }

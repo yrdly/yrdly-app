@@ -90,12 +90,14 @@ export default function NeighborsPage() {
         );
 
         console.log('🔵 NeighborsPage: Found friends:', friends.map(f => f.name));
+        console.log('🔵 NeighborsPage: Current user friends:', profile?.friends);
+        console.log('🔵 NeighborsPage: All neighbors count:', allNeighbors.length);
 
         const unsubscribeFunctions: (() => void)[] = [];
 
         friends.forEach(friend => {
             console.log('🔵 NeighborsPage: Setting up listener for friend:', friend.name, 'with id:', friend.id);
-            const unsubscribe = OnlineStatusService.listenToUserOnlineStatus(friend.id, (status) => {
+            const unsubscribe = OnlineStatusService.getInstance().listenToUserOnlineStatus(friend.id, (status) => {
                 console.log('🔵 NeighborsPage: Status update for', friend.name, ':', status);
                 setOnlineStatuses(prev => ({
                     ...prev,
@@ -111,51 +113,80 @@ export default function NeighborsPage() {
         };
     }, [currentUser?.id, allNeighbors, profile?.friends]);
 
-    useEffect(() => {
-        if (!currentUser) return;
+    const loadUsers = useCallback(async () => {
+        if (!currentUser?.id) {
+            console.log('🔴 NeighborsPage: No current user, skipping loadUsers');
+            return;
+        }
 
-        const loadUsers = async () => {
-            try {
-                const { data: usersData, error: usersError } = await supabase
-                    .from('users')
-                    .select('*')
-                    .neq('id', currentUser.id);
+        console.log('🔵 NeighborsPage: Loading users for current user:', currentUser.id);
+        
+        try {
+            // First, let's test if we can access the users table at all
+            console.log('🔵 NeighborsPage: Testing users table access...');
+            const { data: testData, error: testError } = await supabase
+                .from('users')
+                .select('id, name')
+                .limit(5);
+            
+            console.log('🔵 NeighborsPage: Test query result:', { testData, testError });
+            
+            console.log('🔵 NeighborsPage: Querying users table...');
+            const { data: usersData, error: usersError } = await supabase
+                .from('users')
+                .select('*')
+                .neq('id', currentUser.id);
 
-                if (usersError) {
-                    console.error('Error loading users:', usersError);
-                    return;
-                }
-
-                const users = (usersData || []).map(user => ({
-                    id: user.id,
-                    uid: user.id,
-                    name: user.name,
-                    avatarUrl: user.avatar_url || 'https://placehold.co/100x100.png',
-                    email: user.email || '',
-                    bio: user.bio || '',
-                    location: user.location || { state: '', lga: '' },
-                    friends: user.friends || [],
-                    blockedUsers: user.blocked_users || [],
-                    notificationSettings: user.notification_settings || {},
-                    isOnline: user.is_online || false,
-                    lastSeen: user.last_seen ? new Date(user.last_seen) as any : null,
-                    timestamp: user.created_at ? new Date(user.created_at) as any : null,
-                } as User));
-
-                setAllNeighbors(users);
-                setLoading(false);
-            } catch (error) {
-                console.error('Error loading users:', error);
-                setLoading(false);
+            if (usersError) {
+                console.error('🔴 NeighborsPage: Error loading users:', usersError);
+                console.error('🔴 NeighborsPage: Error details:', {
+                    message: usersError.message,
+                    details: usersError.details,
+                    hint: usersError.hint,
+                    code: usersError.code
+                });
+                return;
             }
-        };
 
-        const loadFriendRequests = async () => {
-            try {
-                const { data: requestsData, error: requestsError } = await supabase
-                    .from('friend_requests')
-                    .select('*')
-                    .contains('participant_ids', [currentUser.id]);
+            console.log('🔵 NeighborsPage: Raw query response:', { usersData, usersError });
+            console.log('🔵 NeighborsPage: Loaded users data:', usersData?.length || 0, 'users');
+
+            const users = (usersData || []).map(user => ({
+                id: user.id,
+                uid: user.id,
+                name: user.name,
+                avatarUrl: user.avatar_url || 'https://placehold.co/100x100.png',
+                email: user.email || '',
+                bio: user.bio || '',
+                location: user.location || { state: '', lga: '' },
+                friends: user.friends || [],
+                blockedUsers: user.blocked_users || [],
+                notificationSettings: user.notification_settings || {},
+                isOnline: user.is_online || false,
+                lastSeen: user.last_seen || null,
+                timestamp: user.created_at || null,
+            } as User));
+
+            console.log('🔵 NeighborsPage: Mapped users:', users.length);
+            setAllNeighbors(users);
+            setLoading(false);
+        } catch (error) {
+            console.error('🔴 NeighborsPage: Error loading users:', error);
+            setLoading(false);
+        }
+    }, [currentUser]);
+
+    const loadFriendRequests = useCallback(async () => {
+        if (!currentUser?.id) {
+            console.log('🔴 NeighborsPage: No current user, skipping loadFriendRequests');
+            return;
+        }
+
+        try {
+            const { data: requestsData, error: requestsError } = await supabase
+                .from('friend_requests')
+                .select('*')
+                .or(`from_user_id.eq.${currentUser.id},to_user_id.eq.${currentUser.id}`);
 
                 if (requestsError) {
                     console.error('Error loading friend requests:', requestsError);
@@ -168,15 +199,22 @@ export default function NeighborsPage() {
                     toUserId: req.to_user_id,
                     participantIds: req.participant_ids,
                     status: req.status,
-                    timestamp: req.created_at ? new Date(req.created_at) as any : null,
+                    timestamp: req.created_at || null,
                 } as FriendRequest));
 
                 setFriendRequests(requests);
             } catch (error) {
                 console.error('Error loading friend requests:', error);
             }
-        };
+    }, [currentUser]);
 
+    useEffect(() => {
+        if (!currentUser) {
+            console.log('🔴 NeighborsPage: No current user in useEffect');
+            return;
+        }
+
+        console.log('🔵 NeighborsPage: useEffect triggered, loading data for user:', currentUser.id);
         loadUsers();
         loadFriendRequests();
 
@@ -199,7 +237,7 @@ export default function NeighborsPage() {
                 event: '*', 
                 schema: 'public', 
                 table: 'friend_requests',
-                filter: `participant_ids.cs.{${currentUser.id}}`
+                filter: `or(from_user_id.eq.${currentUser.id},to_user_id.eq.${currentUser.id})`
             }, () => {
                 loadFriendRequests();
             })
@@ -209,7 +247,7 @@ export default function NeighborsPage() {
             supabase.removeChannel(usersChannel);
             supabase.removeChannel(requestsChannel);
         };
-    }, [currentUser]);
+    }, [currentUser, loadUsers, loadFriendRequests]);
 
     const handleFilterChange = (type: "state" | "lga", value: string) => {
         setFilters((prev) => {
@@ -236,10 +274,15 @@ export default function NeighborsPage() {
     }, [profile, friendRequests, currentUser]);
 
     const filteredAndSortedNeighbors = useMemo(() => {
-        if (!currentUser) return [];
+        if (!currentUser) {
+            console.log('🔴 NeighborsPage: No current user in filteredAndSortedNeighbors');
+            return [];
+        }
+        
+        console.log('🔵 NeighborsPage: Filtering neighbors. Total:', allNeighbors.length, 'Filters:', filters);
+        
         const blockedByMe = profile?.blocked_users || [];
-
-        return allNeighbors.filter((neighbor) => {
+        const filtered = allNeighbors.filter((neighbor) => {
             // Basic filters
             if (neighbor.id === currentUser.id) return false;
             if (blockedByMe.includes(neighbor.id)) return false; // Filter out blocked users
@@ -251,6 +294,9 @@ export default function NeighborsPage() {
 
             return stateMatch && lgaMatch;
         });
+        
+        console.log('🔵 NeighborsPage: Filtered neighbors count:', filtered.length);
+        return filtered;
     }, [allNeighbors, filters, profile, currentUser]);
 
     const handleAddFriend = async (e: React.MouseEvent, neighbor: User) => {

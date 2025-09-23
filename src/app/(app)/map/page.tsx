@@ -34,17 +34,17 @@ export default function MapPage() {
             setLoading(true);
             const fetchedMarkers: MarkerData[] = [];
 
-            const eventsQuery = query(collection(db, 'posts'), where('category', '==', 'Event'), where('eventLocation.geopoint', '!=', null));
+            const eventsQuery = query(collection(db, 'posts'), where('category', '==', 'Event'), where('event_location.geopoint', '!=', null));
             const eventsSnapshot = await getDocs(eventsQuery);
             eventsSnapshot.forEach(doc => {
                 const post = doc.data() as Post;
-                if (post.eventLocation?.geopoint) {
+                if (post.event_location?.geopoint) {
                     fetchedMarkers.push({
                         id: doc.id,
                         type: 'event',
-                        position: { lat: post.eventLocation.geopoint.latitude, lng: post.eventLocation.geopoint.longitude },
+                        position: { lat: post.event_location.geopoint.latitude, lng: post.event_location.geopoint.longitude },
                         title: post.title || post.text,
-                        address: post.eventLocation.address,
+                        address: post.event_location.address,
                     });
                 }
             });

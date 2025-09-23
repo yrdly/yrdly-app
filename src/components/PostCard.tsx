@@ -296,7 +296,7 @@ export function PostCard({ post }: PostCardProps) {
                 </Avatar>
                 <div>
                     <p className="font-semibold">{author?.name}</p>
-                    <p className="text-xs text-muted-foreground">Joined {timeAgo(author?.timestamp ? (typeof author.timestamp === 'string' ? new Date(author.timestamp) : author.timestamp.toDate()) : null)}</p>
+                    <p className="text-xs text-muted-foreground">Joined {timeAgo(author?.timestamp ? new Date(author.timestamp) : null)}</p>
                 </div>
             </button>
         </div>
@@ -313,10 +313,10 @@ export function PostCard({ post }: PostCardProps) {
   const renderDefaultContent = () => (
      <CardContent className="p-4 pt-0">
         <p className="whitespace-pre-wrap">{post.text}</p>
-        {post.eventLocation && (
+        {post.event_location && (
             <div className="flex items-center text-sm text-muted-foreground mt-2">
                 <MapPin className="h-4 w-4 mr-1"/>
-                <span>{post.eventLocation.address}</span>
+                <span>{post.event_location.address}</span>
             </div>
         )}
     </CardContent>

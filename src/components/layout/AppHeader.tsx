@@ -44,7 +44,13 @@ export function AppHeader() {
       <header className="fixed top-0 left-0 right-0 md:relative z-50 flex h-16 items-center justify-between border-b bg-background/95 backdrop-blur-sm px-4 shadow-sm">
         <div className="flex items-center gap-4">
           <Link href="/home" className="flex items-center gap-2 text-xl font-bold text-foreground">
-            <Image src="/yrdly-logo.png" alt="Yrdly Logo" width={32} height={32} />
+            <Image 
+              src="/yrdly-logo.png" 
+              alt="Yrdly Logo" 
+              width={32} 
+              height={32}
+              style={{ width: "auto", height: "auto" }}
+            />
             <span className="font-headline">Yrdly</span>
           </Link>
         </div>

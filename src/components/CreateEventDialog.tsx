@@ -98,10 +98,10 @@ const CreateEventDialogComponent = memo(function CreateEventDialog({ children, o
           stableFormReset({
             title: postToEdit.title,
             description: postToEdit.description,
-            location: postToEdit.eventLocation,
-            eventDate: postToEdit.eventDate,
-            eventTime: postToEdit.eventTime,
-            eventLink: postToEdit.eventLink,
+            location: postToEdit.event_location,
+            eventDate: postToEdit.event_date,
+            eventTime: postToEdit.event_time,
+            eventLink: postToEdit.event_link,
             image: postToEdit.image_urls || [],
           });
         } else if (!isEditMode) {
@@ -127,10 +127,10 @@ const CreateEventDialogComponent = memo(function CreateEventDialog({ children, o
         category: "Event",
         text: values.description,
         title: values.title,
-        eventLocation: values.location,
-        eventDate: values.eventDate,
-        eventTime: values.eventTime,
-        eventLink: values.eventLink,
+        event_location: values.location,
+        event_date: values.eventDate,
+        event_time: values.eventTime,
+        event_link: values.eventLink,
         attendees: postToEdit?.attendees || [],
     };
     await createPost(eventData, postToEdit?.id, values.image);

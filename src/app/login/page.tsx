@@ -43,7 +43,8 @@ export default function LoginPage() {
           if (user.email_confirmed_at) {
             router.push('/home');
           } else {
-            setError('Please check your email and click the confirmation link to complete your signup.');
+            // Redirect to onboarding email verification
+            router.push(`/onboarding/verify-email?email=${encodeURIComponent(email)}`);
           }
         }
       } else {

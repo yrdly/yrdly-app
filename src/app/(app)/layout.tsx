@@ -16,7 +16,7 @@ import type { User } from '@/types';
 import { useDeepLinking } from '@/hooks/use-deep-linking';
 import { ServiceWorkerRegistration } from '@/components/ServiceWorkerRegistration';
 import { OfflineStatus } from '@/components/OfflineStatus';
-import { EmailVerificationGuard } from '@/components/EmailVerificationGuard';
+import { OnboardingGuard } from '@/components/OnboardingGuard';
 
 function ProtectedLayout({ children }: { children: React.ReactNode }) {
   const { user, profile, loading } = useAuth(); // Using Supabase auth
@@ -52,7 +52,7 @@ function ProtectedLayout({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <EmailVerificationGuard>
+    <OnboardingGuard>
       <ServiceWorkerRegistration />
       {profileUser && (
         <UserProfileDialog 
@@ -77,7 +77,7 @@ function ProtectedLayout({ children }: { children: React.ReactNode }) {
           <OfflineStatus />
         </SidebarInset>
       </SidebarProvider>
-    </EmailVerificationGuard>
+    </OnboardingGuard>
   );
 }
 

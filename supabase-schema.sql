@@ -13,11 +13,13 @@ CREATE TYPE delivery_option AS ENUM ('face_to_face', 'partnered_service', 'own_l
 CREATE TYPE account_type AS ENUM ('bank_account', 'mobile_money', 'digital_wallet');
 CREATE TYPE verification_status AS ENUM ('pending', 'verified', 'rejected', 'expired');
 CREATE TYPE verification_level AS ENUM ('basic', 'bank_account', 'identity', 'address');
+CREATE TYPE onboarding_step AS ENUM ('signup', 'email_verification', 'profile_setup', 'welcome', 'tour', 'completed');
 
 -- Users table (extends Supabase auth.users)
 CREATE TABLE public.users (
     id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
+    username TEXT UNIQUE,
     email TEXT,
     avatar_url TEXT,
     bio TEXT,
@@ -34,6 +36,12 @@ CREATE TABLE public.users (
     }',
     is_online BOOLEAN DEFAULT false,
     last_seen TIMESTAMPTZ,
+    -- Onboarding fields
+    onboarding_status onboarding_step DEFAULT 'signup',
+    profile_completed BOOLEAN DEFAULT false,
+    onboarding_completed_at TIMESTAMPTZ,
+    tour_completed BOOLEAN DEFAULT false,
+    welcome_message_sent BOOLEAN DEFAULT false,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -245,6 +253,7 @@ CREATE TABLE public.notifications (
 );
 
 -- Create indexes for better performance
+CREATE INDEX idx_users_username ON public.users(username);
 CREATE INDEX idx_posts_user_id ON public.posts(user_id);
 CREATE INDEX idx_posts_category ON public.posts(category);
 CREATE INDEX idx_posts_timestamp ON public.posts(timestamp DESC);
@@ -281,8 +290,8 @@ ALTER TABLE public.chat_messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
 
 -- Create RLS policies (basic ones - you can customize these)
--- Users can read their own data and public user data
-CREATE POLICY "Users can read own data" ON public.users FOR SELECT USING (auth.uid() = id);
+-- Users can read all users' data (needed for neighbors page)
+CREATE POLICY "Users can read all users" ON public.users FOR SELECT USING (true);
 CREATE POLICY "Users can update own data" ON public.users FOR UPDATE USING (auth.uid() = id);
 CREATE POLICY "Users can insert own data" ON public.users FOR INSERT WITH CHECK (auth.uid() = id);
 

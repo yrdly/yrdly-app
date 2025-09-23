@@ -88,11 +88,11 @@ export function EventCard({ event }: EventCardProps) {
             attendeeEmail: user.email, // Send to the person attending, not the event creator
             attendeeName: user.displayName || 'User',
             eventName: event.title || 'Event',
-            eventDate: event.eventDate,
-            eventTime: event.eventTime,
-            eventLocation: event.eventLocation?.address,
+            eventDate: event.event_date,
+            eventTime: event.event_time,
+            eventLocation: event.event_location?.address,
             eventDescription: event.text,
-            eventLink: event.eventLink,
+            eventLink: event.event_link,
           });
 
           if (emailResult.success) {
@@ -150,10 +150,10 @@ export function EventCard({ event }: EventCardProps) {
   return (
     <Card className="flex flex-col">
       <div onClick={handleCardClick} className="cursor-pointer">
-        {event.imageUrl && (
+        {event.image_url && (
           <div className="relative w-full h-48 rounded-t-lg overflow-hidden">
             <Image
-              src={event.imageUrl}
+              src={event.image_url}
               alt={event.title || event.text}
               fill
               style={{ objectFit: "cover" }}
@@ -213,28 +213,28 @@ export function EventCard({ event }: EventCardProps) {
           <p className="text-sm text-muted-foreground pt-1">{event.text}</p>
         </CardHeader>
         <CardContent className="space-y-3">
-          {event.eventLocation && (
+          {event.event_location && (
             <div className="flex items-center text-muted-foreground text-sm">
-              <MapPin className="mr-2 h-4 w-4" /> {event.eventLocation.address}
+              <MapPin className="mr-2 h-4 w-4" /> {event.event_location.address}
             </div>
           )}
-          {(event.eventDate || event.eventTime) && (
+          {(event.event_date || event.event_time) && (
               <div className="flex items-center text-muted-foreground text-sm">
                   <Calendar className="mr-2 h-4 w-4" />
-                  {event.eventDate} {event.eventDate && event.eventTime ? 'at' : ''} {event.eventTime}
+                  {event.event_date} {event.event_date && event.event_time ? 'at' : ''} {event.event_time}
               </div>
           )}
-          {event.eventLink && (
+          {event.event_link && (
             <div className="flex items-center text-sm">
               <LinkIcon className="mr-2 h-4 w-4 text-muted-foreground" />
               <button 
                 onClick={(e) => {
                   e.stopPropagation();
-                  window.open(event.eventLink, '_blank', 'noopener,noreferrer');
+                  window.open(event.event_link, '_blank', 'noopener,noreferrer');
                 }}
                 className="text-blue-600 hover:underline truncate text-left bg-transparent border-none p-0 cursor-pointer"
               >
-                {event.eventLink}
+                {event.event_link}
               </button>
             </div>
           )}

@@ -23,27 +23,31 @@ export interface Post {
   id: string;
   user_id: string;
   author_name: string;
-  author_image: string;
+  author_image?: string;
   text: string;
   description?: string; // For marketplace listings
-  imageUrl?: string;
-  image_urls?: string[];
+  image_url?: string; // Single image URL
+  image_urls?: string[]; // Multiple image URLs
   timestamp: string; // Supabase returns ISO string
   comment_count: number;
   category: PostCategory;
   
   // Event-specific fields
   title?: string;
-  eventDate?: string;
-  eventTime?: string;
-  eventLink?: string;
-  eventLocation?: Location;
+  event_date?: string; // Changed from eventDate
+  event_time?: string; // Changed from eventTime
+  event_link?: string; // Changed from eventLink
+  event_location?: Location; // Changed from eventLocation
   attendees?: string[];
 
   // For Sale specific fields
   price?: number;
 
   liked_by: string[];
+  
+  // Additional Supabase fields
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface Comment {
@@ -74,10 +78,10 @@ export interface User {
   friends?: string[];
   blockedUsers?: string[];
   notificationSettings?: NotificationSettings;
-  timestamp?: Timestamp;
+  timestamp?: string; // Changed from Timestamp to string for Supabase
   // Online status fields
   isOnline?: boolean;
-  lastSeen?: Timestamp;
+  lastSeen?: string; // Changed from Timestamp to string for Supabase
 }
 
 export interface FriendRequest {
@@ -86,7 +90,7 @@ export interface FriendRequest {
     toUserId: string;
     participantIds: string[];
     status: 'pending' | 'accepted' | 'declined';
-    timestamp: Timestamp;
+    timestamp: string; // Changed from Timestamp to string for Supabase
 }
 
 

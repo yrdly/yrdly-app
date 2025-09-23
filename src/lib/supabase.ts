@@ -38,6 +38,7 @@ export type Database = {
         Row: {
           id: string;
           name: string;
+          username: string | null;
           email: string | null;
           avatar_url: string | null;
           bio: string | null;
@@ -47,12 +48,20 @@ export type Database = {
           notification_settings: any;
           is_online: boolean;
           last_seen: string | null;
+          // Onboarding fields
+          onboarding_status: 'signup' | 'email_verification' | 'profile_setup' | 'welcome' | 'tour' | 'completed';
+          profile_completed: boolean;
+          onboarding_completed_at: string | null;
+          tour_completed: boolean;
+          welcome_message_sent: boolean;
           created_at: string;
           updated_at: string;
         };
       };
     };
-    Enums: {};
+    Enums: {
+      onboarding_step: 'signup' | 'email_verification' | 'profile_setup' | 'welcome' | 'tour' | 'completed';
+    };
   };
 };
 
