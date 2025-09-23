@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { User } from '@supabase/supabase-js';
 import { AuthService, AuthUser } from '@/lib/auth-service';
+import { supabase } from '@/lib/supabase';
 
 interface AuthContextType {
   user: User | null;
@@ -27,6 +28,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let isMounted = true;
+    let profileChannel: any = null;
 
     // Get initial session
     const getInitialSession = async () => {
@@ -80,6 +82,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     };
 
+    const setupProfileRealtime = (userId: string) => {
+      // Set up real-time subscription for profile updates
+      profileChannel = supabase
+        .channel(`user-profile-${userId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'users',
+            filter: `id=eq.${userId}`,
+          },
+          async (payload) => {
+            console.log('Profile update received:', payload);
+            if (isMounted && payload.new) {
+              // Refresh the profile data
+              try {
+                const updatedProfile = await AuthService.getUserProfile(userId);
+                if (isMounted) {
+                  setProfile(updatedProfile);
+                }
+              } catch (error) {
+                console.error('Error refreshing profile after update:', error);
+              }
+            }
+          }
+        )
+        .subscribe();
+    };
+
     getInitialSession();
 
     // Listen for auth state changes
@@ -114,6 +146,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             
             if (isMounted) {
               setProfile(userProfile);
+              // Set up real-time subscription for this user's profile
+              setupProfileRealtime(user.id);
             }
           } catch (error) {
             console.error('Error fetching user profile:', error);
@@ -123,6 +157,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         } else {
           setProfile(null);
+          // Clean up profile subscription
+          if (profileChannel) {
+            supabase.removeChannel(profileChannel);
+            profileChannel = null;
+          }
         }
         
         setLoading(false);
@@ -132,6 +171,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       isMounted = false;
       subscription.unsubscribe();
+      if (profileChannel) {
+        supabase.removeChannel(profileChannel);
+      }
     };
   }, []);
 

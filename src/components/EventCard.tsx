@@ -165,10 +165,10 @@ export function EventCard({ event }: EventCardProps) {
            <div className="flex items-center space-x-3 mb-4">
                <Avatar>
                    <AvatarImage src={event.author_image} alt={event.author_name} data-ai-hint="person portrait"/>
-                   <AvatarFallback>{event.author_name.charAt(0)}</AvatarFallback>
+                   <AvatarFallback>{event.author_name?.charAt(0) || 'U'}</AvatarFallback>
                </Avatar>
                <div className="flex-1">
-                  <p className="text-sm font-semibold">{event.author_name}</p>
+                  <p className="text-sm font-semibold">{event.author_name || 'Anonymous User'}</p>
                   <p className="text-xs text-muted-foreground">{timeAgo(event.timestamp ? new Date(event.timestamp) : null)}</p>
                </div>
                {user?.uid === event.user_id && (

@@ -12,14 +12,13 @@ import { cn } from "@/lib/utils";
 import { SendHorizonal, Search, ArrowLeft, ShoppingBag, ImagePlus, X } from "lucide-react";
 import { Textarea } from "../ui/textarea";
 import { ChatService } from "@/lib/chat-service";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth } from "@/hooks/use-supabase-auth";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Progress } from "../ui/progress";
 import { OnlineStatusService } from "@/lib/online-status";
 import { AvatarOnlineIndicator } from "../ui/online-indicator";
-import { doc, getDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { supabase } from "@/lib/supabase";
 import type { User } from "@/types";
 
 // Utility function to get chat wallpaper based on theme
@@ -153,9 +152,28 @@ export function MarketplaceChatLayout({
         
         for (const userId of participantIds) {
           try {
-            const userDoc = await getDoc(doc(db, 'users', userId));
-            if (userDoc.exists()) {
-              participantsData[userId] = { id: userDoc.id, ...userDoc.data() } as User;
+            const { data: userData, error } = await supabase
+              .from('users')
+              .select('*')
+              .eq('id', userId)
+              .single();
+            
+            if (userData && !error) {
+              participantsData[userId] = {
+                id: userData.id,
+                uid: userData.id,
+                name: userData.name,
+                avatarUrl: userData.avatar_url || 'https://placehold.co/100x100.png',
+                email: userData.email || '',
+                bio: userData.bio || '',
+                location: userData.location || { state: '', lga: '' },
+                friends: userData.friends || [],
+                blockedUsers: userData.blocked_users || [],
+                notificationSettings: userData.notification_settings || {},
+                isOnline: userData.is_online || false,
+                lastSeen: userData.last_seen ? new Date(userData.last_seen) as any : null,
+                timestamp: userData.created_at ? new Date(userData.created_at) as any : null,
+              } as User;
             }
           } catch (error) {
             console.error(`Error loading user ${userId}:`, error);
@@ -202,9 +220,28 @@ export function MarketplaceChatLayout({
         const isCurrentUserBuyer = selectedChat.buyerId === currentUser.uid;
         const otherParticipantId = isCurrentUserBuyer ? selectedChat.sellerId : selectedChat.buyerId;
         
-        const otherParticipantDoc = await getDoc(doc(db, 'users', otherParticipantId));
-        if (otherParticipantDoc.exists()) {
-          setBuyer({ id: otherParticipantDoc.id, ...otherParticipantDoc.data() } as User);
+        const { data: userData, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', otherParticipantId)
+          .single();
+        
+        if (userData && !error) {
+          setBuyer({
+            id: userData.id,
+            uid: userData.id,
+            name: userData.name,
+            avatarUrl: userData.avatar_url || 'https://placehold.co/100x100.png',
+            email: userData.email || '',
+            bio: userData.bio || '',
+            location: userData.location || { state: '', lga: '' },
+            friends: userData.friends || [],
+            blockedUsers: userData.blocked_users || [],
+            notificationSettings: userData.notification_settings || {},
+            isOnline: userData.is_online || false,
+            lastSeen: userData.last_seen ? new Date(userData.last_seen) as any : null,
+            timestamp: userData.created_at ? new Date(userData.created_at) as any : null,
+          } as User);
         }
       } catch (error) {
         console.error("Error loading other participant:", error);

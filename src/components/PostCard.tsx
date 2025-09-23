@@ -10,8 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Heart, MessageCircle, Share2, MapPin, Briefcase, MoreHorizontal, Trash2, Edit } from "lucide-react";
 import { useAuth } from "@/hooks/use-supabase-auth";
-import { doc, arrayUnion, arrayRemove, onSnapshot, getDoc, deleteDoc, runTransaction, collection, query, where, addDoc, serverTimestamp, getDocs } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { supabase } from "@/lib/supabase";
 import { Skeleton } from "./ui/skeleton";
 import {
   DropdownMenu,
@@ -62,59 +61,56 @@ export function PostCard({ post }: PostCardProps) {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
   useEffect(() => {
-    const fetchAuthor = async () => {
-      setLoadingAuthor(true);
-      if (post.user_id) {
-        try {
-          const userDocRef = doc(db, "users", post.user_id);
-          const userDocSnap = await getDoc(userDocRef);
-
-          if (userDocSnap.exists()) {
-              setAuthor({ id: userDocSnap.id, ...userDocSnap.data() } as User);
-          } else {
-              setAuthor({ 
-                  id: post.user_id, 
-                  uid: post.user_id,
-                  name: post.author_name || 'Deleted User', 
-                  avatarUrl: post.author_image || 'https://placehold.co/100x100.png'
-              });
-          }
-        } catch (error) {
-          console.error("Error fetching author:", error);
-          setAuthor(null);
-        } finally {
-          setLoadingAuthor(false);
-        }
-      } else {
-         setAuthor({ 
-            id: 'unknown',
-            uid: 'unknown',
-            name: post.author_name || 'Anonymous User', 
-            avatarUrl: post.author_image || 'https://placehold.co/100x100.png'
-        });
-        setLoadingAuthor(false);
-      }
-    };
-
-    fetchAuthor();
+    // Since we're using Supabase, the post already contains author information
+    // No need to fetch from Firebase
+    setLoadingAuthor(false);
+    setAuthor({ 
+      id: post.user_id || 'unknown',
+      uid: post.user_id || 'unknown',
+      name: post.author_name || 'Anonymous User', 
+      avatarUrl: post.author_image || 'https://placehold.co/100x100.png'
+    });
   }, [post.user_id, post.author_name, post.author_image]);
 
   useEffect(() => {
     if (!post.id) return;
-    const postRef = doc(db, "posts", post.id);
-    const unsubscribe = onSnapshot(postRef, (docSnap) => {
-        if(docSnap.exists()) {
-            const postData = docSnap.data();
+    
+    // Set initial values from post data
+    setLikes(post.liked_by?.length || 0);
+    setCommentCount(post.comment_count || 0);
+    if (currentUser && post.liked_by) {
+      setIsLiked(post.liked_by.includes(currentUser.id));
+    }
+
+    // Set up real-time subscription for this post
+    const channel = supabase
+      .channel(`post-${post.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'posts',
+          filter: `id=eq.${post.id}`,
+        },
+        (payload) => {
+          console.log('Post update received:', payload);
+          if (payload.new) {
+            const postData = payload.new;
             setLikes(postData.liked_by?.length || 0);
             setCommentCount(postData.comment_count || 0);
             if (currentUser && postData.liked_by) {
               setIsLiked(postData.liked_by.includes(currentUser.id));
             }
+          }
         }
-    });
+      )
+      .subscribe();
 
-    return () => unsubscribe();
-  }, [post.id, currentUser]);
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [post.id, post.liked_by, post.comment_count, currentUser]);
 
   const handleLike = async () => {
     if (!currentUser || !post.id) return;
@@ -122,30 +118,56 @@ export function PostCard({ post }: PostCardProps) {
     // Trigger haptic feedback
     triggerHaptic('light');
     
-    const postRef = doc(db, "posts", post.id);
+    try {
+      // Get current post data
+      const { data: postData, error: fetchError } = await supabase
+        .from('posts')
+        .select('liked_by')
+        .eq('id', post.id)
+        .single();
 
-    await runTransaction(db, async (transaction) => {
-        const postDoc = await transaction.get(postRef);
-        if (!postDoc.exists()) {
-            throw "Document does not exist!";
-        }
+      if (fetchError) {
+        console.error('Error fetching post:', fetchError);
+        return;
+      }
 
-        const postData = postDoc.data();
-        const currentLikedBy = postData.liked_by || [];
-        const userHasLiked = currentLikedBy.includes(currentUser.id);
+      const currentLikedBy = postData.liked_by || [];
+      const userHasLiked = currentLikedBy.includes(currentUser.id);
 
-        if (userHasLiked) {
-            transaction.update(postRef, { liked_by: arrayRemove(currentUser.id) });
-        } else {
-            transaction.update(postRef, { liked_by: arrayUnion(currentUser.id) });
-        }
-    });
+      let newLikedBy;
+      if (userHasLiked) {
+        // Remove user from liked_by array
+        newLikedBy = currentLikedBy.filter(id => id !== currentUser.id);
+      } else {
+        // Add user to liked_by array
+        newLikedBy = [...currentLikedBy, currentUser.id];
+      }
+
+      // Update the post
+      const { error: updateError } = await supabase
+        .from('posts')
+        .update({ liked_by: newLikedBy })
+        .eq('id', post.id);
+
+      if (updateError) {
+        console.error('Error updating post:', updateError);
+      }
+    } catch (error) {
+      console.error('Error handling like:', error);
+    }
   };
 
   const handleDelete = async () => {
     if (!currentUser || !post.id || currentUser.id !== post.user_id) return;
     try {
-        await deleteDoc(doc(db, "posts", post.id));
+        const { error } = await supabase
+          .from('posts')
+          .delete()
+          .eq('id', post.id);
+        
+        if (error) {
+          throw error;
+        }
         toast({ title: "Post deleted", description: "Your post has been successfully removed." });
     } catch (error) {
         console.error("Error deleting post:", error);
@@ -203,24 +225,43 @@ export function PostCard({ post }: PostCardProps) {
 
         const sortedParticipantIds = [currentUser.id, author.id].sort();
         
-        const q = query(
-            collection(db, "conversations"),
-            where("participantIds", "==", sortedParticipantIds)
-        );
-
         try {
-            const querySnapshot = await getDocs(q);
+            // Check if conversation already exists
+            const { data: existingConversations, error: fetchError } = await supabase
+                .from('conversations')
+                .select('id')
+                .eq('participant_ids', sortedParticipantIds)
+                .limit(1);
+
+            if (fetchError) {
+                console.error("Error fetching conversations:", fetchError);
+                toast({ variant: "destructive", title: "Error", description: "Could not open conversation." });
+                return;
+            }
+
             let conversationId: string;
 
-            if (querySnapshot.empty) {
-                const newConvRef = await addDoc(collection(db, "conversations"), {
-                    participantIds: sortedParticipantIds,
-                    lastMessage: null,
-                    timestamp: serverTimestamp(),
-                });
-                conversationId = newConvRef.id;
+            if (existingConversations && existingConversations.length > 0) {
+                conversationId = existingConversations[0].id;
             } else {
-                conversationId = querySnapshot.docs[0].id;
+                // Create new conversation
+                const { data: newConversation, error: createError } = await supabase
+                    .from('conversations')
+                    .insert({
+                        participant_ids: sortedParticipantIds,
+                        last_message: null,
+                        created_at: new Date().toISOString(),
+                    })
+                    .select('id')
+                    .single();
+
+                if (createError) {
+                    console.error("Error creating conversation:", createError);
+                    toast({ variant: "destructive", title: "Error", description: "Could not create conversation." });
+                    return;
+                }
+
+                conversationId = newConversation.id;
             }
             
             router.push(`/messages/${conversationId}`);

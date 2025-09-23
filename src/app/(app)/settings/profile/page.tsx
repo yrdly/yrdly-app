@@ -147,6 +147,63 @@ export default function ProfilePage() {
                 throw authError;
             }
 
+            // Step 4: Update all existing posts and comments with new avatar/name
+            if (data.avatar && data.avatar.length > 0 || data.name !== profile?.name) {
+                try {
+                    // Update posts
+                    const updateData: any = { author_name: displayName };
+                    if (data.avatar && data.avatar.length > 0) {
+                        updateData.author_image = avatarUrl;
+                    }
+                    
+                    const { error: postsUpdateError } = await supabase
+                        .from('posts')
+                        .update(updateData)
+                        .eq('user_id', user.id);
+
+                    if (postsUpdateError) {
+                        console.error('Posts update error:', postsUpdateError);
+                    } else {
+                        console.log('Updated all existing posts with new profile info');
+                    }
+
+                    // Update comments
+                    const commentUpdateData: any = { author_name: displayName };
+                    if (data.avatar && data.avatar.length > 0) {
+                        commentUpdateData.author_image = avatarUrl;
+                    }
+                    
+                    const { error: commentsUpdateError } = await supabase
+                        .from('comments')
+                        .update(commentUpdateData)
+                        .eq('user_id', user.id);
+
+                    if (commentsUpdateError) {
+                        console.error('Comments update error:', commentsUpdateError);
+                    } else {
+                        console.log('Updated all existing comments with new profile info');
+                    }
+
+                    // Update chat messages (sender_name only, no avatar field)
+                    const { error: messagesUpdateError } = await supabase
+                        .from('chat_messages')
+                        .update({ 
+                            sender_name: displayName 
+                        })
+                        .eq('sender_id', user.id);
+
+                    if (messagesUpdateError) {
+                        console.error('Chat messages update error:', messagesUpdateError);
+                    } else {
+                        console.log('Updated all existing chat messages with new name');
+                    }
+
+                } catch (updateError) {
+                    console.error('Error updating existing content:', updateError);
+                    // Don't throw error here, just log it - profile update was successful
+                }
+            }
+
             toast({ title: 'Profile updated successfully!' });
             setIsEditMode(false);
         } catch (error) {

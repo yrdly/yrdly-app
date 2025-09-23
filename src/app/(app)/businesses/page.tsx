@@ -9,8 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Search, Plus, Briefcase } from "lucide-react";
 import { useState, useEffect } from "react";
 import type { Business } from "@/types";
-import { collection, query, onSnapshot } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { supabase } from "@/lib/supabase";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { MapPin } from "lucide-react";
@@ -166,20 +165,43 @@ export default function BusinessesPage() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const q = query(collection(db, "businesses"));
-        const unsubscribe = onSnapshot(q, (querySnapshot) => {
-            const businessesData = querySnapshot.docs.map(doc => {
-                 const data = doc.data();
-                return {
-                    id: doc.id,
-                    ...data,
-                } as Business;
-            });
-            setBusinesses(businessesData);
-            setLoading(false);
-        });
+        const fetchBusinesses = async () => {
+            try {
+                const { data, error } = await supabase
+                    .from('businesses')
+                    .select('*')
+                    .order('created_at', { ascending: false });
 
-        return () => unsubscribe();
+                if (error) {
+                    console.error('Error fetching businesses:', error);
+                    return;
+                }
+
+                setBusinesses(data as Business[]);
+                setLoading(false);
+            } catch (error) {
+                console.error('Error fetching businesses:', error);
+                setLoading(false);
+            }
+        };
+
+        fetchBusinesses();
+
+        // Set up real-time subscription
+        const channel = supabase
+            .channel('businesses')
+            .on('postgres_changes', { 
+                event: '*', 
+                schema: 'public', 
+                table: 'businesses'
+            }, () => {
+                fetchBusinesses();
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }, []);
 
   return (

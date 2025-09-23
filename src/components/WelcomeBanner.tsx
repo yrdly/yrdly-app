@@ -88,7 +88,7 @@ export function WelcomeBanner() {
                 <div className="flex items-center gap-2"><Building className="h-5 w-5 text-primary"/> Discover local businesses</div>
             </div>
             <div className="flex gap-2">
-                <Button asChild variant="default" size="sm" className="bg-primary-foreground text-primary hover:bg-primary-foreground/90"><Link href="/settings">Complete Profile</Link></Button>
+                <Button asChild variant="default" size="sm" className="bg-primary-foreground text-primary hover:bg-primary-foreground/90"><Link href="/settings/profile">Complete Profile</Link></Button>
                 <Button asChild variant="outline" size="sm" className="bg-transparent border-primary-foreground text-primary-foreground hover:bg-primary-foreground/10"><Link href="/neighbors">Find Neighbors</Link></Button>
             </div>
           </AlertDescription>

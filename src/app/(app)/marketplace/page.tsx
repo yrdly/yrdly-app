@@ -10,8 +10,7 @@ import { Search, Plus, ShoppingCart } from "lucide-react";
 import { CreateItemDialog } from "@/components/CreateItemDialog";
 import { useState, useEffect, useMemo } from "react";
 import type { Post as PostType } from "@/types";
-import { collection, query, where, onSnapshot, orderBy, deleteDoc, doc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { supabase } from "@/lib/supabase";
 import { EnhancedItemCard } from "@/components/marketplace/EnhancedItemCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
@@ -37,21 +36,45 @@ export default function MarketplacePage() {
     const { toast } = useToast();
 
     useEffect(() => {
-        const q = query(
-            collection(db, "posts"), 
-            where("category", "==", "For Sale"),
-            orderBy("timestamp", "desc")
-        );
-        const unsubscribe = onSnapshot(q, (querySnapshot) => {
-            const itemsData = querySnapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data(),
-            } as PostType));
-            setItems(itemsData);
-            setLoading(false);
-        });
+        const fetchItems = async () => {
+            try {
+                const { data, error } = await supabase
+                    .from('posts')
+                    .select('*')
+                    .eq('category', 'For Sale')
+                    .order('timestamp', { ascending: false });
 
-        return () => unsubscribe();
+                if (error) {
+                    console.error('Error fetching marketplace items:', error);
+                    return;
+                }
+
+                setItems(data as PostType[]);
+                setLoading(false);
+            } catch (error) {
+                console.error('Error fetching marketplace items:', error);
+                setLoading(false);
+            }
+        };
+
+        fetchItems();
+
+        // Set up real-time subscription
+        const channel = supabase
+            .channel('marketplace-items')
+            .on('postgres_changes', { 
+                event: '*', 
+                schema: 'public', 
+                table: 'posts',
+                filter: 'category=eq.For Sale'
+            }, () => {
+                fetchItems();
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }, []);
 
     const filteredItems = useMemo(() => {
@@ -72,7 +95,15 @@ export default function MarketplacePage() {
 
     const handleDeleteItem = async (itemId: string) => {
         try {
-            await deleteDoc(doc(db, "posts", itemId));
+            const { error } = await supabase
+                .from('posts')
+                .delete()
+                .eq('id', itemId);
+            
+            if (error) {
+                throw error;
+            }
+            
             toast({
                 title: "Success",
                 description: "Item deleted successfully",

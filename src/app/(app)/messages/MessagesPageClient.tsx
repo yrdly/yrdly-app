@@ -2,7 +2,7 @@
 
 import { ChatLayoutSimple } from '@/components/messages/ChatLayoutSimple';
 import { MarketplaceChatLayout } from '@/components/messages/MarketplaceChatLayout';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/hooks/use-supabase-auth';
 import { useState, useEffect, useMemo } from 'react';
 import type { User } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -31,17 +31,17 @@ const MessagesLoading = () => (
 
 // Client component to handle the interactive parts
 export function MessagesPageClient({ selectedConversationId }: { selectedConversationId?: string }) {
-    const { user, userDetails } = useAuth();
+    const { user, profile } = useAuth();
     const [loading, setLoading] = useState(true);
     const searchParams = useSearchParams();
     const tab = searchParams.get('tab');
 
     const currentUser = useMemo(() => user ? {
-        id: user.uid,
-        uid: user.uid,
-        name: user.displayName || 'Anonymous',
-        avatarUrl: user.photoURL || `https://placehold.co/100x100.png`,
-    } as User : null, [user]);
+        id: user.id,
+        uid: user.id,
+        name: profile?.name || user.user_metadata?.name || user.email?.split('@')[0] || 'Anonymous',
+        avatarUrl: profile?.avatar_url || user.user_metadata?.avatar_url || `https://placehold.co/100x100.png`,
+    } as User : null, [user, profile]);
 
     // Simulate loading for a moment, as conversations are now fetched within ChatLayout
     useEffect(() => {

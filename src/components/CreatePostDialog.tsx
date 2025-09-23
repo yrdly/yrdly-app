@@ -34,7 +34,7 @@ import {
 } from "@/components/ui/form";
 import { PlusCircle } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth } from "@/hooks/use-supabase-auth";
 import { useState, useEffect, memo, useCallback, useMemo } from "react";
 import * as React from 'react';
 import { usePosts } from "@/hooks/use-posts";
@@ -125,12 +125,12 @@ const CreatePostDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
 
 
   const Trigger = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>((props, ref) => {
-    const { userDetails } = useAuth();
+    const { user, profile } = useAuth();
     return (
         <div ref={ref} {...props} className="flex items-center gap-4 w-full">
             <Avatar>
-                <AvatarImage src={userDetails?.avatarUrl || 'https://placehold.co/100x100.png'}/>
-                <AvatarFallback>{userDetails?.name?.charAt(0) || 'U'}</AvatarFallback>
+                <AvatarImage src={profile?.avatar_url || user?.user_metadata?.avatar_url || 'https://placehold.co/100x100.png'}/>
+                <AvatarFallback>{profile?.name?.charAt(0) || user?.email?.charAt(0) || 'U'}</AvatarFallback>
             </Avatar>
             <div className="flex-1 text-left text-muted-foreground cursor-pointer hover:bg-muted p-2 rounded-md border border-dashed">
                 What&apos;s happening in your neighborhood?

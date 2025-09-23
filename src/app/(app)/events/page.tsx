@@ -10,8 +10,7 @@ import { Plus, CalendarDays } from "lucide-react";
 import { CreateEventDialog } from "@/components/CreateEventDialog";
 import { useState, useEffect } from "react";
 import type { Post as PostType } from "@/types";
-import { collection, query, where, onSnapshot, orderBy } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { supabase } from "@/lib/supabase";
 import { EventCard } from "@/components/EventCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
@@ -34,20 +33,45 @@ export default function EventsPage() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const q = query(collection(db, "posts"), where("category", "==", "Event"), orderBy("timestamp", "desc"));
-        const unsubscribe = onSnapshot(q, (querySnapshot) => {
-            const eventsData = querySnapshot.docs.map(doc => {
-                 const data = doc.data();
-                return {
-                    id: doc.id,
-                    ...data,
-                } as PostType;
-            });
-            setPosts(eventsData);
-            setLoading(false);
-        });
+        const fetchEvents = async () => {
+            try {
+                const { data, error } = await supabase
+                    .from('posts')
+                    .select('*')
+                    .eq('category', 'Event')
+                    .order('timestamp', { ascending: false });
 
-        return () => unsubscribe();
+                if (error) {
+                    console.error('Error fetching events:', error);
+                    return;
+                }
+
+                setPosts(data as PostType[]);
+                setLoading(false);
+            } catch (error) {
+                console.error('Error fetching events:', error);
+                setLoading(false);
+            }
+        };
+
+        fetchEvents();
+
+        // Set up real-time subscription
+        const channel = supabase
+            .channel('events')
+            .on('postgres_changes', { 
+                event: '*', 
+                schema: 'public', 
+                table: 'posts',
+                filter: 'category=eq.Event'
+            }, () => {
+                fetchEvents();
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }, []);
 
   return (
