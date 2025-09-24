@@ -5,6 +5,9 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { Loader2 } from 'lucide-react';
 
+// Force dynamic rendering to avoid cache issues
+export const dynamic = 'force-dynamic';
+
 export default function AuthCallback() {
   const router = useRouter();
 
@@ -13,6 +16,7 @@ export default function AuthCallback() {
       try {
         console.log('Handling OAuth callback...');
         console.log('Current URL:', window.location.href);
+        console.log('Timestamp:', new Date().toISOString());
         
         // Check if we have URL fragments (OAuth response)
         const hashParams = new URLSearchParams(window.location.hash.substring(1));
@@ -37,8 +41,8 @@ export default function AuthCallback() {
           
           if (data.session) {
             console.log('Session established:', data.session.user);
-            // Redirect to home immediately
-            router.push('/home');
+            // Redirect to home immediately with cache busting
+            window.location.href = '/home';
             return;
           }
         }
@@ -54,11 +58,11 @@ export default function AuthCallback() {
 
         if (data.session) {
           console.log('User already authenticated:', data.session.user);
-          // Redirect to home immediately
-          router.push('/home');
+          // Redirect to home immediately with cache busting
+          window.location.href = '/home';
         } else {
           console.log('No session found, redirecting to login');
-          router.push('/login');
+          window.location.href = '/login';
         }
       } catch (error) {
         console.error('Unexpected error:', error);

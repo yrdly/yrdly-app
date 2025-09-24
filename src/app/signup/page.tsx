@@ -57,15 +57,19 @@ export default function SignupPage() {
       if (error) {
         setError(error.message);
       } else if (user) {
+        console.log('Signup successful, user:', user);
         // Check if user needs email confirmation
         if (user.email_confirmed_at) {
           router.push('/home');
         } else {
-          // Redirect to onboarding email verification
-          router.push(`/onboarding/verify-email?email=${encodeURIComponent(email)}`);
+          // Wait a moment for the session to be established, then redirect
+          setTimeout(() => {
+            router.push(`/onboarding/verify-email?email=${encodeURIComponent(email)}`);
+          }, 1000);
         }
       }
     } catch (err) {
+      console.error('Signup error:', err);
       setError('An unexpected error occurred');
     } finally {
       setLoading(false);

@@ -13,9 +13,10 @@ import { useToast } from '@/hooks/use-toast';
 import { BrevoEmailService } from '@/lib/brevo-service';
 // Removed Firebase import - using Supabase auth
 import { onboardingAnalytics } from '@/lib/onboarding-analytics';
+import { supabase } from '@/lib/supabase';
 
 function VerifyEmailContent() {
-  const { user, profile } = useAuth();
+  const { user, profile, loading } = useAuth();
   const { updateOnboardingStatus, isEmailVerified } = useOnboarding();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -28,6 +29,22 @@ function VerifyEmailContent() {
 
   const email = searchParams.get('email') || user?.email || '';
   const token = searchParams.get('token');
+
+  // Redirect if user is not authenticated (with delay to allow session to establish)
+  useEffect(() => {
+    if (!loading && !user) {
+      console.log('No user found, waiting for session...');
+      // Wait a bit longer for the session to be established
+      const timer = setTimeout(() => {
+        if (!user) {
+          console.log('Still no user after delay, redirecting to signup');
+          router.push('/signup');
+        }
+      }, 3000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [user, loading, router]);
 
   // Check if user is verified and redirect
   useEffect(() => {
@@ -101,11 +118,12 @@ function VerifyEmailContent() {
   }, [lastSentTime]);
 
   const handleResendVerification = async () => {
-    if (!user || cooldownTime > 0) return;
+    console.log('Resend verification clicked', { user: !!user, cooldownTime, loading });
+    if (!user || cooldownTime > 0 || loading) return;
 
     setIsResending(true);
     try {
-      // Try to send verification email via Brevo, fallback to Firebase
+      // Try to send verification email via Brevo, fallback to manual message
       try {
         // Create verification link with user ID as token
         const verificationLink = `${window.location.origin}/onboarding/verify-email?token=${user.id}&email=${encodeURIComponent(email)}`;
@@ -116,12 +134,16 @@ function VerifyEmailContent() {
         console.log('Verification email sent via Brevo');
         onboardingAnalytics.trackEmailVerificationSent(email);
       } catch (error: any) {
+        console.log('Brevo email failed:', error.message);
         if (error.message === 'BREVO_NOT_CONFIGURED' || error.message === 'BREVO_SEND_FAILED') {
-          console.log('Falling back to Firebase email verification');
+          console.log('Brevo not configured, showing manual instructions');
           
-          // Fallback to Firebase email verification
-          // Note: This requires Firebase auth user, not Supabase user
-          console.log('Firebase fallback not available with Supabase user');
+          // Show manual verification instructions since email service is not configured
+          toast({
+            title: "Email Service Not Configured",
+            description: "Please contact support to resend your verification email, or check your email for the verification link.",
+            variant: "destructive"
+          });
           onboardingAnalytics.trackEmailVerificationSent(email);
         } else {
           throw error; // Re-throw other errors
@@ -151,12 +173,20 @@ function VerifyEmailContent() {
   };
 
   const handleCheckVerification = async () => {
-    if (!user) return;
+    console.log('Check verification clicked', { user: !!user, emailConfirmed: user?.email_confirmed_at, loading });
+    if (!user || loading) return;
     
     setIsChecking(true);
     try {
-      // Check verification status (Supabase user doesn't need reload)
-      if (user.email_confirmed_at) {
+      // Check verification status - refresh user data first
+      const { data: { user: refreshedUser }, error } = await supabase.auth.getUser();
+      
+      if (error) {
+        console.error('Error getting user:', error);
+        throw error;
+      }
+      
+      if (refreshedUser?.email_confirmed_at) {
         await updateOnboardingStatus('profile_setup');
         toast({
           title: "Email Verified!",
@@ -166,7 +196,7 @@ function VerifyEmailContent() {
       } else {
         toast({
           title: "Not Verified Yet",
-          description: "Your email is not verified yet. Please check your inbox.",
+          description: "Your email is not verified yet. Please check your inbox and click the verification link.",
         });
       }
     } catch (error) {
@@ -184,6 +214,34 @@ function VerifyEmailContent() {
   const handleBackToSignup = () => {
     router.push('/signup');
   };
+
+  // Show loading while checking authentication
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="text-center">
+          <div className="mx-auto mb-4">
+            <YrdlyLogo />
+          </div>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show waiting state if no user (but not loading)
+  if (!loading && !user) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="text-center">
+          <div className="mx-auto mb-4">
+            <YrdlyLogo />
+          </div>
+          <p className="text-muted-foreground">Setting up your account...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
