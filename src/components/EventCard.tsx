@@ -31,6 +31,7 @@ import {
 import { CreateEventDialog } from "./CreateEventDialog";
 import { useToast } from "@/hooks/use-toast";
 import { sendEventConfirmationEmail } from "@/lib/email-actions";
+import { EventDetail } from "./events/EventDetail";
 
 interface EventCardProps {
   event: PostType;
@@ -42,6 +43,7 @@ export function EventCard({ event }: EventCardProps) {
   const [attendeeCount, setAttendeeCount] = useState(event.attendees?.length || 0);
   const [isAttending, setIsAttending] = useState(event.attendees?.includes(user?.id || '') || false);
   const [loadingAttending, setLoadingAttending] = useState(false);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -174,10 +176,11 @@ export function EventCard({ event }: EventCardProps) {
     if ((e.target as HTMLElement).closest('a, button, [role="menu"]')) {
       return;
     }
-    router.push(`/posts/${event.id}`);
+    setIsDetailOpen(true);
   };
 
   return (
+    <>
     <Card className="flex flex-col">
       <div onClick={handleCardClick} className="cursor-pointer">
         {event.image_url && (
@@ -282,13 +285,26 @@ export function EventCard({ event }: EventCardProps) {
         <div className="flex flex-col items-end space-y-1">
           <span className="text-sm text-muted-foreground">{attendeeCount} {attendeeCount === 1 ? 'attending' : 'attendees'}</span>
           
-          {!user?.email && (
+          {user?.email && (
             <p className="text-xs text-muted-foreground text-center">
-              Add email to your profile to receive event confirmations
+              Event confirmations will be sent to your registered email
             </p>
           )}
         </div>
       </CardFooter>
     </Card>
+
+    {/* Event Detail View */}
+    <EventDetail
+      event={event}
+      isOpen={isDetailOpen}
+      onClose={() => setIsDetailOpen(false)}
+      onEditEvent={(event) => {
+        // Handle edit event - you can implement this
+        console.log('Edit event:', event);
+      }}
+      onDeleteEvent={handleDelete}
+    />
+    </>
   );
 }

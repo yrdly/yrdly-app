@@ -161,10 +161,10 @@ export function NeighborChatLayout({ selectedConversationId }: NeighborChatLayou
     const loadMessages = async () => {
       try {
         const { data, error } = await supabase
-          .from('chat_messages')
+          .from('messages')
           .select('*')
           .eq('conversation_id', selectedConversation.id)
-          .order('created_at', { ascending: true });
+          .order('timestamp', { ascending: true });
 
         if (error) {
           console.error('Error loading messages:', error);
@@ -185,7 +185,7 @@ export function NeighborChatLayout({ selectedConversationId }: NeighborChatLayou
       .on('postgres_changes', { 
         event: '*', 
         schema: 'public', 
-        table: 'chat_messages',
+        table: 'messages',
         filter: `conversation_id=eq.${selectedConversation.id}`
       }, () => {
         loadMessages();
@@ -224,14 +224,13 @@ export function NeighborChatLayout({ selectedConversationId }: NeighborChatLayou
 
       // Send message
       const { error } = await supabase
-        .from('chat_messages')
+        .from('messages')
         .insert({
           conversation_id: selectedConversation.id,
           sender_id: user.id,
-          sender_name: profile?.name || user.user_metadata?.name || 'Anonymous',
-          content: newMessage.trim(),
+          text: newMessage.trim(),
           image_url: imageUrl,
-          created_at: new Date().toISOString(),
+          timestamp: new Date().toISOString(),
           is_read: false,
         });
 

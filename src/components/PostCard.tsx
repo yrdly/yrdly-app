@@ -227,17 +227,24 @@ export function PostCard({ post }: PostCardProps) {
         
         try {
             // Check if conversation already exists
-            const { data: existingConversations, error: fetchError } = await supabase
+            // Get all conversations for the current user and filter for the specific friend
+            const { data: allConversations, error: fetchError } = await supabase
                 .from('conversations')
-                .select('id')
-                .eq('participant_ids', sortedParticipantIds)
-                .limit(1);
+                .select('id, participant_ids')
+                .contains('participant_ids', [currentUser.id]);
 
             if (fetchError) {
                 console.error("Error fetching conversations:", fetchError);
                 toast({ variant: "destructive", title: "Error", description: "Could not open conversation." });
                 return;
             }
+
+            // Filter for conversation with the specific friend
+            const existingConversations = allConversations?.filter(conv => 
+                conv.participant_ids.includes(currentUser.id) && 
+                conv.participant_ids.includes(author.id) &&
+                conv.participant_ids.length === 2
+            );
 
             let conversationId: string;
 
@@ -249,7 +256,6 @@ export function PostCard({ post }: PostCardProps) {
                     .from('conversations')
                     .insert({
                         participant_ids: sortedParticipantIds,
-                        last_message: null,
                         created_at: new Date().toISOString(),
                     })
                     .select('id')
@@ -338,7 +344,7 @@ export function PostCard({ post }: PostCardProps) {
   };
 
   return (
-    <Card className="overflow-hidden">
+    <Card className="overflow-hidden mb-4">
        <div onClick={handleCardClick} className="cursor-pointer">
       {selectedUser && (
           <UserProfileDialog 
@@ -352,11 +358,11 @@ export function PostCard({ post }: PostCardProps) {
               }} 
           />
       )}
-      <CardHeader className="flex flex-row items-center gap-4 p-4">
+      <CardHeader className="flex flex-row items-center gap-3 p-3 pb-2">
         {loadingAuthor ? (
-            <div className="flex items-center gap-4 w-full">
+            <div className="flex items-center gap-3 w-full">
                 <Skeleton className="h-10 w-10 rounded-full" />
-                <div className="space-y-2">
+                <div className="space-y-1">
                     <Skeleton className="h-4 w-[150px]" />
                     <Skeleton className="h-3 w-[100px]" />
                 </div>
@@ -364,14 +370,14 @@ export function PostCard({ post }: PostCardProps) {
         ) : author ? (
             <>
                 <button onClick={openProfile} className="cursor-pointer">
-                    <Avatar>
+                    <Avatar className="h-10 w-10">
                         <AvatarImage src={author.avatarUrl} alt={author.name} data-ai-hint="person portrait" />
                         <AvatarFallback>{author.name?.charAt(0)}</AvatarFallback>
                     </Avatar>
                 </button>
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                     <button onClick={openProfile} className="cursor-pointer">
-                        <p className="font-semibold hover:underline">{author.name}</p>
+                        <p className="font-semibold hover:underline truncate">{author.name}</p>
                     </button>
                     <p className="text-xs text-muted-foreground">{timeAgo(post.timestamp ? new Date(post.timestamp) : null)}</p>
                 </div>
@@ -419,21 +425,46 @@ export function PostCard({ post }: PostCardProps) {
 
       <Collapsible open={isCommentsOpen} onOpenChange={setIsCommentsOpen}>
         {post.image_urls && post.image_urls.length > 0 && (
-            <div className="relative w-full aspect-video">
-            <Image
-                src={post.image_urls[0]}
-                alt="Post image"
-                fill
-                className="object-cover"
-                priority
-                data-ai-hint="neighborhood street"
-            />
+            <div className="px-3 pb-2">
+              {post.image_urls.length === 1 ? (
+                <div className="relative w-full aspect-video rounded-lg overflow-hidden">
+                  <Image
+                    src={post.image_urls[0]}
+                    alt="Post image"
+                    fill
+                    className="object-cover"
+                  />
+                </div>
+              ) : (
+                <div className="grid gap-1" style={{ 
+                  gridTemplateColumns: post.image_urls.length === 2 ? '1fr 1fr' : '1fr 1fr', 
+                  gridTemplateRows: post.image_urls.length > 2 ? '1fr 1fr' : '1fr' 
+                }}>
+                  {post.image_urls.slice(0, 4).map((imageUrl, index) => (
+                    <div key={index} className="relative aspect-square rounded-lg overflow-hidden">
+                      <Image
+                        src={imageUrl}
+                        alt={`Post image ${index + 1}`}
+                        fill
+                        className="object-cover"
+                      />
+                      {index === 3 && post.image_urls && post.image_urls.length > 4 && (
+                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                          <span className="text-white font-semibold">+{post.image_urls.length - 4}</span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
         )}
         
-        {post.category === 'For Sale' ? renderMarketplaceContent() : renderDefaultContent()}
+        <div className="px-3 pb-2">
+          {post.category === 'For Sale' ? renderMarketplaceContent() : renderDefaultContent()}
+        </div>
 
-        <CardFooter className="p-2 bg-background/50">
+        <CardFooter className="p-3 pt-2 bg-background/50">
             <div className="flex justify-around w-full">
             <Button variant="ghost" className="flex-1 gap-2" onClick={handleLike}>
                 <Heart className={`h-5 w-5 ${isLiked ? "text-red-500 fill-current" : ""}`} />

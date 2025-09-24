@@ -28,8 +28,11 @@ type CommentWithReplies = Comment & {
 const EMOJI_REACTIONS = ['👍', '❤️', '😂', '😡'];
 
 export function CommentSection({ postId }: CommentSectionProps) {
-    const { user: currentUser, userDetails } = useAuth();
+    const { user: currentUser, userDetails, loading } = useAuth();
     const { toast } = useToast();
+    
+    // Debug authentication state
+    console.log('CommentSection auth state:', { currentUser, userDetails, loading });
     const [comments, setComments] = useState<Comment[]>([]);
     const [newComment, setNewComment] = useState('');
     const [replyingTo, setReplyingTo] = useState<string | null>(null);
@@ -48,15 +51,25 @@ export function CommentSection({ postId }: CommentSectionProps) {
                 filter: `post_id=eq.${postId}`
             }, (payload) => {
                 if (payload.new) {
+                    const dbComment = payload.new as any;
+                    const newComment: Comment = {
+                        id: dbComment.id,
+                        userId: dbComment.user_id,
+                        authorName: dbComment.author_name,
+                        authorImage: dbComment.author_image,
+                        text: dbComment.text,
+                        timestamp: dbComment.timestamp,
+                        parentId: dbComment.parent_id,
+                        reactions: dbComment.reactions || {}
+                    };
                     setComments(prev => {
-                        const newComment = payload.new as Comment;
                         const existing = prev.filter(c => c.id !== newComment.id);
                         return [...existing, newComment].sort((a, b) => 
                             new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
                         );
                     });
                 } else if (payload.eventType === 'DELETE') {
-                    const oldComment = payload.old as Comment;
+                    const oldComment = payload.old as any;
                     setComments(prev => prev.filter(c => c.id !== oldComment.id));
                 }
             })
@@ -71,7 +84,18 @@ export function CommentSection({ postId }: CommentSectionProps) {
                 .order('timestamp', { ascending: true });
             
             if (!error && data) {
-                setComments(data as Comment[]);
+                // Map database fields to TypeScript interface
+                const mappedComments = data.map((comment: any) => ({
+                    id: comment.id,
+                    userId: comment.user_id,
+                    authorName: comment.author_name,
+                    authorImage: comment.author_image,
+                    text: comment.text,
+                    timestamp: comment.timestamp,
+                    parentId: comment.parent_id,
+                    reactions: comment.reactions || {}
+                }));
+                setComments(mappedComments);
             }
         };
         
@@ -84,7 +108,17 @@ export function CommentSection({ postId }: CommentSectionProps) {
 
     const handlePostComment = useCallback(async (e: FormEvent) => {
         e.preventDefault();
-        if (!currentUser || !userDetails || newComment.trim() === '') return;
+        console.log('Comment submission attempt:', { currentUser, userDetails, newComment, loading });
+        
+        if (loading) {
+            console.log('Comment submission blocked: Auth still loading');
+            return;
+        }
+        
+        if (!currentUser || !userDetails || newComment.trim() === '') {
+            console.log('Comment submission blocked:', { hasUser: !!currentUser, hasUserDetails: !!userDetails, hasComment: !!newComment.trim() });
+            return;
+        }
 
         try {
             // Add comment to Supabase
@@ -94,7 +128,7 @@ export function CommentSection({ postId }: CommentSectionProps) {
                     post_id: postId,
                     user_id: currentUser.id,
                     author_name: userDetails.name,
-                    author_image: userDetails.avatarUrl,
+                    author_image: userDetails.avatar_url,
                     text: newComment,
                     timestamp: new Date().toISOString(),
                     parent_id: replyingTo || null,
@@ -121,6 +155,7 @@ export function CommentSection({ postId }: CommentSectionProps) {
 
             setNewComment('');
             setReplyingTo(null);
+            console.log('Comment posted successfully!');
 
         } catch (error) {
             console.error("Error posting comment: ", error);
@@ -228,7 +263,7 @@ export function CommentSection({ postId }: CommentSectionProps) {
                                     onClick={() => handleReaction(comment.id, emoji)}
                                     className={cn(
                                         "flex items-center bg-background px-2 py-0.5 rounded-full text-xs border transition-colors",
-                                        currentUser && uids.includes(currentUser.uid) ? "border-primary bg-primary/10" : "border-transparent hover:border-border"
+                                        currentUser && uids.includes(currentUser.id) ? "border-primary bg-primary/10" : "border-transparent hover:border-border"
                                     )}
                                 >
                                     <span>{emoji}</span>
@@ -272,18 +307,24 @@ export function CommentSection({ postId }: CommentSectionProps) {
             </div>
             <form onSubmit={handlePostComment} className="flex items-start gap-3 pt-4 border-t">
                 <Avatar className="h-8 w-8">
-                    <AvatarImage src={userDetails?.avatarUrl} />
+                    <AvatarImage src={userDetails?.avatar_url} />
                     <AvatarFallback>{userDetails?.name?.charAt(0)}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1 relative">
                     <Textarea
-                        placeholder={replyingTo ? "Write a reply..." : "Add a comment..."}
+                        placeholder={loading ? "Loading..." : (replyingTo ? "Write a reply..." : "Add a comment...")}
                         value={newComment}
                         onChange={(e) => setNewComment(e.target.value)}
                         className="pr-20"
+                        disabled={loading}
                     />
                     <div className="absolute top-2 right-2 flex gap-1">
-                        <Button type="submit" size="icon" className="h-8 w-8">
+                        <Button 
+                            type="submit" 
+                            size="icon" 
+                            className="h-8 w-8"
+                            disabled={loading || !newComment.trim()}
+                        >
                             <Send className="h-4 w-4" />
                         </Button>
                     </div>

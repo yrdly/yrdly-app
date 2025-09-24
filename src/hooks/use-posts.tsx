@@ -192,12 +192,50 @@ export const usePosts = () => {
             return;
         }
         try {
+            // First, get the post to retrieve image URLs
+            const { data: postData, error: fetchError } = await supabase
+                .from('posts')
+                .select('image_urls')
+                .eq('id', postId)
+                .single();
+
+            if (fetchError) {
+                console.error('Error fetching post for deletion:', fetchError);
+            }
+
+            // Delete the post from database
             const { error } = await supabase
                 .from('posts')
                 .delete()
                 .eq('id', postId);
             
             if (error) throw error;
+
+            // Delete associated images from storage
+            if (postData?.image_urls && postData.image_urls.length > 0) {
+                const deletePromises = postData.image_urls.map(async (imageUrl: string) => {
+                    try {
+                        // Extract the path from the full URL
+                        const url = new URL(imageUrl);
+                        const pathParts = url.pathname.split('/');
+                        const bucket = pathParts[2]; // post-images
+                        const path = pathParts.slice(3).join('/'); // posts/userId/filename
+                        
+                        const { error: deleteError } = await supabase.storage
+                            .from(bucket)
+                            .remove([path]);
+                        
+                        if (deleteError) {
+                            console.error('Error deleting image:', deleteError);
+                        }
+                    } catch (error) {
+                        console.error('Error processing image deletion:', error);
+                    }
+                });
+
+                await Promise.all(deletePromises);
+            }
+
             toast({ title: 'Success', description: 'Post deleted successfully.' });
         } catch (error) {
             console.error('Error deleting post:', error);

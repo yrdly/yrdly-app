@@ -1,6 +1,81 @@
 import { supabase } from './supabase';
 
 export class StorageService {
+  // Get proper MIME type for file
+  private static getMimeType(file: File): string {
+    // If file already has a proper MIME type, use it
+    if (file.type && file.type !== 'application/octet-stream') {
+      return file.type;
+    }
+
+    // Handle HEIC files specifically
+    if (file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif')) {
+      return 'image/heic';
+    }
+
+    // Handle other common image formats
+    const extension = file.name.toLowerCase().split('.').pop();
+    switch (extension) {
+      case 'jpg':
+      case 'jpeg':
+        return 'image/jpeg';
+      case 'png':
+        return 'image/png';
+      case 'gif':
+        return 'image/gif';
+      case 'webp':
+        return 'image/webp';
+      case 'svg':
+        return 'image/svg+xml';
+      case 'bmp':
+        return 'image/bmp';
+      case 'tiff':
+        return 'image/tiff';
+      default:
+        return 'image/jpeg'; // Default fallback
+    }
+  }
+
+  // Convert HEIC to JPEG if needed
+  private static async convertHeicToJpeg(file: File): Promise<File> {
+    if (!file.name.toLowerCase().endsWith('.heic') && !file.name.toLowerCase().endsWith('.heif')) {
+      return file;
+    }
+
+    try {
+      // Create a canvas to convert HEIC to JPEG
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+
+      return new Promise((resolve, reject) => {
+        img.onload = () => {
+          canvas.width = img.width;
+          canvas.height = img.height;
+          ctx?.drawImage(img, 0, 0);
+          
+          canvas.toBlob((blob) => {
+            if (blob) {
+              const newFile = new File([blob], file.name.replace(/\.(heic|heif)$/i, '.jpg'), {
+                type: 'image/jpeg',
+                lastModified: file.lastModified
+              });
+              resolve(newFile);
+            } else {
+              reject(new Error('Failed to convert HEIC to JPEG'));
+            }
+          }, 'image/jpeg', 0.9);
+        };
+
+        img.onerror = () => reject(new Error('Failed to load HEIC image'));
+        img.src = URL.createObjectURL(file);
+      });
+    } catch (error) {
+      console.error('HEIC conversion error:', error);
+      return file; // Return original file if conversion fails
+    }
+  }
+
   // Upload a file to Supabase Storage
   static async uploadFile(
     bucket: string,
@@ -12,12 +87,18 @@ export class StorageService {
     }
   ): Promise<{ data: any; error: any }> {
     try {
+      // Convert HEIC files to JPEG
+      const processedFile = await this.convertHeicToJpeg(file);
+      
+      // Get proper MIME type
+      const mimeType = this.getMimeType(processedFile);
+      
       const { data, error } = await supabase.storage
         .from(bucket)
-        .upload(path, file, {
+        .upload(path, processedFile, {
           cacheControl: options?.cacheControl || '3600',
           upsert: false,
-          contentType: options?.contentType || file.type,
+          contentType: options?.contentType || mimeType,
         });
 
       if (error) {

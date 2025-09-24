@@ -9,8 +9,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { BuyButton } from '@/components/escrow/BuyButton';
 import { ChatButton } from '@/components/escrow/ChatButton';
 import { useAuth } from '@/hooks/use-auth';
-import { Edit, Trash2, MapPin, User, Calendar } from 'lucide-react';
+import { Edit, Trash2, MapPin, User, Calendar, Eye } from 'lucide-react';
 import { Post } from '@/types';
+import { MarketplaceItemDetail } from './MarketplaceItemDetail';
 
 interface EnhancedItemCardProps {
   item: Post;
@@ -22,6 +23,7 @@ export function EnhancedItemCard({ item, onEditItem, onDeleteItem }: EnhancedIte
   const { user } = useAuth();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
 
   const isOwner = user?.uid === item.user_id;
   const hasImages = item.image_urls && item.image_urls.length > 0;
@@ -64,7 +66,10 @@ export function EnhancedItemCard({ item, onEditItem, onDeleteItem }: EnhancedIte
     <>
       <Card className="h-full flex flex-col hover:shadow-lg transition-shadow">
         {/* Image Section */}
-        <div className="relative aspect-square overflow-hidden rounded-t-lg">
+        <div 
+          className="relative aspect-square overflow-hidden rounded-t-lg cursor-pointer"
+          onClick={() => setIsDetailOpen(true)}
+        >
           <Image
             src={firstImage}
             alt={item.title || 'Item image'}
@@ -155,6 +160,16 @@ export function EnhancedItemCard({ item, onEditItem, onDeleteItem }: EnhancedIte
         {/* Actions */}
         <CardFooter className="pt-0">
           <div className="w-full space-y-3">
+            {/* View Details Button */}
+            <Button 
+              variant="outline" 
+              className="w-full"
+              onClick={() => setIsDetailOpen(true)}
+            >
+              <Eye className="w-4 h-4 mr-2" />
+              View Details
+            </Button>
+
             {/* Buy Button - Only show if not owner */}
             {!isOwner && item.price && (
               <BuyButton
@@ -219,6 +234,15 @@ export function EnhancedItemCard({ item, onEditItem, onDeleteItem }: EnhancedIte
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Item Detail View */}
+      <MarketplaceItemDetail
+        item={item}
+        isOpen={isDetailOpen}
+        onClose={() => setIsDetailOpen(false)}
+        onEditItem={onEditItem}
+        onDeleteItem={onDeleteItem}
+      />
     </>
   );
 }

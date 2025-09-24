@@ -303,7 +303,8 @@ export default function NeighborsPage() {
         e.stopPropagation();
         if (!currentUser) return;
         try {
-            const { error } = await supabase
+            // Create friend request
+            const { error: requestError } = await supabase
                 .from('friend_requests')
                 .insert({
                     from_user_id: currentUser.id,
@@ -313,10 +314,31 @@ export default function NeighborsPage() {
                     created_at: new Date().toISOString(),
                 });
 
-            if (error) {
-                console.error("Error sending friend request:", error);
+            if (requestError) {
+                console.error("Error sending friend request:", requestError);
                 toast({ variant: "destructive", title: "Error", description: "Could not send friend request." });
                 return;
+            }
+
+            // Create notification for the recipient
+            const { error: notificationError } = await supabase
+                .from('notifications')
+                .insert({
+                    user_id: neighbor.id,
+                    type: 'friend_request',
+                    title: 'New Friend Request',
+                    body: `${currentUser.user_metadata?.name || currentUser.email?.split('@')[0] || 'Someone'} wants to be your friend`,
+                    data: {
+                        from_user_id: currentUser.id,
+                        from_user_name: currentUser.user_metadata?.name || currentUser.email?.split('@')[0] || 'Unknown',
+                        request_id: '', // We'll need to get this from the friend request
+                    },
+                    created_at: new Date().toISOString(),
+                });
+
+            if (notificationError) {
+                console.error("Error creating notification:", notificationError);
+                // Don't fail the friend request if notification fails
             }
 
             toast({ title: "Friend request sent!" });
@@ -402,17 +424,24 @@ export default function NeighborsPage() {
 
         try {
             // Check if conversation already exists
-            const { data: existingConversations, error: fetchError } = await supabase
+            // Get all conversations for the current user and filter for the specific friend
+            const { data: allConversations, error: fetchError } = await supabase
                 .from('conversations')
-                .select('id')
-                .eq('participant_ids', sortedParticipantIds)
-                .limit(1);
+                .select('id, participant_ids')
+                .contains('participant_ids', [currentUser.id]);
 
             if (fetchError) {
                 console.error("Error fetching conversations:", fetchError);
                 toast({ variant: "destructive", title: "Error", description: "Could not open conversation." });
                 return;
             }
+
+            // Filter for conversation with the specific friend
+            const existingConversations = allConversations?.filter(conv => 
+                conv.participant_ids.includes(currentUser.id) && 
+                conv.participant_ids.includes(friendId) &&
+                conv.participant_ids.length === 2
+            );
 
             let conversationId: string;
 
@@ -424,7 +453,6 @@ export default function NeighborsPage() {
                     .from('conversations')
                     .insert({
                         participant_ids: sortedParticipantIds,
-                        last_message: null,
                         created_at: new Date().toISOString(),
                     })
                     .select('id')
