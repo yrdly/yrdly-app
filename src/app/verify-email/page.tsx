@@ -7,9 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Mail, RefreshCw, CheckCircle, AlertCircle } from 'lucide-react';
-import { sendEmailVerification, updateProfile } from 'firebase/auth';
-import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { supabase } from '@/lib/supabase';
 import { BrevoEmailService } from '@/lib/brevo-service';
 import { useToast } from '@/hooks/use-toast';
 import { YrdlyLogo } from '@/components/ui/yrdly-logo';
@@ -28,7 +26,7 @@ function VerifyEmailContent() {
 
   // Check if user is verified and redirect
   useEffect(() => {
-    if (user?.emailVerified) {
+    if (user?.email_confirmed_at) {
       router.push('/home');
     }
   }, [user, router]);
@@ -36,12 +34,15 @@ function VerifyEmailContent() {
   // Handle email verification from Brevo link
   useEffect(() => {
     const verifyEmailFromToken = async () => {
-      if (token && user && user.uid === token) {
+      if (token && user && user.id === token) {
         try {
-          // Mark email as verified in Firestore
-          await updateDoc(doc(db, 'users', user.uid), {
-            emailVerified: true
-          });
+          // Mark email as verified in Supabase
+          const { error } = await supabase
+            .from('users')
+            .update({ email_verified: true })
+            .eq('id', user.id);
+
+          if (error) throw error;
 
           toast({
             title: "Email Verified!",
@@ -94,13 +95,8 @@ function VerifyEmailContent() {
         console.log('Verification email sent via Brevo');
       } catch (error: any) {
         if (error.message === 'BREVO_NOT_CONFIGURED' || error.message === 'BREVO_SEND_FAILED') {
-          console.log('Falling back to Firebase email verification');
-          
-          // Fallback to Firebase email verification
-          await sendEmailVerification(user, {
-            url: `${window.location.origin}/verify-email?email=${encodeURIComponent(email)}`,
-            handleCodeInApp: true
-          });
+          console.log('Brevo email service not configured - please configure Brevo for email verification');
+          throw new Error('Email service not configured. Please contact support.');
         } else {
           throw error; // Re-throw other errors
         }

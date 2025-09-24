@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { supabase } from '@/lib/supabase';
 
 interface OfflineAction {
   id: string;
@@ -94,17 +93,22 @@ export function useOffline() {
   // Create post from offline data
   const createPostFromOffline = useCallback(async (data: any) => {
     try {
-      const postRef = doc(db, 'posts', `offline_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
-      await setDoc(postRef, {
-        ...data,
-        createdAt: new Date(),
-        isOfflineCreated: true,
-        syncedAt: new Date(),
-        status: 'pending_sync'
-      });
+      const { data: newPost, error } = await supabase
+        .from('posts')
+        .insert({
+          ...data,
+          created_at: new Date().toISOString(),
+          is_offline_created: true,
+          synced_at: new Date().toISOString(),
+          status: 'pending_sync'
+        })
+        .select('id')
+        .single();
       
-      console.log('Successfully created offline post:', postRef.id);
-      return postRef.id;
+      if (error) throw error;
+      
+      console.log('Successfully created offline post:', newPost.id);
+      return newPost.id;
     } catch (error) {
       console.error('Failed to create offline post:', error);
       throw error;
@@ -114,17 +118,22 @@ export function useOffline() {
   // Send message from offline data
   const sendMessageFromOffline = useCallback(async (data: any) => {
     try {
-      const messageRef = doc(db, 'messages', `offline_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
-      await setDoc(messageRef, {
-        ...data,
-        timestamp: new Date(),
-        isOfflineSent: true,
-        syncedAt: new Date(),
-        status: 'pending_sync'
-      });
+      const { data: newMessage, error } = await supabase
+        .from('messages')
+        .insert({
+          ...data,
+          timestamp: new Date().toISOString(),
+          is_offline_sent: true,
+          synced_at: new Date().toISOString(),
+          status: 'pending_sync'
+        })
+        .select('id')
+        .single();
       
-      console.log('Successfully created offline message:', messageRef.id);
-      return messageRef.id;
+      if (error) throw error;
+      
+      console.log('Successfully created offline message:', newMessage.id);
+      return newMessage.id;
     } catch (error) {
       console.error('Failed to create offline message:', error);
       throw error;
@@ -134,17 +143,22 @@ export function useOffline() {
   // Create event from offline data
   const createEventFromOffline = useCallback(async (data: any) => {
     try {
-      const eventRef = doc(db, 'events', `offline_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
-      await setDoc(eventRef, {
-        ...data,
-        createdAt: new Date(),
-        isOfflineCreated: true,
-        syncedAt: new Date(),
-        status: 'pending_sync'
-      });
+      const { data: newEvent, error } = await supabase
+        .from('events')
+        .insert({
+          ...data,
+          created_at: new Date().toISOString(),
+          is_offline_created: true,
+          synced_at: new Date().toISOString(),
+          status: 'pending_sync'
+        })
+        .select('id')
+        .single();
       
-      console.log('Successfully created offline event:', eventRef.id);
-      return eventRef.id;
+      if (error) throw error;
+      
+      console.log('Successfully created offline event:', newEvent.id);
+      return newEvent.id;
     } catch (error) {
       console.error('Failed to create offline event:', error);
       throw error;
@@ -154,17 +168,22 @@ export function useOffline() {
   // Create business from offline data
   const createBusinessFromOffline = useCallback(async (data: any) => {
     try {
-      const businessRef = doc(db, 'businesses', `offline_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
-      await setDoc(businessRef, {
-        ...data,
-        createdAt: new Date(),
-        isOfflineCreated: true,
-        syncedAt: new Date(),
-        status: 'pending_sync'
-      });
+      const { data: newBusiness, error } = await supabase
+        .from('businesses')
+        .insert({
+          ...data,
+          created_at: new Date().toISOString(),
+          is_offline_created: true,
+          synced_at: new Date().toISOString(),
+          status: 'pending_sync'
+        })
+        .select('id')
+        .single();
       
-      console.log('Successfully created offline business:', businessRef.id);
-      return businessRef.id;
+      if (error) throw error;
+      
+      console.log('Successfully created offline business:', newBusiness.id);
+      return newBusiness.id;
     } catch (error) {
       console.error('Failed to create offline business:', error);
       throw error;
@@ -175,14 +194,16 @@ export function useOffline() {
   const updateProfileFromOffline = useCallback(async (data: any) => {
     try {
       const { userId, ...profileData } = data;
-      const userRef = doc(db, 'users', userId);
-      await setDoc(userRef, {
-        ...profileData,
-        updatedAt: new Date(),
-        isOfflineUpdated: true,
-        syncedAt: new Date(),
-        status: 'pending_sync'
-      }, { merge: true });
+      const { error } = await supabase
+        .from('users')
+        .update({
+          ...profileData,
+          updated_at: new Date().toISOString(),
+          is_offline_updated: true,
+          synced_at: new Date().toISOString(),
+          status: 'pending_sync'
+        })
+        .eq('id', userId);
       
       console.log('Successfully updated offline profile for user:', userId);
       return userId;
@@ -316,19 +337,23 @@ export function useOffline() {
 
   // Check Firestore connection
   useEffect(() => {
-    const checkFirestoreConnection = async () => {
+    const checkSupabaseConnection = async () => {
       try {
-        // Try to access a document to check connection
-        const testDoc = doc(db, '_test', 'connection');
-        await getDoc(testDoc);
+        // Try to access a table to check connection
+        const { error } = await supabase
+          .from('users')
+          .select('id')
+          .limit(1);
+        
+        if (error) throw error;
         setIsFirestoreOnline(true);
       } catch (error) {
         setIsFirestoreOnline(false);
       }
     };
 
-    const interval = setInterval(checkFirestoreConnection, 10000);
-    checkFirestoreConnection();
+    const interval = setInterval(checkSupabaseConnection, 10000);
+    checkSupabaseConnection();
 
     return () => clearInterval(interval);
   }, []);

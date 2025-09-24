@@ -11,7 +11,7 @@ import { Mail, RefreshCw, CheckCircle, AlertCircle, ArrowLeft } from 'lucide-rea
 import { YrdlyLogo } from '@/components/ui/yrdly-logo';
 import { useToast } from '@/hooks/use-toast';
 import { BrevoEmailService } from '@/lib/brevo-service';
-import { sendEmailVerification } from 'firebase/auth';
+// Removed Firebase import - using Supabase auth
 import { onboardingAnalytics } from '@/lib/onboarding-analytics';
 
 function VerifyEmailContent() {

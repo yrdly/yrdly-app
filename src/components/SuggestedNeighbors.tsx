@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { collection, query, where, limit, getDocs } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/use-auth';
 import type { User } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -27,18 +26,18 @@ export function SuggestedNeighbors() {
             setLoading(true);
             try {
                 // Fetch users from the same LGA, excluding the current user and existing friends
-                const friendsAndSelf = [...(userDetails.friends?.filter(Boolean) || []), user.uid];
+                const friendsAndSelf = [...(userDetails.friends?.filter(Boolean) || []), user.id];
                 
-                const q = query(
-                    collection(db, 'users'),
-                    where('location.lga', '==', userDetails.location.lga),
-                    where('uid', 'not-in', friendsAndSelf),
-                    limit(5)
-                );
+                const { data: suggestionsData, error } = await supabase
+                    .from('users')
+                    .select('*')
+                    .eq('location.lga', userDetails.location.lga)
+                    .not('id', 'in', `(${friendsAndSelf.join(',')})`)
+                    .limit(5);
 
-                const querySnapshot = await getDocs(q);
-                const suggestionsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
-                setSuggestions(suggestionsData);
+                if (!error && suggestionsData) {
+                    setSuggestions(suggestionsData as User[]);
+                }
 
             } catch (error) {
                 console.error("Error fetching suggestions:", error);

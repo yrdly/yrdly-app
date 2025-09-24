@@ -1,17 +1,4 @@
-import { 
-  collection, 
-  doc, 
-  addDoc, 
-  updateDoc, 
-  getDoc, 
-  getDocs, 
-  query, 
-  where, 
-  orderBy,
-  serverTimestamp,
-  Timestamp 
-} from 'firebase/firestore';
-import { db } from './firebase';
+import { supabase } from './supabase';
 import { 
   SellerAccount, 
   AccountType, 
@@ -25,9 +12,9 @@ import {
 } from '@/types/seller-account';
 
 export class SellerAccountService {
-  private static readonly COLLECTION = 'seller_accounts';
-  private static readonly DOCUMENTS_COLLECTION = 'verification_documents';
-  private static readonly PAYOUTS_COLLECTION = 'payout_requests';
+  private static readonly TABLE = 'seller_accounts';
+  private static readonly DOCUMENTS_TABLE = 'verification_documents';
+  private static readonly PAYOUTS_TABLE = 'payout_requests';
 
   // Create or update seller account
   static async saveAccount(
@@ -42,34 +29,35 @@ export class SellerAccountService {
         await this.unsetPrimaryAccounts(userId);
       }
 
-      const accountData: Omit<SellerAccount, 'id'> = {
-        userId,
-        accountType,
-        accountDetails,
-        verificationStatus: VerificationStatus.PENDING,
-        verificationLevel: VerificationLevel.BASIC,
-        isPrimary,
-        isActive: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        verificationData: {
-          microDepositAmount: 0,
-          microDepositVerified: false,
-          documentUploaded: false,
-          documentVerified: false,
-          addressVerified: false,
-          phoneVerified: false,
-          emailVerified: false
-        }
+      const accountData = {
+        user_id: userId,
+        account_type: accountType,
+        account_details: accountDetails,
+        verification_status: VerificationStatus.PENDING,
+        verification_level: VerificationLevel.BASIC,
+        is_primary: isPrimary,
+        is_active: true,
+        verification_data: {
+          micro_deposit_amount: 0,
+          micro_deposit_verified: false,
+          document_uploaded: false,
+          document_verified: false,
+          address_verified: false,
+          phone_verified: false,
+          email_verified: false
+        },
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       };
 
-      const docRef = await addDoc(collection(db, this.COLLECTION), {
-        ...accountData,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
-      });
+      const { data, error } = await supabase
+        .from(this.TABLE)
+        .insert(accountData)
+        .select('id')
+        .single();
 
-      return docRef.id;
+      if (error) throw error;
+      return data.id;
     } catch (error) {
       console.error('Error saving seller account:', error);
       throw new Error('Failed to save account information');
@@ -79,22 +67,16 @@ export class SellerAccountService {
   // Get seller accounts
   static async getSellerAccounts(userId: string): Promise<SellerAccount[]> {
     try {
-      const q = query(
-        collection(db, this.COLLECTION),
-        where('userId', '==', userId),
-        where('isActive', '==', true),
-        orderBy('isPrimary', 'desc'),
-        orderBy('createdAt', 'desc')
-      );
+      const { data, error } = await supabase
+        .from(this.TABLE)
+        .select('*')
+        .eq('user_id', userId)
+        .eq('is_active', true)
+        .order('is_primary', { ascending: false })
+        .order('created_at', { ascending: false });
 
-      const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate() || new Date(),
-        updatedAt: doc.data().updatedAt?.toDate() || new Date(),
-        verifiedAt: doc.data().verifiedAt?.toDate()
-      })) as SellerAccount[];
+      if (error) throw error;
+      return data as SellerAccount[];
     } catch (error) {
       console.error('Error fetching seller accounts:', error);
       throw new Error('Failed to fetch account information');
@@ -120,22 +102,26 @@ export class SellerAccountService {
     rejectedReason?: string
   ): Promise<void> {
     try {
-      const accountRef = doc(db, this.COLLECTION, accountId);
       const updateData: any = {
-        verificationStatus: status,
-        verificationLevel: level,
-        updatedAt: serverTimestamp()
+        verification_status: status,
+        verification_level: level,
+        updated_at: new Date().toISOString()
       };
 
       if (status === VerificationStatus.VERIFIED) {
-        updateData.verifiedAt = serverTimestamp();
+        updateData.verified_at = new Date().toISOString();
       }
 
       if (status === VerificationStatus.REJECTED && rejectedReason) {
-        updateData.rejectedReason = rejectedReason;
+        updateData.rejected_reason = rejectedReason;
       }
 
-      await updateDoc(accountRef, updateData);
+      const { error } = await supabase
+        .from(this.TABLE)
+        .update(updateData)
+        .eq('id', accountId);
+
+      if (error) throw error;
     } catch (error) {
       console.error('Error updating verification status:', error);
       throw new Error('Failed to update verification status');
@@ -149,20 +135,22 @@ export class SellerAccountService {
     documentUrl: string
   ): Promise<string> {
     try {
-      const documentData: Omit<VerificationDocument, 'id'> = {
-        userId,
-        documentType,
-        documentUrl,
+      const documentData = {
+        user_id: userId,
+        document_type: documentType,
+        document_url: documentUrl,
         status: VerificationStatus.PENDING,
-        uploadedAt: new Date()
+        uploaded_at: new Date().toISOString()
       };
 
-      const docRef = await addDoc(collection(db, this.DOCUMENTS_COLLECTION), {
-        ...documentData,
-        uploadedAt: serverTimestamp()
-      });
+      const { data, error } = await supabase
+        .from(this.DOCUMENTS_TABLE)
+        .insert(documentData)
+        .select('id')
+        .single();
 
-      return docRef.id;
+      if (error) throw error;
+      return data.id;
     } catch (error) {
       console.error('Error uploading verification document:', error);
       throw new Error('Failed to upload document');
@@ -172,19 +160,14 @@ export class SellerAccountService {
   // Get verification documents
   static async getVerificationDocuments(userId: string): Promise<VerificationDocument[]> {
     try {
-      const q = query(
-        collection(db, this.DOCUMENTS_COLLECTION),
-        where('userId', '==', userId),
-        orderBy('uploadedAt', 'desc')
-      );
+      const { data, error } = await supabase
+        .from(this.DOCUMENTS_TABLE)
+        .select('*')
+        .eq('user_id', userId)
+        .order('uploaded_at', { ascending: false });
 
-      const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        uploadedAt: doc.data().uploadedAt?.toDate() || new Date(),
-        verifiedAt: doc.data().verifiedAt?.toDate()
-      })) as VerificationDocument[];
+      if (error) throw error;
+      return data as VerificationDocument[];
     } catch (error) {
       console.error('Error fetching verification documents:', error);
       throw new Error('Failed to fetch verification documents');
@@ -208,20 +191,22 @@ export class SellerAccountService {
         throw new Error('Unauthorized payout request');
       }
 
-      const payoutData: Omit<PayoutRequest, 'id'> = {
-        sellerId,
-        accountId,
+      const payoutData = {
+        seller_id: sellerId,
+        account_id: accountId,
         amount,
         status: 'pending',
-        requestedAt: new Date()
+        requested_at: new Date().toISOString()
       };
 
-      const docRef = await addDoc(collection(db, this.PAYOUTS_COLLECTION), {
-        ...payoutData,
-        requestedAt: serverTimestamp()
-      });
+      const { data, error } = await supabase
+        .from(this.PAYOUTS_TABLE)
+        .insert(payoutData)
+        .select('id')
+        .single();
 
-      return docRef.id;
+      if (error) throw error;
+      return data.id;
     } catch (error) {
       console.error('Error requesting payout:', error);
       throw new Error('Failed to request payout');
@@ -231,19 +216,14 @@ export class SellerAccountService {
   // Get payout history
   static async getPayoutHistory(sellerId: string): Promise<PayoutRequest[]> {
     try {
-      const q = query(
-        collection(db, this.PAYOUTS_COLLECTION),
-        where('sellerId', '==', sellerId),
-        orderBy('requestedAt', 'desc')
-      );
+      const { data, error } = await supabase
+        .from(this.PAYOUTS_TABLE)
+        .select('*')
+        .eq('seller_id', sellerId)
+        .order('requested_at', { ascending: false });
 
-      const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        requestedAt: doc.data().requestedAt?.toDate() || new Date(),
-        processedAt: doc.data().processedAt?.toDate()
-      })) as PayoutRequest[];
+      if (error) throw error;
+      return data as PayoutRequest[];
     } catch (error) {
       console.error('Error fetching payout history:', error);
       throw new Error('Failed to fetch payout history');
@@ -257,10 +237,13 @@ export class SellerAccountService {
       const updatePromises = accounts
         .filter(account => account.isPrimary)
         .map(account => 
-          updateDoc(doc(db, this.COLLECTION, account.id), {
-            isPrimary: false,
-            updatedAt: serverTimestamp()
-          })
+          supabase
+            .from(this.TABLE)
+            .update({
+              is_primary: false,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', account.id)
         );
 
       await Promise.all(updatePromises);
@@ -271,19 +254,14 @@ export class SellerAccountService {
 
   private static async getAccountById(accountId: string): Promise<SellerAccount | null> {
     try {
-      const docRef = doc(db, this.COLLECTION, accountId);
-      const docSnap = await getDoc(docRef);
-      
-      if (docSnap.exists()) {
-        return {
-          id: docSnap.id,
-          ...docSnap.data(),
-          createdAt: docSnap.data().createdAt?.toDate() || new Date(),
-          updatedAt: docSnap.data().updatedAt?.toDate() || new Date(),
-          verifiedAt: docSnap.data().verifiedAt?.toDate()
-        } as SellerAccount;
-      }
-      return null;
+      const { data, error } = await supabase
+        .from(this.TABLE)
+        .select('*')
+        .eq('id', accountId)
+        .single();
+
+      if (error) throw error;
+      return data as SellerAccount;
     } catch (error) {
       console.error('Error fetching account by ID:', error);
       return null;
@@ -297,11 +275,17 @@ export class SellerAccountService {
     const microDepositAmount = Math.floor(Math.random() * 5) + 1; // ₦1-₦5
     
     try {
-      const accountRef = doc(db, this.COLLECTION, accountId);
-      await updateDoc(accountRef, {
-        'verificationData.microDepositAmount': microDepositAmount,
-        updatedAt: serverTimestamp()
-      });
+      const { error } = await supabase
+        .from(this.TABLE)
+        .update({
+          verification_data: {
+            micro_deposit_amount: microDepositAmount
+          },
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', accountId);
+
+      if (error) throw error;
 
       // Here you would call your payment provider to send the micro-deposit
       // await PaymentProvider.sendMicroDeposit(accountDetails, microDepositAmount);
@@ -323,10 +307,17 @@ export class SellerAccountService {
       const isCorrect = account.verificationData.microDepositAmount === enteredAmount;
       
       if (isCorrect) {
-        await updateDoc(doc(db, this.COLLECTION, accountId), {
-          'verificationData.microDepositVerified': true,
-          updatedAt: serverTimestamp()
-        });
+        const { error } = await supabase
+          .from(this.TABLE)
+          .update({
+            verification_data: {
+              micro_deposit_verified: true
+            },
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', accountId);
+
+        if (error) throw error;
       }
 
       return isCorrect;

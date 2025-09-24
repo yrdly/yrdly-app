@@ -6,8 +6,7 @@ import { useState, useEffect } from 'react';
 // Force dynamic rendering to avoid prerender issues
 export const dynamic = 'force-dynamic';
 
-import { collection, getDocs, query, where } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { supabase } from '@/lib/supabase';
 import type { Business, Post } from '@/types';
 import { APIProvider, Map, AdvancedMarker, Pin, InfoWindow } from '@vis.gl/react-google-maps';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -34,37 +33,46 @@ export default function MapPage() {
             setLoading(true);
             const fetchedMarkers: MarkerData[] = [];
 
-            const eventsQuery = query(collection(db, 'posts'), where('category', '==', 'Event'), where('event_location.geopoint', '!=', null));
-            const eventsSnapshot = await getDocs(eventsQuery);
-            eventsSnapshot.forEach(doc => {
-                const post = doc.data() as Post;
-                if (post.event_location?.geopoint) {
-                    fetchedMarkers.push({
-                        id: doc.id,
-                        type: 'event',
-                        position: { lat: post.event_location.geopoint.latitude, lng: post.event_location.geopoint.longitude },
-                        title: post.title || post.text,
-                        address: post.event_location.address,
-                    });
-                }
-            });
+            const { data: eventsData, error: eventsError } = await supabase
+                .from('posts')
+                .select('*')
+                .eq('category', 'Event')
+                .not('event_location', 'is', null);
+            
+            if (!eventsError && eventsData) {
+                eventsData.forEach(post => {
+                    if (post.event_location?.geopoint) {
+                        fetchedMarkers.push({
+                            id: post.id,
+                            type: 'event',
+                            position: { lat: post.event_location.geopoint.latitude, lng: post.event_location.geopoint.longitude },
+                            title: post.title || post.text,
+                            address: post.event_location.address,
+                        });
+                    }
+                });
+            }
 
             // Fetch businesses
-            const businessesQuery = query(collection(db, 'businesses'), where('location.geopoint', '!=', null));
-            const businessesSnapshot = await getDocs(businessesQuery);
-            businessesSnapshot.forEach(doc => {
-                const business = doc.data() as Business;
-                if (business.location?.geopoint) {
-                    fetchedMarkers.push({
-                        id: doc.id,
-                        type: 'business',
-                        position: { lat: business.location.geopoint.latitude, lng: business.location.geopoint.longitude },
-                        title: business.name,
-                        address: business.location.address,
-                    });
-                }
-            });
-
+            const { data: businessesData, error: businessesError } = await supabase
+                .from('businesses')
+                .select('*')
+                .not('location', 'is', null);
+            
+            if (!businessesError && businessesData) {
+                businessesData.forEach(business => {
+                    if (business.location?.geopoint) {
+                        fetchedMarkers.push({
+                            id: business.id,
+                            type: 'business',
+                            position: { lat: business.location.geopoint.latitude, lng: business.location.geopoint.longitude },
+                            title: business.name,
+                            address: business.location.address,
+                        });
+                    }
+                });
+            }
+            
             setMarkers(fetchedMarkers);
             setLoading(false);
         };

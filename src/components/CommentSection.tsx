@@ -2,8 +2,7 @@
 "use client";
 
 import { useState, useMemo, FormEvent, useCallback } from 'react';
-import { collection, query, orderBy, onSnapshot, serverTimestamp, doc, runTransaction, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { supabase } from '@/lib/supabase';
 import type { Comment, User } from '@/types';
 import { useAuth } from '@/hooks/use-auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -38,49 +37,87 @@ export function CommentSection({ postId }: CommentSectionProps) {
 
     useMemo(() => {
         if (!postId) return;
-        const commentsQuery = query(
-            collection(db, 'posts', postId, 'comments'),
-            orderBy('timestamp', 'asc')
-        );
+        
+        // Set up real-time subscription for comments
+        const channel = supabase
+            .channel(`comments_${postId}`)
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'comments',
+                filter: `post_id=eq.${postId}`
+            }, (payload) => {
+                if (payload.new) {
+                    setComments(prev => {
+                        const newComment = payload.new as Comment;
+                        const existing = prev.filter(c => c.id !== newComment.id);
+                        return [...existing, newComment].sort((a, b) => 
+                            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+                        );
+                    });
+                } else if (payload.eventType === 'DELETE') {
+                    const oldComment = payload.old as Comment;
+                    setComments(prev => prev.filter(c => c.id !== oldComment.id));
+                }
+            })
+            .subscribe();
 
-        const unsubscribe = onSnapshot(commentsQuery, (snapshot) => {
-            const fetchedComments = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data(),
-            } as Comment));
-            setComments(fetchedComments);
-        });
+        // Also fetch comments initially
+        const fetchComments = async () => {
+            const { data, error } = await supabase
+                .from('comments')
+                .select('*')
+                .eq('post_id', postId)
+                .order('timestamp', { ascending: true });
+            
+            if (!error && data) {
+                setComments(data as Comment[]);
+            }
+        };
+        
+        fetchComments();
 
-        return () => unsubscribe();
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }, [postId]);
 
     const handlePostComment = useCallback(async (e: FormEvent) => {
         e.preventDefault();
         if (!currentUser || !userDetails || newComment.trim() === '') return;
 
-        const postRef = doc(db, "posts", postId);
-        const commentsColRef = collection(postRef, "comments");
-
         try {
-            await runTransaction(db, async (transaction) => {
-                const postDoc = await transaction.get(postRef);
-                if (!postDoc.exists()) {
-                    throw "Post does not exist!";
-                }
-
-                transaction.set(doc(commentsColRef), {
-                    userId: currentUser.uid,
-                    authorName: userDetails.name,
-                    authorImage: userDetails.avatarUrl,
+            // Add comment to Supabase
+            const { error: commentError } = await supabase
+                .from('comments')
+                .insert({
+                    post_id: postId,
+                    user_id: currentUser.id,
+                    author_name: userDetails.name,
+                    author_image: userDetails.avatarUrl,
                     text: newComment,
-                    timestamp: serverTimestamp(),
-                    parentId: replyingTo || null,
+                    timestamp: new Date().toISOString(),
+                    parent_id: replyingTo || null,
                     reactions: {},
                 });
 
-                const newCount = (postDoc.data().commentCount || 0) + 1;
-                transaction.update(postRef, { commentCount: newCount });
-            });
+            if (commentError) throw commentError;
+
+            // Update comment count on the post
+            const { data: postData, error: fetchError } = await supabase
+                .from('posts')
+                .select('comment_count')
+                .eq('id', postId)
+                .single();
+            
+            if (fetchError) throw fetchError;
+            
+            const { error: updateError } = await supabase
+                .from('posts')
+                .update({ comment_count: (postData.comment_count || 0) + 1 })
+                .eq('id', postId);
+
+            if (updateError) throw updateError;
 
             setNewComment('');
             setReplyingTo(null);
@@ -93,43 +130,57 @@ export function CommentSection({ postId }: CommentSectionProps) {
 
     const handleReaction = useCallback(async (commentId: string, emoji: string) => {
         if (!currentUser) return;
-        const commentRef = doc(db, 'posts', postId, 'comments', commentId);
 
         try {
-            await runTransaction(db, async (transaction) => {
-                const commentDoc = await transaction.get(commentRef);
-                if (!commentDoc.exists()) return;
+            // Get current comment data
+            const { data: commentData, error: fetchError } = await supabase
+                .from('comments')
+                .select('reactions')
+                .eq('id', commentId)
+                .single();
+            
+            if (fetchError) throw fetchError;
 
-                const reactions = commentDoc.data().reactions || {};
-                const uidsForEmoji: string[] = reactions[emoji] || [];
-                const userHasReacted = uidsForEmoji.includes(currentUser.uid);
+            const reactions = commentData.reactions || {};
+            const uidsForEmoji: string[] = reactions[emoji] || [];
+            const userHasReacted = uidsForEmoji.includes(currentUser.id);
 
-                const newUidsForEmoji = userHasReacted
-                    ? uidsForEmoji.filter((uid) => uid !== currentUser.uid)
-                    : [...uidsForEmoji, currentUser.uid];
+            const newUidsForEmoji = userHasReacted
+                ? uidsForEmoji.filter((uid) => uid !== currentUser.id)
+                : [...uidsForEmoji, currentUser.id];
 
-                transaction.update(commentRef, {
-                    [`reactions.${emoji}`]: newUidsForEmoji
-                });
-            });
+            // Update the comment with new reactions
+            const { error: updateError } = await supabase
+                .from('comments')
+                .update({
+                    reactions: {
+                        ...reactions,
+                        [emoji]: newUidsForEmoji
+                    }
+                })
+                .eq('id', commentId);
+
+            if (updateError) throw updateError;
         } catch (error) {
             console.error("Error handling reaction: ", error);
             toast({ variant: "destructive", title: "Error", description: "Could not add reaction." });
         }
-    }, [currentUser, postId, toast]);
+    }, [currentUser, toast]);
     
     const openProfile = async (userId: string) => {
-        if (userId === currentUser?.uid) {
+        if (userId === currentUser?.id) {
             // Maybe navigate to own profile page in the future
             return;
         }
         
-        const userDocRef = doc(db, 'users', userId);
-        const userDocSnap = await getDoc(userDocRef);
+        const { data: userData, error } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', userId)
+            .single();
 
-        if (userDocSnap.exists()) {
-            const user = {id: userDocSnap.id, ...userDocSnap.data()} as User;
-            setSelectedUser(user);
+        if (!error && userData) {
+            setSelectedUser(userData as User);
         }
     };
 
@@ -166,7 +217,7 @@ export function CommentSection({ postId }: CommentSectionProps) {
                         <button onClick={() => openProfile(comment.userId)} className="cursor-pointer">
                             <span className="font-semibold text-sm hover:underline">{comment.authorName}</span>
                         </button>
-                        <span className="text-xs text-muted-foreground">{timeAgo(comment.timestamp?.toDate())}</span>
+                        <span className="text-xs text-muted-foreground">{timeAgo(new Date(comment.timestamp))}</span>
                     </div>
                     <p className="text-sm mt-1">{comment.text}</p>
                      <div className="flex gap-1 mt-2 flex-wrap">

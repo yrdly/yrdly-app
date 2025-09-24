@@ -1,7 +1,5 @@
-
 import { useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { supabase } from '@/lib/supabase';
 import { useAuth } from './use-auth';
 
 export const useUnreadMessages = () => {
@@ -9,33 +7,46 @@ export const useUnreadMessages = () => {
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
-    if (!user?.uid) {
+    if (!user?.id) {
       setUnreadCount(0);
       return;
     }
 
-    const q = query(
-      collection(db, 'conversations'),
-      where('participantIds', 'array-contains', user.uid)
-    );
+    // Set up real-time subscription for unread messages
+    const channel = supabase
+      .channel(`unread_messages_${user.id}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'messages',
+        filter: `to_user_id=eq.${user.id}&is_read=eq.false`
+      }, (payload) => {
+        // Re-fetch count on any change to relevant messages
+        fetchUnreadCount();
+      })
+      .subscribe();
 
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      let count = 0;
-      querySnapshot.forEach((doc) => {
-        const conversation = doc.data();
-        if (
-          conversation.lastMessage &&
-          conversation.lastMessage.senderId !== user.uid &&
-          !conversation.lastMessage.readBy.includes(user.uid)
-        ) {
-          count++;
-        }
-      });
-      setUnreadCount(count);
-    });
+    const fetchUnreadCount = async () => {
+      const { count, error } = await supabase
+        .from('messages')
+        .select('*', { count: 'exact' })
+        .eq('to_user_id', user.id)
+        .eq('is_read', false);
 
-    return () => unsubscribe();
-  }, [user?.uid]);
+      if (error) {
+        console.error('Error fetching unread messages:', error);
+        setUnreadCount(0);
+      } else {
+        setUnreadCount(count || 0);
+      }
+    };
+
+    fetchUnreadCount();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
 
   return unreadCount;
 };

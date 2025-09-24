@@ -1,18 +1,4 @@
-import { 
-  collection, 
-  doc, 
-  addDoc, 
-  updateDoc, 
-  getDoc, 
-  getDocs, 
-  query, 
-  where, 
-  orderBy,
-  serverTimestamp,
-  Timestamp,
-  deleteDoc
-} from 'firebase/firestore';
-import { db } from './firebase';
+import { supabase } from './supabase';
 import { 
   AdminUser, 
   UserRole, 
@@ -23,8 +9,8 @@ import {
 } from '@/types/user-roles';
 
 export class AdminService {
-  private static readonly ADMINS_COLLECTION = 'admin_users';
-  private static readonly SYSTEM_LOGS_COLLECTION = 'system_logs';
+  private static readonly ADMINS_TABLE = 'admin_users';
+  private static readonly SYSTEM_LOGS_TABLE = 'system_logs';
 
   // Create admin user
   static async createAdmin(
@@ -36,31 +22,33 @@ export class AdminService {
     try {
       const permissions = this.getPermissionsForRole(role);
       
-      const adminData: Omit<AdminUser, 'id'> = {
+      const adminData = {
         email,
         name,
         role,
         permissions,
-        isActive: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        createdBy
+        is_active: true,
+        created_by: createdBy,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       };
 
-      const docRef = await addDoc(collection(db, this.ADMINS_COLLECTION), {
-        ...adminData,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
-      });
+      const { data, error } = await supabase
+        .from(this.ADMINS_TABLE)
+        .insert(adminData)
+        .select('id')
+        .single();
+
+      if (error) throw error;
 
       // Log the action
-      await this.logAction(createdBy, 'CREATE_ADMIN', 'admin_user', docRef.id, {
+      await this.logAction(createdBy, 'CREATE_ADMIN', 'admin_user', data.id, {
         email,
         name,
         role
       });
 
-      return docRef.id;
+      return data.id;
     } catch (error) {
       console.error('Error creating admin:', error);
       throw new Error('Failed to create admin user');
@@ -70,19 +58,13 @@ export class AdminService {
   // Get all admin users
   static async getAdminUsers(): Promise<AdminUser[]> {
     try {
-      const q = query(
-        collection(db, this.ADMINS_COLLECTION),
-        orderBy('createdAt', 'desc')
-      );
+      const { data, error } = await supabase
+        .from(this.ADMINS_TABLE)
+        .select('*')
+        .order('created_at', { ascending: false });
 
-      const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate() || new Date(),
-        updatedAt: doc.data().updatedAt?.toDate() || new Date(),
-        lastLoginAt: doc.data().lastLoginAt?.toDate()
-      })) as AdminUser[];
+      if (error) throw error;
+      return data as AdminUser[];
     } catch (error) {
       console.error('Error fetching admin users:', error);
       throw new Error('Failed to fetch admin users');
@@ -92,19 +74,14 @@ export class AdminService {
   // Get admin user by ID
   static async getAdminById(adminId: string): Promise<AdminUser | null> {
     try {
-      const docRef = doc(db, this.ADMINS_COLLECTION, adminId);
-      const docSnap = await getDoc(docRef);
-      
-      if (docSnap.exists()) {
-        return {
-          id: docSnap.id,
-          ...docSnap.data(),
-          createdAt: docSnap.data().createdAt?.toDate() || new Date(),
-          updatedAt: docSnap.data().updatedAt?.toDate() || new Date(),
-          lastLoginAt: docSnap.data().lastLoginAt?.toDate()
-        } as AdminUser;
-      }
-      return null;
+      const { data, error } = await supabase
+        .from(this.ADMINS_TABLE)
+        .select('*')
+        .eq('id', adminId)
+        .single();
+
+      if (error) throw error;
+      return data as AdminUser;
     } catch (error) {
       console.error('Error fetching admin by ID:', error);
       return null;
@@ -114,22 +91,14 @@ export class AdminService {
   // Get admin user by email
   static async getAdminByEmail(email: string): Promise<AdminUser | null> {
     try {
-      const q = query(
-        collection(db, this.ADMINS_COLLECTION),
-        where('email', '==', email)
-      );
+      const { data, error } = await supabase
+        .from(this.ADMINS_TABLE)
+        .select('*')
+        .eq('email', email)
+        .single();
 
-      const snapshot = await getDocs(q);
-      if (snapshot.empty) return null;
-
-      const doc = snapshot.docs[0];
-      return {
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate() || new Date(),
-        updatedAt: doc.data().updatedAt?.toDate() || new Date(),
-        lastLoginAt: doc.data().lastLoginAt?.toDate()
-      } as AdminUser;
+      if (error) throw error;
+      return data as AdminUser;
     } catch (error) {
       console.error('Error fetching admin by email:', error);
       return null;
@@ -143,17 +112,20 @@ export class AdminService {
     updatedBy: string
   ): Promise<void> {
     try {
-      const adminRef = doc(db, this.ADMINS_COLLECTION, adminId);
-      
       // If role is being updated, update permissions too
       if (updates.role) {
         updates.permissions = this.getPermissionsForRole(updates.role);
       }
 
-      await updateDoc(adminRef, {
-        ...updates,
-        updatedAt: serverTimestamp()
-      });
+      const { error } = await supabase
+        .from(this.ADMINS_TABLE)
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', adminId);
+
+      if (error) throw error;
 
       // Log the action
       await this.logAction(updatedBy, 'UPDATE_ADMIN', 'admin_user', adminId, updates);
@@ -166,8 +138,12 @@ export class AdminService {
   // Delete admin user
   static async deleteAdmin(adminId: string, deletedBy: string): Promise<void> {
     try {
-      const adminRef = doc(db, this.ADMINS_COLLECTION, adminId);
-      await deleteDoc(adminRef);
+      const { error } = await supabase
+        .from(this.ADMINS_TABLE)
+        .delete()
+        .eq('id', adminId);
+
+      if (error) throw error;
 
       // Log the action
       await this.logAction(deletedBy, 'DELETE_ADMIN', 'admin_user', adminId, {});
@@ -204,10 +180,14 @@ export class AdminService {
   // Update admin login time
   static async updateLastLogin(adminId: string): Promise<void> {
     try {
-      const adminRef = doc(db, this.ADMINS_COLLECTION, adminId);
-      await updateDoc(adminRef, {
-        lastLoginAt: serverTimestamp()
-      });
+      const { error } = await supabase
+        .from(this.ADMINS_TABLE)
+        .update({
+          last_login_at: new Date().toISOString()
+        })
+        .eq('id', adminId);
+
+      if (error) throw error;
     } catch (error) {
       console.error('Error updating last login:', error);
     }
@@ -217,7 +197,7 @@ export class AdminService {
   static async getAdminStats(): Promise<AdminStats> {
     try {
       // This would typically involve multiple queries to get stats
-      // For now, we'll return mock data - in production, you'd query actual collections
+      // For now, we'll return mock data - in production, you'd query actual tables
       return {
         totalUsers: 1250,
         totalAdmins: 5,
@@ -245,21 +225,22 @@ export class AdminService {
     userAgent: string = 'unknown'
   ): Promise<void> {
     try {
-      const logData: Omit<SystemLog, 'id'> = {
-        userId,
+      const logData = {
+        user_id: userId,
         action,
         resource,
-        resourceId,
+        resource_id: resourceId,
         details,
-        ipAddress,
-        userAgent,
-        timestamp: new Date()
+        ip_address: ipAddress,
+        user_agent: userAgent,
+        timestamp: new Date().toISOString()
       };
 
-      await addDoc(collection(db, this.SYSTEM_LOGS_COLLECTION), {
-        ...logData,
-        timestamp: serverTimestamp()
-      });
+      const { error } = await supabase
+        .from(this.SYSTEM_LOGS_TABLE)
+        .insert(logData);
+
+      if (error) throw error;
     } catch (error) {
       console.error('Error logging action:', error);
       // Don't throw error for logging failures
@@ -269,18 +250,14 @@ export class AdminService {
   // Get system logs
   static async getSystemLogs(limit: number = 100): Promise<SystemLog[]> {
     try {
-      const q = query(
-        collection(db, this.SYSTEM_LOGS_COLLECTION),
-        orderBy('timestamp', 'desc'),
-        // limit(limit) // Uncomment when you have proper pagination
-      );
+      const { data, error } = await supabase
+        .from(this.SYSTEM_LOGS_TABLE)
+        .select('*')
+        .order('timestamp', { ascending: false })
+        .limit(limit);
 
-      const snapshot = await getDocs(q);
-      return snapshot.docs.slice(0, limit).map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        timestamp: doc.data().timestamp?.toDate() || new Date()
-      })) as SystemLog[];
+      if (error) throw error;
+      return data as SystemLog[];
     } catch (error) {
       console.error('Error fetching system logs:', error);
       throw new Error('Failed to fetch system logs');
@@ -294,13 +271,14 @@ export class AdminService {
   ): Promise<string> {
     try {
       // Check if any super admin already exists
-      const q = query(
-        collection(db, this.ADMINS_COLLECTION),
-        where('role', '==', UserRole.SUPER_ADMIN)
-      );
-      
-      const snapshot = await getDocs(q);
-      if (!snapshot.empty) {
+      const { data, error } = await supabase
+        .from(this.ADMINS_TABLE)
+        .select('id')
+        .eq('role', UserRole.SUPER_ADMIN)
+        .limit(1);
+
+      if (error) throw error;
+      if (data && data.length > 0) {
         throw new Error('Super admin already exists');
       }
 

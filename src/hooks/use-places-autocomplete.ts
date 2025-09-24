@@ -4,7 +4,7 @@ import usePlacesAutocomplete, {
   getGeocode,
   getLatLng,
 } from "use-places-autocomplete";
-import { GeoPoint } from "firebase/firestore";
+// Removed Firebase import - using custom location types
 
 export interface Suggestion {
   description: string;
@@ -36,7 +36,7 @@ export const usePlaces = () => {
     const { lat, lng } = await getLatLng(results[0]);
     return {
       address: results[0].formatted_address,
-      geopoint: new GeoPoint(lat, lng),
+      geopoint: { latitude: lat, longitude: lng },
     };
   };
 

@@ -2,8 +2,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
-import { collection, query, where, getDocs, or, doc, onSnapshot } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { supabase } from '@/lib/supabase';
 import type { User, Post, FriendRequest } from "../types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -68,30 +67,31 @@ export function SearchDialog({ open, onOpenChange }: { open: boolean, onOpenChan
                 searchResults.push(...pageResults);
 
                 // User search
-                const usersQuery = query(
-                    collection(db, 'users'),
-                    where('name', '>=', searchTerm),
-                    where('name', '<=', searchTerm + '\uf8ff')
-                );
-                const usersSnapshot = await getDocs(usersQuery);
-                const usersData = usersSnapshot.docs.map(doc => ({ type: 'user', data: { id: doc.id, ...doc.data() } as User } as SearchResult));
-                searchResults.push(...usersData);
+                const { data: usersData, error: usersError } = await supabase
+                    .from('users')
+                    .select('*')
+                    .ilike('name', `%${searchTerm}%`);
+                
+                if (!usersError && usersData) {
+                    const usersResults = usersData.map(user => ({ type: 'user', data: user as User } as SearchResult));
+                    searchResults.push(...usersResults);
+                }
                 
                 // Post search (listings and events)
-                const postsQuery = query(
-                    collection(db, 'posts'),
-                    or(
-                        where('text', '>=', searchTerm),
-                        where('text', '<=', searchTerm + '\uf8ff'),
-                        where('title', '>=', searchTerm),
-                        where('title', '<=', searchTerm + '\uf8ff')
-                    )
-                );
-                const postsSnapshot = await getDocs(postsQuery);
-                const postsData = postsSnapshot.docs
-                    .filter(doc => doc.data().text?.toLowerCase().includes(lowerCaseSearchTerm) || doc.data().title?.toLowerCase().includes(lowerCaseSearchTerm))
-                    .map(doc => ({ type: 'post', data: { id: doc.id, ...doc.data() } as Post } as SearchResult));
-                searchResults.push(...postsData);
+                const { data: postsData, error: postsError } = await supabase
+                    .from('posts')
+                    .select('*')
+                    .or(`text.ilike.%${searchTerm}%,title.ilike.%${searchTerm}%`);
+                
+                if (!postsError && postsData) {
+                    const postsResults = postsData
+                        .filter(post => 
+                            post.text?.toLowerCase().includes(lowerCaseSearchTerm) || 
+                            post.title?.toLowerCase().includes(lowerCaseSearchTerm)
+                        )
+                        .map(post => ({ type: 'post', data: post as Post } as SearchResult));
+                    searchResults.push(...postsResults);
+                }
 
                 setResults(searchResults);
             } catch (error) {

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { enableFirestoreNetwork, disableFirestoreNetwork } from '@/lib/firebase';
+// Removed Firebase imports - using Supabase
 
 export function useNetworkStatus() {
   const [isOnline, setIsOnline] = useState(true);
@@ -7,28 +7,21 @@ export function useNetworkStatus() {
 
   const handleOnline = useCallback(() => {
     setIsOnline(true);
-    // Re-enable Firestore network when coming back online
-    enableFirestoreNetwork();
+    // Supabase handles network status automatically
     setIsFirestoreOnline(true);
   }, []);
 
   const handleOffline = useCallback(() => {
     setIsOnline(false);
-    // Keep Firestore offline for better offline experience
-    // setIsFirestoreOnline(false);
+    // Supabase handles offline state automatically
   }, []);
 
   const toggleFirestoreNetwork = useCallback(async (enable: boolean) => {
     try {
-      if (enable) {
-        await enableFirestoreNetwork();
-        setIsFirestoreOnline(true);
-      } else {
-        await disableFirestoreNetwork();
-        setIsFirestoreOnline(false);
-      }
+      // Supabase handles network status automatically
+      setIsFirestoreOnline(enable);
     } catch (error) {
-      console.error('Error toggling Firestore network:', error);
+      console.error('Error toggling network status:', error);
     }
   }, []);
 

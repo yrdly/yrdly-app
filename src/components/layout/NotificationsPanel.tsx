@@ -96,7 +96,7 @@ export function NotificationsPanel() {
                                     <div className="flex-1">
                                         <p className="text-sm">{notif.message}</p>
                                         <p className="text-xs text-muted-foreground">
-                                            {timeAgo(notif.createdAt?.toDate())}
+                                            {timeAgo(new Date(notif.createdAt))}
                                         </p>
                                     </div>
                                 </DropdownMenuItem>

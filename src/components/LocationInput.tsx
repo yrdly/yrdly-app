@@ -6,7 +6,12 @@ import { useFormContext, Controller } from 'react-hook-form';
 import { Input } from '@/components/ui/input';
 import { usePlaces } from '@/hooks/use-places-autocomplete';
 import { Skeleton } from './ui/skeleton';
-import { GeoPoint } from 'firebase/firestore';
+// Removed Firebase import - using custom location types
+
+export interface GeoPoint {
+  latitude: number;
+  longitude: number;
+}
 
 export interface LocationValue {
   address: string;

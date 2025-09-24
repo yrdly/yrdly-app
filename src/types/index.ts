@@ -1,5 +1,9 @@
+// Removed Firebase imports - using Supabase
 
-import type { Timestamp, GeoPoint } from "firebase/firestore";
+export interface GeoPoint {
+  latitude: number;
+  longitude: number;
+}
 
 export interface Location {
   address: string;
@@ -56,7 +60,7 @@ export interface Comment {
   authorName: string;
   authorImage: string;
   text: string;
-  timestamp: Timestamp;
+  timestamp: string; // Changed from Timestamp to string for Supabase
   parentId: string | null;
   reactions: { [key: string]: string[] }; // emoji -> userId[]
 }

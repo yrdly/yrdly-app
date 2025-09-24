@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { doc, onSnapshot } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { supabase } from '@/lib/supabase';
 import { Post as PostType } from '@/types';
 import { PostCard } from '@/components/PostCard';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -21,18 +20,45 @@ export function PostPageClient({ postId }: { postId: string }) {
             return;
         }
 
-        const postRef = doc(db, 'posts', postId);
-        const unsubscribe = onSnapshot(postRef, (docSnap) => {
-            if (docSnap.exists()) {
-                setPost({ id: docSnap.id, ...docSnap.data() } as PostType);
-            } else {
-                // Handle case where post doesn't exist, maybe redirect
+        // Set up real-time subscription for post updates
+        const channel = supabase
+            .channel(`post_${postId}`)
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'posts',
+                filter: `id=eq.${postId}`
+            }, (payload) => {
+                if (payload.new) {
+                    setPost(payload.new as PostType);
+                } else if (payload.eventType === 'DELETE') {
+                    router.push('/home');
+                }
+                setLoading(false);
+            })
+            .subscribe();
+
+        // Also fetch the post initially
+        const fetchPost = async () => {
+            const { data, error } = await supabase
+                .from('posts')
+                .select('*')
+                .eq('id', postId)
+                .single();
+            
+            if (error || !data) {
                 router.push('/home');
+            } else {
+                setPost(data as PostType);
             }
             setLoading(false);
-        });
+        };
+        
+        fetchPost();
 
-        return () => unsubscribe();
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }, [postId, router]);
 
     if (loading) {

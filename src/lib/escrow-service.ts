@@ -1,17 +1,4 @@
-import { 
-  collection, 
-  doc, 
-  addDoc, 
-  updateDoc, 
-  getDoc, 
-  getDocs, 
-  query, 
-  where, 
-  orderBy, 
-  serverTimestamp,
-  Timestamp 
-} from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { supabase } from '@/lib/supabase';
 import { 
   EscrowTransaction, 
   EscrowStatus, 
@@ -37,32 +24,35 @@ export class EscrowService {
     const totalAmount = amount; // Buyer pays the full item price
     const sellerAmount = amount - commission; // Seller receives amount minus commission
 
-    const transactionData: Omit<EscrowTransaction, 'id' | 'createdAt' | 'updatedAt'> = {
-      itemId,
-      buyerId,
-      sellerId,
+    const transactionData = {
+      item_id: itemId,
+      buyer_id: buyerId,
+      seller_id: sellerId,
       amount,
       commission,
-      totalAmount,
-      sellerAmount,
+      total_amount: totalAmount,
+      seller_amount: sellerAmount,
       status: EscrowStatus.PENDING,
-      paymentMethod,
-      deliveryDetails,
-      paidAt: undefined,
-      shippedAt: undefined,
-      deliveredAt: undefined,
-      completedAt: undefined,
-      disputeReason: undefined,
-      disputeResolvedAt: undefined
+      payment_method: paymentMethod,
+      delivery_details: deliveryDetails,
+      paid_at: null,
+      shipped_at: null,
+      delivered_at: null,
+      completed_at: null,
+      dispute_reason: null,
+      dispute_resolved_at: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     };
 
-    const docRef = await addDoc(collection(db, 'escrow_transactions'), {
-      ...transactionData,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    });
+    const { data, error } = await supabase
+      .from('escrow_transactions')
+      .insert(transactionData)
+      .select('id')
+      .single();
 
-    return docRef.id;
+    if (error) throw error;
+    return data.id;
   }
 
   // Update transaction status
@@ -71,26 +61,24 @@ export class EscrowService {
     status: EscrowStatus,
     additionalData?: Partial<EscrowTransaction>
   ): Promise<void> {
-    const transactionRef = doc(db, 'escrow_transactions', transactionId);
-    
     const updateData: any = {
       status,
-      updatedAt: serverTimestamp()
+      updated_at: new Date().toISOString()
     };
 
     // Add timestamp based on status
     switch (status) {
       case EscrowStatus.PAID:
-        updateData.paidAt = serverTimestamp();
+        updateData.paid_at = new Date().toISOString();
         break;
       case EscrowStatus.SHIPPED:
-        updateData.shippedAt = serverTimestamp();
+        updateData.shipped_at = new Date().toISOString();
         break;
       case EscrowStatus.DELIVERED:
-        updateData.deliveredAt = serverTimestamp();
+        updateData.delivered_at = new Date().toISOString();
         break;
       case EscrowStatus.COMPLETED:
-        updateData.completedAt = serverTimestamp();
+        updateData.completed_at = new Date().toISOString();
         break;
     }
 
@@ -99,88 +87,48 @@ export class EscrowService {
       Object.assign(updateData, additionalData);
     }
 
-    await updateDoc(transactionRef, updateData);
+    const { error } = await supabase
+      .from('escrow_transactions')
+      .update(updateData)
+      .eq('id', transactionId);
+
+    if (error) throw error;
   }
 
   // Get transaction by ID
   static async getTransaction(transactionId: string): Promise<EscrowTransaction | null> {
-    const docRef = doc(db, 'escrow_transactions', transactionId);
-    const docSnap = await getDoc(docRef);
+    const { data, error } = await supabase
+      .from('escrow_transactions')
+      .select('*')
+      .eq('id', transactionId)
+      .single();
 
-    if (docSnap.exists()) {
-      const data = docSnap.data();
-      return {
-        id: docSnap.id,
-        ...data,
-        createdAt: (data.createdAt as Timestamp).toDate(),
-        updatedAt: (data.updatedAt as Timestamp).toDate(),
-        paidAt: data.paidAt ? (data.paidAt as Timestamp).toDate() : undefined,
-        shippedAt: data.shippedAt ? (data.shippedAt as Timestamp).toDate() : undefined,
-        deliveredAt: data.deliveredAt ? (data.deliveredAt as Timestamp).toDate() : undefined,
-        completedAt: data.completedAt ? (data.completedAt as Timestamp).toDate() : undefined,
-        disputeResolvedAt: data.disputeResolvedAt ? (data.disputeResolvedAt as Timestamp).toDate() : undefined
-      } as EscrowTransaction;
-    }
-
-    return null;
+    if (error) throw error;
+    return data as EscrowTransaction;
   }
 
   // Get user's transactions
   static async getUserTransactions(userId: string): Promise<EscrowTransaction[]> {
-    const q = query(
-      collection(db, 'escrow_transactions'),
-      where('buyerId', '==', userId),
-      orderBy('createdAt', 'desc')
-    );
+    const { data, error } = await supabase
+      .from('escrow_transactions')
+      .select('*')
+      .eq('buyer_id', userId)
+      .order('created_at', { ascending: false });
 
-    const querySnapshot = await getDocs(q);
-    const transactions: EscrowTransaction[] = [];
-
-    querySnapshot.forEach((doc) => {
-      const data = doc.data();
-      transactions.push({
-        id: doc.id,
-        ...data,
-        createdAt: (data.createdAt as Timestamp).toDate(),
-        updatedAt: (data.updatedAt as Timestamp).toDate(),
-        paidAt: data.paidAt ? (data.paidAt as Timestamp).toDate() : undefined,
-        shippedAt: data.shippedAt ? (data.shippedAt as Timestamp).toDate() : undefined,
-        deliveredAt: data.deliveredAt ? (data.deliveredAt as Timestamp).toDate() : undefined,
-        completedAt: data.completedAt ? (data.completedAt as Timestamp).toDate() : undefined,
-        disputeResolvedAt: data.disputeResolvedAt ? (data.disputeResolvedAt as Timestamp).toDate() : undefined
-      } as EscrowTransaction);
-    });
-
-    return transactions;
+    if (error) throw error;
+    return data as EscrowTransaction[];
   }
 
   // Get seller's transactions
   static async getSellerTransactions(sellerId: string): Promise<EscrowTransaction[]> {
-    const q = query(
-      collection(db, 'escrow_transactions'),
-      where('sellerId', '==', sellerId),
-      orderBy('createdAt', 'desc')
-    );
+    const { data, error } = await supabase
+      .from('escrow_transactions')
+      .select('*')
+      .eq('seller_id', sellerId)
+      .order('created_at', { ascending: false });
 
-    const querySnapshot = await getDocs(q);
-    const transactions: EscrowTransaction[] = [];
-
-    querySnapshot.forEach((doc) => {
-      const data = doc.data();
-      transactions.push({
-        id: doc.id,
-        ...data,
-        createdAt: (data.createdAt as Timestamp).toDate(),
-        updatedAt: (data.updatedAt as Timestamp).toDate(),
-        paidAt: data.paidAt ? (data.paidAt as Timestamp).toDate() : undefined,
-        shippedAt: data.shippedAt ? (data.shippedAt as Timestamp).toDate() : undefined,
-        deliveredAt: data.deliveredAt ? (data.deliveredAt as Timestamp).toDate() : undefined,
-        completedAt: data.completedAt ? (data.completedAt as Timestamp).toDate() : undefined,
-        disputeResolvedAt: data.disputeResolvedAt ? (data.disputeResolvedAt as Timestamp).toDate() : undefined
-      } as EscrowTransaction);
-    });
-
-    return transactions;
+    if (error) throw error;
+    return data as EscrowTransaction[];
   }
 
   // Update delivery details
@@ -188,12 +136,15 @@ export class EscrowService {
     transactionId: string,
     deliveryDetails: DeliveryDetails
   ): Promise<void> {
-    const transactionRef = doc(db, 'escrow_transactions', transactionId);
-    
-    await updateDoc(transactionRef, {
-      deliveryDetails,
-      updatedAt: serverTimestamp()
-    });
+    const { error } = await supabase
+      .from('escrow_transactions')
+      .update({
+        delivery_details: deliveryDetails,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', transactionId);
+
+    if (error) throw error;
   }
 
   // Dispute a transaction
@@ -211,20 +162,26 @@ export class EscrowService {
     transactionId: string,
     resolution: string
   ): Promise<void> {
-    const transactionRef = doc(db, 'escrow_transactions', transactionId);
-    
-    await updateDoc(transactionRef, {
-      disputeReason: resolution,
-      disputeResolvedAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    });
+    const { error } = await supabase
+      .from('escrow_transactions')
+      .update({
+        dispute_reason: resolution,
+        dispute_resolved_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', transactionId);
+
+    if (error) throw error;
   }
 
   // Get escrow statistics
   static async getStats(): Promise<EscrowStats> {
-    const q = query(collection(db, 'escrow_transactions'));
-    const querySnapshot = await getDocs(q);
-    
+    const { data, error } = await supabase
+      .from('escrow_transactions')
+      .select('*');
+
+    if (error) throw error;
+
     let totalTransactions = 0;
     let totalVolume = 0;
     let totalCommission = 0;
@@ -232,13 +189,12 @@ export class EscrowService {
     let completedTransactions = 0;
     let disputedTransactions = 0;
 
-    querySnapshot.forEach((doc) => {
-      const data = doc.data();
+    data.forEach((transaction) => {
       totalTransactions++;
-      totalVolume += data.amount;
-      totalCommission += data.commission;
+      totalVolume += transaction.amount;
+      totalCommission += transaction.commission;
 
-      switch (data.status) {
+      switch (transaction.status) {
         case EscrowStatus.PENDING:
           pendingTransactions++;
           break;

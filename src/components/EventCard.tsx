@@ -6,8 +6,7 @@ import { Button } from "@/components/ui/button";
 import { MapPin, Calendar, LinkIcon, MoreHorizontal, Edit, Trash2 } from "lucide-react";
 import Image from "next/image";
 import { useState, useEffect } from "react";
-import { doc, updateDoc, arrayUnion, arrayRemove, onSnapshot, deleteDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/use-auth";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { timeAgo } from "@/lib/utils";
@@ -41,24 +40,34 @@ export function EventCard({ event }: EventCardProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [attendeeCount, setAttendeeCount] = useState(event.attendees?.length || 0);
-  const [isAttending, setIsAttending] = useState(event.attendees?.includes(user?.uid || '') || false);
+  const [isAttending, setIsAttending] = useState(event.attendees?.includes(user?.id || '') || false);
   const [loadingAttending, setLoadingAttending] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
     if (!event.id) return;
-    const eventRef = doc(db, "posts", event.id);
-    const unsubscribe = onSnapshot(eventRef, (docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data();
+    
+    // Set up real-time subscription for event updates
+    const channel = supabase
+      .channel(`event_${event.id}`)
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'posts',
+        filter: `id=eq.${event.id}`
+      }, (payload) => {
+        const data = payload.new;
         const currentAttendees = data.attendees || [];
         setAttendeeCount(currentAttendees.length);
         if (user) {
-          setIsAttending(currentAttendees.includes(user.uid));
+          setIsAttending(currentAttendees.includes(user.id));
         }
-      }
-    });
-    return () => unsubscribe();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [event.id, user]);
 
   const handleAttendingToggle = async (e: React.MouseEvent) => {
@@ -70,23 +79,39 @@ export function EventCard({ event }: EventCardProps) {
     }
 
     setLoadingAttending(true);
-    const eventRef = doc(db, "posts", event.id);
 
     try {
       if (isAttending) {
-        await updateDoc(eventRef, { attendees: arrayRemove(user.uid) });
+        // Remove user from attendees array
+        const { error } = await supabase
+          .from('posts')
+          .update({ 
+            attendees: event.attendees?.filter(id => id !== user.id) || []
+          })
+          .eq('id', event.id);
+        
+        if (error) throw error;
+        
         toast({
           title: "Removed from event",
           description: "You're no longer attending this event.",
         });
       } else {
-        await updateDoc(eventRef, { attendees: arrayUnion(user.uid) });
+        // Add user to attendees array
+        const { error } = await supabase
+          .from('posts')
+          .update({ 
+            attendees: [...(event.attendees || []), user.id]
+          })
+          .eq('id', event.id);
+        
+        if (error) throw error;
         
         // Send confirmation email to the attendee (the person who just RSVP'd)
         if (user.email) {
           const emailResult = await sendEventConfirmationEmail({
             attendeeEmail: user.email, // Send to the person attending, not the event creator
-            attendeeName: user.displayName || 'User',
+            attendeeName: user.user_metadata?.name || user.email?.split('@')[0] || 'User',
             eventName: event.title || 'Event',
             eventDate: event.event_date,
             eventTime: event.event_time,
@@ -128,9 +153,14 @@ export function EventCard({ event }: EventCardProps) {
   };
 
   const handleDelete = async () => {
-    if (!user || !event.id || user.uid !== event.user_id) return;
+    if (!user || !event.id || user.id !== event.user_id) return;
     try {
-        await deleteDoc(doc(db, "posts", event.id));
+        const { error } = await supabase
+            .from('posts')
+            .delete()
+            .eq('id', event.id);
+        
+        if (error) throw error;
         toast({ title: "Event deleted", description: "Your event has been successfully removed." });
         router.push('/events'); // Navigate back to events list after deletion
     } catch (error) {

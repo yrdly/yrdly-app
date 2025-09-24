@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot, orderBy, doc, updateDoc, Timestamp, deleteDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { supabase } from '@/lib/supabase';
 import { useAuth } from './use-auth';
 import { useToast } from './use-toast';
 
@@ -14,7 +13,7 @@ export interface Notification {
     relatedId: string;
     message: string;
     isRead: boolean;
-    createdAt: Timestamp;
+    createdAt: string; // Using string for Supabase timestamps
 }
 
 export const useNotifications = () => {
@@ -32,48 +31,80 @@ export const useNotifications = () => {
             return;
         }
 
-        const notificationsQuery = query(
-            collection(db, 'notifications'),
-            where('userId', '==', user.uid),
-            orderBy('createdAt', 'desc')
-        );
+        // Set up real-time subscription for notifications
+        const channel = supabase
+            .channel(`notifications_${user.id}`)
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'notifications',
+                filter: `user_id=eq.${user.id}`
+            }, (payload) => {
+                // Handle real-time updates
+                if (payload.new) {
+                    const newNotification = payload.new as Notification;
+                    setNotifications(prev => {
+                        const existing = prev.filter(n => n.id !== newNotification.id);
+                        return [newNotification, ...existing].sort((a, b) => 
+                            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                        );
+                    });
+                } else if (payload.eventType === 'DELETE') {
+                    setNotifications(prev => prev.filter(n => n.id !== payload.old.id));
+                }
+            })
+            .subscribe();
 
-        const unsubscribe = onSnapshot(notificationsQuery, (snapshot) => {
-            const newNotifications = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification));
-            // Sort client-side to ensure descending order without needing a new index
-            newNotifications.sort((a, b) => b.createdAt?.seconds - a.createdAt?.seconds);
+        // Also fetch notifications initially
+        const fetchNotifications = async () => {
+            const { data: notificationsData, error } = await supabase
+                .from('notifications')
+                .select('*')
+                .eq('user_id', user.id)
+                .order('created_at', { ascending: false });
             
-            const newUnreadCount = newNotifications.filter(n => !n.isRead).length;
+            if (!error && notificationsData) {
+                const newNotifications = notificationsData as Notification[];
+                const newUnreadCount = newNotifications.filter(n => !n.isRead).length;
 
-            // Optional: Show a toast for new, unread notifications
-            if (newUnreadCount > unreadCount) {
-                 const latestNotification = newNotifications[0];
-                 if (latestNotification && !latestNotification.isRead) {
-                    // Check if this notification was already seen in this session
-                    const seenNotifs = sessionStorage.getItem('seenNotifications');
-                    const seen = seenNotifs ? JSON.parse(seenNotifs) : [];
-                    if (!seen.includes(latestNotification.id)) {
-                        toast({
-                            title: "New Notification",
-                            description: latestNotification.message,
-                        });
-                        sessionStorage.setItem('seenNotifications', JSON.stringify([...seen, latestNotification.id]));
-                    }
-                 }
+                // Optional: Show a toast for new, unread notifications
+                if (newUnreadCount > unreadCount) {
+                     const latestNotification = newNotifications[0];
+                     if (latestNotification && !latestNotification.isRead) {
+                        // Check if this notification was already seen in this session
+                        const seenNotifs = sessionStorage.getItem('seenNotifications');
+                        const seen = seenNotifs ? JSON.parse(seenNotifs) : [];
+                        if (!seen.includes(latestNotification.id)) {
+                            toast({
+                                title: "New Notification",
+                                description: latestNotification.message,
+                            });
+                            sessionStorage.setItem('seenNotifications', JSON.stringify([...seen, latestNotification.id]));
+                        }
+                     }
+                }
+
+                setNotifications(newNotifications);
+                setUnreadCount(newUnreadCount);
             }
-            
-            setNotifications(newNotifications);
-            setUnreadCount(newUnreadCount);
             setLoading(false);
-        });
+        };
+        
+        fetchNotifications();
 
-        return () => unsubscribe();
+        return () => {
+            supabase.removeChannel(channel);
+        };
 
     }, [user, toast, unreadCount]);
 
     const markAsRead = async (notificationId: string) => {
-        const notificationRef = doc(db, 'notifications', notificationId);
-        await updateDoc(notificationRef, { isRead: true });
+        const { error } = await supabase
+            .from('notifications')
+            .update({ is_read: true })
+            .eq('id', notificationId);
+        
+        if (error) throw error;
     };
 
     const markAllAsRead = async () => {
@@ -85,8 +116,12 @@ export const useNotifications = () => {
 
     const clearAllNotifications = async () => {
         if (!user) return;
-        const promises = notifications.map(n => deleteDoc(doc(db, 'notifications', n.id)));
-        await Promise.all(promises);
+        const { error } = await supabase
+            .from('notifications')
+            .delete()
+            .eq('user_id', user.id);
+        
+        if (error) throw error;
     };
 
     return { notifications, unreadCount, loading, markAsRead, markAllAsRead, clearAllNotifications };

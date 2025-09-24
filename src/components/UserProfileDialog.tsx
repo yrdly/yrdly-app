@@ -3,9 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { doc, onSnapshot, collection, query, where, addDoc, serverTimestamp, updateDoc, arrayUnion, runTransaction, arrayRemove, getDocs, writeBatch } from 'firebase/firestore';
-import { httpsCallable } from 'firebase/functions';
-import { db, functions } from '@/lib/firebase';
+import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/use-auth';
 import type { User, FriendRequest } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -50,49 +48,60 @@ export function UserProfileDialog({ user: profileUser, open, onOpenChange }: Use
     const [isBlocked, setIsBlocked] = useState(false);
 
     useEffect(() => {
-        if (!profileUser || !currentUser || !userDetails) {
-            if (open) onOpenChange(false);
-            return;
-        };
+        const checkFriendshipStatus = async () => {
+            if (!profileUser || !currentUser || !userDetails) {
+                if (open) onOpenChange(false);
+                return;
+            };
 
-        // Don't open a dialog for the current user
-        if (profileUser.uid === currentUser.uid) {
-            if (open) onOpenChange(false);
-            return;
-        }
-        
-        setIsBlocked(userDetails.blockedUsers?.includes(profileUser.uid) ?? false);
-
-        if (userDetails.friends?.includes(profileUser.uid)) {
-            setFriendshipStatus('friends');
-        } else {
-            // Only check for requests if they are not friends
-            const requestsQuery = query(
-                collection(db, 'friend_requests'),
-                where('participantIds', 'in', [[currentUser.uid, profileUser.uid], [profileUser.uid, currentUser.uid]]),
-                where('status', '==', 'pending')
-            );
+            // Don't open a dialog for the current user
+            if (profileUser.id === currentUser.id) {
+                if (open) onOpenChange(false);
+                return;
+            }
             
-            const unsubscribe = onSnapshot(requestsQuery, (snapshot) => {
-                 if (!snapshot.empty) {
-                    const request = { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as FriendRequest
+            setIsBlocked(userDetails.blockedUsers?.includes(profileUser.id) ?? false);
+
+            if (userDetails.friends?.includes(profileUser.id)) {
+                setFriendshipStatus('friends');
+            } else {
+                // Only check for requests if they are not friends
+                const { data: requestsData, error } = await supabase
+                    .from('friend_requests')
+                    .select('*')
+                    .or(`from_user_id.eq.${currentUser.id},to_user_id.eq.${currentUser.id}`)
+                    .or(`from_user_id.eq.${profileUser.id},to_user_id.eq.${profileUser.id}`)
+                    .eq('status', 'pending');
+                
+                if (!error && requestsData && requestsData.length > 0) {
+                    const request = requestsData[0] as FriendRequest;
                     setFriendRequest(request);
-                    setFriendshipStatus(request.fromUserId === currentUser.uid ? 'request_sent' : 'request_received');
+                    setFriendshipStatus(request.fromUserId === currentUser.id ? 'request_sent' : 'request_received');
                 } else {
                     setFriendRequest(null);
                     setFriendshipStatus('none');
                 }
-            });
-            return () => unsubscribe();
-        }
+            }
+        };
 
+        checkFriendshipStatus();
     }, [profileUser, currentUser, userDetails, open, onOpenChange]);
 
 
     const handleAddFriend = async () => {
         if (!currentUser || !profileUser || isBlocked) return;
         try {
-            await addDoc(collection(db, "friend_requests"), { fromUserId: currentUser.uid, toUserId: profileUser.uid, participantIds: [currentUser.uid, profileUser.uid].sort(), status: "pending", timestamp: serverTimestamp() });
+            const { error } = await supabase
+                .from('friend_requests')
+                .insert({
+                    from_user_id: currentUser.id,
+                    to_user_id: profileUser.id,
+                    participant_ids: [currentUser.id, profileUser.id].sort(),
+                    status: 'pending',
+                    timestamp: new Date().toISOString()
+                });
+            
+            if (error) throw error;
             toast({ title: "Friend request sent!" });
         } catch {
             toast({ variant: "destructive", title: "Error", description: "Could not send friend request." });
@@ -102,8 +111,47 @@ export function UserProfileDialog({ user: profileUser, open, onOpenChange }: Use
     const handleAcceptRequest = async () => {
         if (!currentUser || !friendRequest) return;
         try {
-            const acceptFriendRequest = httpsCallable(functions, 'acceptfriendrequest');
-            await acceptFriendRequest({ friendRequestId: friendRequest.id });
+            // Update friend request status
+            const { error: updateError } = await supabase
+                .from('friend_requests')
+                .update({ status: 'accepted' })
+                .eq('id', friendRequest.id);
+            
+            if (updateError) throw updateError;
+            
+            // Add to friends list for both users
+            // First get current friends list for current user
+            const { data: currentUserData, error: fetchError1 } = await supabase
+                .from('users')
+                .select('friends')
+                .eq('id', currentUser.id)
+                .single();
+            
+            if (fetchError1) throw fetchError1;
+            
+            const { error: addFriendError } = await supabase
+                .from('users')
+                .update({ friends: [...(currentUserData.friends || []), friendRequest.fromUserId] })
+                .eq('id', currentUser.id);
+            
+            if (addFriendError) throw addFriendError;
+            
+            // Then get current friends list for the other user
+            const { data: otherUserData, error: fetchError2 } = await supabase
+                .from('users')
+                .select('friends')
+                .eq('id', friendRequest.fromUserId)
+                .single();
+            
+            if (fetchError2) throw fetchError2;
+            
+            const { error: addFriendError2 } = await supabase
+                .from('users')
+                .update({ friends: [...(otherUserData.friends || []), currentUser.id] })
+                .eq('id', friendRequest.fromUserId);
+            
+            if (addFriendError2) throw addFriendError2;
+            
             toast({ title: "Friend request accepted!" });
         } catch {
             toast({ variant: "destructive", title: "Error", description: "Could not accept friend request." });
@@ -112,16 +160,55 @@ export function UserProfileDialog({ user: profileUser, open, onOpenChange }: Use
 
     const handleDeclineRequest = async () => {
         if (!friendRequest) return;
-        const requestRef = doc(db, "friend_requests", friendRequest.id);
-        await updateDoc(requestRef, { status: "declined" });
-        toast({ title: "Friend request declined." });
+        try {
+            const { error } = await supabase
+                .from('friend_requests')
+                .update({ status: 'declined' })
+                .eq('id', friendRequest.id);
+            
+            if (error) throw error;
+            toast({ title: "Friend request declined." });
+        } catch {
+            toast({ variant: "destructive", title: "Error", description: "Could not decline friend request." });
+        }
     };
 
     const handleUnfriend = async () => {
         if (!currentUser || !profileUser) return;
         try {
-            const unfriend = httpsCallable(functions, 'unfriendUser');
-            await unfriend({ friendId: profileUser.uid });
+            // Remove from friends list for both users
+            // First get current friends list for current user
+            const { data: currentUserData, error: fetchError1 } = await supabase
+                .from('users')
+                .select('friends')
+                .eq('id', currentUser.id)
+                .single();
+            
+            if (fetchError1) throw fetchError1;
+            
+            const { error: removeFriendError } = await supabase
+                .from('users')
+                .update({ friends: (currentUserData.friends || []).filter((id: string) => id !== profileUser.id) })
+                .eq('id', currentUser.id);
+            
+            if (removeFriendError) throw removeFriendError;
+            
+            // Then get current friends list for the other user
+            const { data: otherUserData, error: fetchError2 } = await supabase
+                .from('users')
+                .select('friends')
+                .eq('id', profileUser.id)
+                .single();
+            
+            if (fetchError2) throw fetchError2;
+            
+            const { error: removeFriendError2 } = await supabase
+                .from('users')
+                .update({ friends: (otherUserData.friends || []).filter((id: string) => id !== currentUser.id) })
+                .eq('id', profileUser.id);
+            
+            if (removeFriendError2) throw removeFriendError2;
+            
             toast({ title: "Friend removed." });
             onOpenChange(true);
         } catch (error) {
@@ -132,8 +219,21 @@ export function UserProfileDialog({ user: profileUser, open, onOpenChange }: Use
     const handleBlockUser = async () => {
         if (!currentUser || !profileUser) return;
         try {
-            const block = httpsCallable(functions, 'blockUser');
-            await block({ userIdToBlock: profileUser.uid });
+            // Get current blocked users list
+            const { data: userData, error: fetchError } = await supabase
+                .from('users')
+                .select('blocked_users')
+                .eq('id', currentUser.id)
+                .single();
+            
+            if (fetchError) throw fetchError;
+            
+            const { error } = await supabase
+                .from('users')
+                .update({ blocked_users: [...(userData.blocked_users || []), profileUser.id] })
+                .eq('id', currentUser.id);
+            
+            if (error) throw error;
             toast({ title: "User blocked." });
             onOpenChange(true); // Signal that a change was made
         } catch (error) {
@@ -144,8 +244,21 @@ export function UserProfileDialog({ user: profileUser, open, onOpenChange }: Use
     const handleUnblockUser = async () => {
         if (!currentUser || !profileUser) return;
         try {
-            const unblock = httpsCallable(functions, 'unblockUser');
-            await unblock({ userIdToUnblock: profileUser.uid });
+            // Get current blocked users list
+            const { data: userData, error: fetchError } = await supabase
+                .from('users')
+                .select('blocked_users')
+                .eq('id', currentUser.id)
+                .single();
+            
+            if (fetchError) throw fetchError;
+            
+            const { error } = await supabase
+                .from('users')
+                .update({ blocked_users: (userData.blocked_users || []).filter((id: string) => id !== profileUser.id) })
+                .eq('id', currentUser.id);
+            
+            if (error) throw error;
             toast({ title: "User unblocked." });
             onOpenChange(true); // Signal that a change was made
         } catch {
@@ -161,25 +274,33 @@ export function UserProfileDialog({ user: profileUser, open, onOpenChange }: Use
     const handleMessageClick = async () => {
         if (!currentUser || !profileUser) return;
         
-        const sortedParticipantIds = [currentUser.uid, profileUser.uid].sort();
-        const q = query(
-            collection(db, "conversations"),
-            where("participantIds", "==", sortedParticipantIds)
-        );
-
+        const sortedParticipantIds = [currentUser.id, profileUser.id].sort();
+        
         try {
-            const querySnapshot = await getDocs(q);
+            // Check if conversation already exists
+            const { data: existingConversations, error: fetchError } = await supabase
+                .from('conversations')
+                .select('id')
+                .eq('participant_ids', sortedParticipantIds);
+            
             let conversationId: string;
 
-            if (querySnapshot.empty) {
-                const newConvRef = await addDoc(collection(db, "conversations"), {
-                    participantIds: sortedParticipantIds,
-                    lastMessage: null,
-                    timestamp: serverTimestamp(),
-                });
-                conversationId = newConvRef.id;
+            if (fetchError || !existingConversations || existingConversations.length === 0) {
+                // Create new conversation
+                const { data: newConv, error: createError } = await supabase
+                    .from('conversations')
+                    .insert({
+                        participant_ids: sortedParticipantIds,
+                        last_message: null,
+                        timestamp: new Date().toISOString(),
+                    })
+                    .select('id')
+                    .single();
+                
+                if (createError) throw createError;
+                conversationId = newConv.id;
             } else {
-                conversationId = querySnapshot.docs[0].id;
+                conversationId = existingConversations[0].id;
             }
             
             onOpenChange(false);

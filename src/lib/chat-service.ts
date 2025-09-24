@@ -1,19 +1,4 @@
-import { 
-  collection, 
-  doc, 
-  addDoc, 
-  updateDoc, 
-  getDoc, 
-  getDocs, 
-  query, 
-  where, 
-  orderBy, 
-  limit,
-  serverTimestamp,
-  Timestamp,
-  onSnapshot 
-} from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { supabase } from '@/lib/supabase';
 import { ChatMessage, ItemChat, ChatParticipant } from '@/types/chat';
 
 export class ChatService {
@@ -26,37 +11,41 @@ export class ChatService {
     itemImageUrl: string
   ): Promise<string> {
     // Check if chat already exists
-    const existingChatQuery = query(
-      collection(db, 'item_chats'),
-      where('itemId', '==', itemId),
-      where('buyerId', '==', buyerId),
-      where('sellerId', '==', sellerId)
-    );
+    const { data: existingChats, error: fetchError } = await supabase
+      .from('item_chats')
+      .select('id')
+      .eq('item_id', itemId)
+      .eq('buyer_id', buyerId)
+      .eq('seller_id', sellerId)
+      .limit(1);
 
-    const existingChatSnapshot = await getDocs(existingChatQuery);
+    if (fetchError) throw fetchError;
     
-    if (!existingChatSnapshot.empty) {
-      return existingChatSnapshot.docs[0].id;
+    if (existingChats && existingChats.length > 0) {
+      return existingChats[0].id;
     }
 
     // Create new chat
-    const chatData: Omit<ItemChat, 'id' | 'createdAt' | 'updatedAt'> = {
-      itemId,
-      buyerId,
-      sellerId,
-      itemTitle,
-      itemImageUrl,
-      lastActivity: new Date(),
-      isActive: true
+    const chatData = {
+      item_id: itemId,
+      buyer_id: buyerId,
+      seller_id: sellerId,
+      item_title: itemTitle,
+      item_image_url: itemImageUrl,
+      last_activity: new Date().toISOString(),
+      is_active: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     };
 
-    const docRef = await addDoc(collection(db, 'item_chats'), {
-      ...chatData,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    });
+    const { data, error } = await supabase
+      .from('item_chats')
+      .insert(chatData)
+      .select('id')
+      .single();
 
-    return docRef.id;
+    if (error) throw error;
+    return data.id;
   }
 
   // Send a message
@@ -68,167 +57,131 @@ export class ChatService {
     messageType: ChatMessage['messageType'] = 'text',
     metadata?: ChatMessage['metadata']
   ): Promise<string> {
-    const messageData: Omit<ChatMessage, 'id' | 'timestamp'> = {
-      chatId,
-      senderId,
-      senderName,
+    const messageData = {
+      chat_id: chatId,
+      sender_id: senderId,
+      sender_name: senderName,
       content,
-      isRead: false,
-      messageType,
-      ...(metadata && { metadata }) // Only include metadata if it exists
+      is_read: false,
+      message_type: messageType,
+      metadata: metadata || null,
+      timestamp: new Date().toISOString()
     };
 
-    const docRef = await addDoc(collection(db, 'chat_messages'), {
-      ...messageData,
-      timestamp: serverTimestamp()
-    });
+    const { data, error } = await supabase
+      .from('chat_messages')
+      .insert(messageData)
+      .select('id')
+      .single();
+
+    if (error) throw error;
 
     // Update chat last activity
-    const chatRef = doc(db, 'item_chats', chatId);
-    await updateDoc(chatRef, {
-      lastActivity: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    });
+    const { error: updateError } = await supabase
+      .from('item_chats')
+      .update({
+        last_activity: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', chatId);
 
-    return docRef.id;
+    if (updateError) throw updateError;
+
+    return data.id;
   }
 
   // Get chat messages
   static async getChatMessages(chatId: string): Promise<ChatMessage[]> {
-    const q = query(
-      collection(db, 'chat_messages'),
-      where('chatId', '==', chatId),
-      orderBy('timestamp', 'asc')
-    );
+    const { data, error } = await supabase
+      .from('chat_messages')
+      .select('*')
+      .eq('chat_id', chatId)
+      .order('timestamp', { ascending: true });
 
-    const querySnapshot = await getDocs(q);
-    const messages: ChatMessage[] = [];
-
-    querySnapshot.forEach((doc) => {
-      const data = doc.data();
-      messages.push({
-        id: doc.id,
-        ...data,
-        timestamp: data.timestamp ? (data.timestamp as Timestamp).toDate() : new Date()
-      } as ChatMessage);
-    });
-
-    return messages;
+    if (error) throw error;
+    return data as ChatMessage[];
   }
 
   // Get user's chats
   static async getUserChats(userId: string): Promise<ItemChat[]> {
-    const q = query(
-      collection(db, 'item_chats'),
-      where('buyerId', '==', userId),
-      orderBy('lastActivity', 'desc')
-    );
+    const { data: chats, error: chatsError } = await supabase
+      .from('item_chats')
+      .select('*')
+      .eq('buyer_id', userId)
+      .order('last_activity', { ascending: false });
 
-    const querySnapshot = await getDocs(q);
-    const chats: ItemChat[] = [];
+    if (chatsError) throw chatsError;
 
-    for (const docSnapshot of querySnapshot.docs) {
-      const data = docSnapshot.data();
-      
+    const chatsWithMessages: ItemChat[] = [];
+
+    for (const chat of chats) {
       // Get the last message for this chat
-      const messagesQuery = query(
-        collection(db, 'chat_messages'),
-        where('chatId', '==', docSnapshot.id),
-        orderBy('timestamp', 'desc'),
-        limit(1)
-      );
-      
-      const messagesSnapshot = await getDocs(messagesQuery);
-      let lastMessage: ChatMessage | undefined;
-      
-      if (!messagesSnapshot.empty) {
-        const messageDoc = messagesSnapshot.docs[0];
-        const messageData = messageDoc.data();
-        lastMessage = {
-          id: messageDoc.id,
-          ...messageData,
-          timestamp: messageData.timestamp ? (messageData.timestamp as Timestamp).toDate() : new Date()
-        } as ChatMessage;
+      const { data: lastMessage, error: messageError } = await supabase
+        .from('chat_messages')
+        .select('*')
+        .eq('chat_id', chat.id)
+        .order('timestamp', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (messageError && messageError.code !== 'PGRST116') {
+        console.error('Error fetching last message:', messageError);
       }
 
-      chats.push({
-        id: docSnapshot.id,
-        ...data,
-        lastMessage,
-        lastActivity: data.lastActivity ? (data.lastActivity as Timestamp).toDate() : new Date(),
-        createdAt: data.createdAt ? (data.createdAt as Timestamp).toDate() : new Date(),
-        updatedAt: data.updatedAt ? (data.updatedAt as Timestamp).toDate() : new Date()
+      chatsWithMessages.push({
+        ...chat,
+        lastMessage: lastMessage || undefined
       } as ItemChat);
     }
 
-    return chats;
+    return chatsWithMessages;
   }
 
   // Get seller's chats
   static async getSellerChats(sellerId: string): Promise<ItemChat[]> {
-    const q = query(
-      collection(db, 'item_chats'),
-      where('sellerId', '==', sellerId),
-      orderBy('lastActivity', 'desc')
-    );
+    const { data: chats, error: chatsError } = await supabase
+      .from('item_chats')
+      .select('*')
+      .eq('seller_id', sellerId)
+      .order('last_activity', { ascending: false });
 
-    const querySnapshot = await getDocs(q);
-    const chats: ItemChat[] = [];
+    if (chatsError) throw chatsError;
 
-    for (const docSnapshot of querySnapshot.docs) {
-      const data = docSnapshot.data();
-      
+    const chatsWithMessages: ItemChat[] = [];
+
+    for (const chat of chats) {
       // Get the last message for this chat
-      const messagesQuery = query(
-        collection(db, 'chat_messages'),
-        where('chatId', '==', docSnapshot.id),
-        orderBy('timestamp', 'desc'),
-        limit(1)
-      );
-      
-      const messagesSnapshot = await getDocs(messagesQuery);
-      let lastMessage: ChatMessage | undefined;
-      
-      if (!messagesSnapshot.empty) {
-        const messageDoc = messagesSnapshot.docs[0];
-        const messageData = messageDoc.data();
-        lastMessage = {
-          id: messageDoc.id,
-          ...messageData,
-          timestamp: messageData.timestamp ? (messageData.timestamp as Timestamp).toDate() : new Date()
-        } as ChatMessage;
+      const { data: lastMessage, error: messageError } = await supabase
+        .from('chat_messages')
+        .select('*')
+        .eq('chat_id', chat.id)
+        .order('timestamp', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (messageError && messageError.code !== 'PGRST116') {
+        console.error('Error fetching last message:', messageError);
       }
 
-      chats.push({
-        id: docSnapshot.id,
-        ...data,
-        lastMessage,
-        lastActivity: data.lastActivity ? (data.lastActivity as Timestamp).toDate() : new Date(),
-        createdAt: data.createdAt ? (data.createdAt as Timestamp).toDate() : new Date(),
-        updatedAt: data.updatedAt ? (data.updatedAt as Timestamp).toDate() : new Date()
+      chatsWithMessages.push({
+        ...chat,
+        lastMessage: lastMessage || undefined
       } as ItemChat);
     }
 
-    return chats;
+    return chatsWithMessages;
   }
 
   // Mark messages as read
   static async markMessagesAsRead(chatId: string, userId: string): Promise<void> {
-    const q = query(
-      collection(db, 'chat_messages'),
-      where('chatId', '==', chatId),
-      where('senderId', '!=', userId),
-      where('isRead', '==', false)
-    );
+    const { error } = await supabase
+      .from('chat_messages')
+      .update({ is_read: true })
+      .eq('chat_id', chatId)
+      .neq('sender_id', userId)
+      .eq('is_read', false);
 
-    const querySnapshot = await getDocs(q);
-    
-    const updatePromises = querySnapshot.docs.map(docSnapshot => {
-      const messageRef = doc(db, 'chat_messages', docSnapshot.id);
-      return updateDoc(messageRef, { isRead: true });
-    });
-
-    await Promise.all(updatePromises);
+    if (error) throw error;
   }
 
   // Listen to chat messages in real-time
@@ -236,28 +189,25 @@ export class ChatService {
     chatId: string,
     callback: (messages: ChatMessage[]) => void
   ): () => void {
-    const q = query(
-      collection(db, 'chat_messages'),
-      where('chatId', '==', chatId),
-      orderBy('timestamp', 'asc')
-    );
+    const channel = supabase
+      .channel(`chat_${chatId}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'chat_messages',
+        filter: `chat_id=eq.${chatId}`
+      }, (payload) => {
+        // Re-fetch messages on any change
+        this.getChatMessages(chatId).then(callback).catch(console.error);
+      })
+      .subscribe();
 
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const messages: ChatMessage[] = [];
+    // Also fetch initial messages
+    this.getChatMessages(chatId).then(callback).catch(console.error);
 
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        messages.push({
-          id: doc.id,
-          ...data,
-          timestamp: data.timestamp ? (data.timestamp as Timestamp).toDate() : new Date()
-        } as ChatMessage);
-      });
-
-      callback(messages);
-    });
-
-    return unsubscribe;
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }
 
   // Send an offer
@@ -285,10 +235,15 @@ export class ChatService {
     messageId: string,
     accepted: boolean
   ): Promise<void> {
-    const messageRef = doc(db, 'chat_messages', messageId);
-    
-    await updateDoc(messageRef, {
-      'metadata.offerStatus': accepted ? 'accepted' : 'rejected'
-    });
+    const { error } = await supabase
+      .from('chat_messages')
+      .update({
+        metadata: {
+          offerStatus: accepted ? 'accepted' : 'rejected'
+        }
+      })
+      .eq('id', messageId);
+
+    if (error) throw error;
   }
 }

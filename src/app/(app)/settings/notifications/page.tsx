@@ -4,11 +4,10 @@ import { useState, useEffect } from 'react';
 
 // Force dynamic rendering to avoid prerender issues
 export const dynamic = 'force-dynamic';
-import { doc, updateDoc, onSnapshot } from 'firebase/firestore';
+import { supabase } from '@/lib/supabase';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { db } from '@/lib/firebase';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
@@ -26,11 +25,43 @@ export default function NotificationSettingsPage() {
     useEffect(() => {
         if (!user) return;
 
-        const userRef = doc(db, 'users', user.uid);
-        const unsubscribe = onSnapshot(userRef, (doc) => {
-            const userData = doc.data();
-            if (userData && userData.notificationSettings) {
-                setSettings(userData.notificationSettings);
+        // Set up real-time subscription for user settings
+        const channel = supabase
+            .channel(`user_settings_${user.id}`)
+            .on('postgres_changes', {
+                event: 'UPDATE',
+                schema: 'public',
+                table: 'users',
+                filter: `id=eq.${user.id}`
+            }, (payload) => {
+                const userData = payload.new;
+                if (userData && userData.notification_settings) {
+                    setSettings(userData.notification_settings);
+                } else {
+                    // Initialize with default settings if none exist
+                    setSettings({
+                        friendRequests: true,
+                        messages: true,
+                        postUpdates: true,
+                        comments: true,
+                        postLikes: true,
+                        eventInvites: true,
+                    });
+                }
+                setLoading(false);
+            })
+            .subscribe();
+
+        // Also fetch settings initially
+        const fetchSettings = async () => {
+            const { data, error } = await supabase
+                .from('users')
+                .select('notification_settings')
+                .eq('id', user.id)
+                .single();
+            
+            if (data && data.notification_settings) {
+                setSettings(data.notification_settings);
             } else {
                 // Initialize with default settings if none exist
                 setSettings({
@@ -43,9 +74,13 @@ export default function NotificationSettingsPage() {
                 });
             }
             setLoading(false);
-        });
+        };
+        
+        fetchSettings();
 
-        return () => unsubscribe();
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }, [user]);
 
     const handleSettingChange = async (key: keyof NotificationSettings, value: boolean) => {
@@ -55,10 +90,12 @@ export default function NotificationSettingsPage() {
         setSettings(newSettings);
 
         try {
-            const userRef = doc(db, 'users', user.uid);
-            await updateDoc(userRef, {
-                notificationSettings: newSettings
-            });
+            const { error } = await supabase
+                .from('users')
+                .update({ notification_settings: newSettings })
+                .eq('id', user.id);
+            
+            if (error) throw error;
             toast({ title: 'Settings updated successfully.' });
         } catch {
             toast({ variant: 'destructive', title: 'Error', description: 'Failed to update settings.' });

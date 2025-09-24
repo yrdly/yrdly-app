@@ -4,8 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { sendPasswordResetEmail } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { supabase } from '@/lib/supabase';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
@@ -60,7 +59,12 @@ function ForgotPasswordForm() {
   const onSubmit = async (values: z.infer<typeof passwordResetSchema>) => {
     setIsLoading(true);
     try {
-      await sendPasswordResetEmail(auth, values.email);
+      const { error } = await supabase.auth.resetPasswordForEmail(values.email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      
+      if (error) throw error;
+      
       setIsSubmitted(true);
       toast({
         title: "Password Reset Email Sent",
