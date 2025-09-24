@@ -31,16 +31,14 @@ export default function AuthCallback() {
           
           if (error) {
             console.error('Error setting session:', error);
-            router.push('/login-supabase?error=' + encodeURIComponent(error.message));
+            router.push('/login?error=' + encodeURIComponent(error.message));
             return;
           }
           
           if (data.session) {
             console.log('Session established:', data.session.user);
-            // Redirect to Supabase home after a short delay
-            setTimeout(() => {
-              router.push('/home');
-            }, 1000);
+            // Redirect to home immediately
+            router.push('/home');
             return;
           }
         }
@@ -50,30 +48,26 @@ export default function AuthCallback() {
         
         if (error) {
           console.error('Auth callback error:', error);
-          router.push('/login-supabase?error=' + encodeURIComponent(error.message));
+          router.push('/login?error=' + encodeURIComponent(error.message));
           return;
         }
 
         if (data.session) {
           console.log('User already authenticated:', data.session.user);
-          // Redirect to Supabase home after a short delay
-          setTimeout(() => {
-            router.push('/home');
-          }, 1000);
+          // Redirect to home immediately
+          router.push('/home');
         } else {
           console.log('No session found, redirecting to login');
-          router.push('/login-supabase');
+          router.push('/login');
         }
       } catch (error) {
         console.error('Unexpected error:', error);
-        router.push('/login-supabase?error=An unexpected error occurred');
+        router.push('/login?error=An unexpected error occurred');
       }
     };
 
-    // Add a small delay to ensure the page is fully loaded
-    const timeoutId = setTimeout(handleAuthCallback, 1000);
-    
-    return () => clearTimeout(timeoutId);
+    // Handle the callback immediately
+    handleAuthCallback();
   }, [router]);
 
   return (

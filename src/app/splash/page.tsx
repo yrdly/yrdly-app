@@ -20,14 +20,22 @@ export default function Splash() {
         }, 100);
 
         const redirectTimer = setTimeout(() => {
-             if (!loading) {
-                if (user) {
-                    router.replace('/home');
-                 } else {
-                    router.replace('/login');
-                }
+            // Always redirect after 3 seconds, regardless of loading state
+            if (user) {
+                router.replace('/home');
+            } else {
+                router.replace('/login');
             }
-        }, 2500);
+        }, 3000);
+
+        // Also redirect immediately if we have a definitive auth state
+        if (!loading) {
+            if (user) {
+                router.replace('/home');
+            } else {
+                router.replace('/login');
+            }
+        }
 
         return () => {
             clearTimeout(timer);
