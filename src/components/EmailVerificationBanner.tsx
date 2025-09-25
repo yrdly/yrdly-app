@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/hooks/use-supabase-auth';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { MailWarning, X, RefreshCw, CheckCircle } from 'lucide-react';
@@ -39,10 +39,10 @@ export function EmailVerificationBanner() {
             // Try to send verification email via Brevo, fallback to Firebase
             try {
                 // Create verification link with user ID as token
-                const verificationLink = `${window.location.origin}/verify-email?token=${user.uid}&email=${encodeURIComponent(user.email || '')}`;
+                const verificationLink = `${window.location.origin}/verify-email?token=${user.id}&email=${encodeURIComponent(user.email || '')}`;
                 
                 // Send verification email via Brevo
-                await BrevoEmailService.sendVerificationEmail(user.email || '', verificationLink, user.displayName || undefined);
+                await BrevoEmailService.sendVerificationEmail(user.email || '', verificationLink, user.user_metadata?.full_name || undefined);
                 
                 console.log('Verification email sent via Brevo');
             } catch (error: any) {
@@ -72,7 +72,7 @@ export function EmailVerificationBanner() {
         }
     };
 
-    if (!user || user.emailVerified || !isVisible) {
+    if (!user || user.email_confirmed_at || !isVisible) {
         return null;
     }
 

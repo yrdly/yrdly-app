@@ -8,7 +8,7 @@ import { supabase } from '@/lib/supabase';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/hooks/use-supabase-auth';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';

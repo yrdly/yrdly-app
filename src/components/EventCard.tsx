@@ -7,7 +7,7 @@ import { MapPin, Calendar, LinkIcon, MoreHorizontal, Edit, Trash2 } from "lucide
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth } from "@/hooks/use-supabase-auth";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { timeAgo } from "@/lib/utils";
 import { useRouter } from "next/navigation";
@@ -204,7 +204,7 @@ export function EventCard({ event }: EventCardProps) {
                   <p className="text-sm font-semibold">{event.author_name || 'Anonymous User'}</p>
                   <p className="text-xs text-muted-foreground">{timeAgo(event.timestamp ? new Date(event.timestamp) : null)}</p>
                </div>
-               {user?.uid === event.user_id && (
+                {user?.id === event.user_id && (
                  <AlertDialog>
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>

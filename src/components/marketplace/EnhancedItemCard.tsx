@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { BuyButton } from '@/components/escrow/BuyButton';
 import { ChatButton } from '@/components/escrow/ChatButton';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/hooks/use-supabase-auth';
 import { Edit, Trash2, MapPin, User, Calendar, Eye } from 'lucide-react';
 import { Post } from '@/types';
 import { MarketplaceItemDetail } from './MarketplaceItemDetail';
@@ -25,7 +25,7 @@ export function EnhancedItemCard({ item, onEditItem, onDeleteItem }: EnhancedIte
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
 
-  const isOwner = user?.uid === item.user_id;
+  const isOwner = user?.id === item.user_id;
   const hasImages = item.image_urls && item.image_urls.length > 0;
   const firstImage = hasImages && item.image_urls ? item.image_urls[0] : '/placeholder-item.jpg';
 

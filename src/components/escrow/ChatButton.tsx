@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/hooks/use-supabase-auth';
 import { ChatService } from '@/lib/chat-service';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
@@ -32,7 +32,7 @@ export function ChatButton({ itemId, itemTitle, itemImageUrl, sellerId, sellerNa
       return;
     }
 
-    if (user.uid === sellerId) {
+    if (user.id === sellerId) {
       toast({
         title: "Error",
         description: "You cannot chat with yourself",
@@ -47,7 +47,7 @@ export function ChatButton({ itemId, itemTitle, itemImageUrl, sellerId, sellerNa
       // Get or create chat with the specific seller
       const chatId = await ChatService.getOrCreateChat(
         itemId,
-        user.uid,
+        user.id,
         sellerId,
         itemTitle,
         itemImageUrl

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useAuth } from './use-auth';
+import { useAuth } from './use-supabase-auth';
 
 export const useUnreadMessages = () => {
   const { user } = useAuth();

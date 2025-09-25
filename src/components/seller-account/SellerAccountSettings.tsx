@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/hooks/use-supabase-auth';
 import { SellerAccountService } from '@/lib/seller-account-service';
 import { 
   SellerAccount, 
@@ -48,8 +48,8 @@ export function SellerAccountSettings() {
     try {
       setLoading(true);
       const [accountsData, payoutsData] = await Promise.all([
-        SellerAccountService.getSellerAccounts(user!.uid),
-        SellerAccountService.getPayoutHistory(user!.uid)
+        SellerAccountService.getSellerAccounts(user!.id),
+        SellerAccountService.getPayoutHistory(user!.id)
       ]);
       setAccounts(accountsData);
       setPayoutHistory(payoutsData);

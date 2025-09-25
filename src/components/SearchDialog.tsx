@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useRouter } from 'next/navigation';
 import { Loader2, User as UserIcon, Calendar, Map, ShoppingCart, FileText } from 'lucide-react';
 import { UserProfileDialog } from './UserProfileDialog';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/hooks/use-supabase-auth';
 
 
 type SearchResult = 
@@ -32,7 +32,7 @@ export function SearchDialog({ open, onOpenChange }: { open: boolean, onOpenChan
     const [results, setResults] = useState<SearchResult[]>([]);
     const [loading, setLoading] = useState(false);
     const router = useRouter();
-    const { user: currentUser, userDetails } = useAuth();
+    const { user: currentUser, profile: userDetails } = useAuth();
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
     const handleResultClick = (result: SearchResult) => {

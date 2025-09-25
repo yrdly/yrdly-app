@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 // Removed Firebase imports - using Supabase
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/hooks/use-supabase-auth';
 import { useToast } from '@/hooks/use-toast';
 
 export function PushNotificationManager() {

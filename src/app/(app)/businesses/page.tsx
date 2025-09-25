@@ -23,7 +23,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth } from "@/hooks/use-supabase-auth";
 import { CreateBusinessDialog } from "@/components/CreateBusinessDialog";
 import {
   AlertDialog,
@@ -92,7 +92,7 @@ function BusinessCard({ business }: { business: Business }) {
                     <CardTitle className="text-lg">{business.name}</CardTitle>
                     <CardDescription>{business.category}</CardDescription>
                 </div>
-                {user?.uid === business.owner_id && (
+                {user?.id === business.owner_id && (
                     <AlertDialog>
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/hooks/use-supabase-auth';
 import { EscrowService } from '@/lib/escrow-service';
 import { EscrowTransaction, EscrowStatus } from '@/types/escrow';
 import { EscrowStatusDisplay } from '@/components/escrow/EscrowStatusDisplay';
@@ -32,8 +32,8 @@ export default function TransactionsPage() {
     try {
       // Load both buyer and seller transactions
       const [buyerTransactions, sellerTransactions] = await Promise.all([
-        EscrowService.getUserTransactions(user.uid),
-        EscrowService.getSellerTransactions(user.uid)
+        EscrowService.getUserTransactions(user.id),
+        EscrowService.getSellerTransactions(user.id)
       ]);
 
       // Combine and sort by date
@@ -99,7 +99,7 @@ export default function TransactionsPage() {
   };
 
   const getRole = (transaction: EscrowTransaction) => {
-    return user?.uid === transaction.buyerId ? 'Buyer' : 'Seller';
+    return user?.id === transaction.buyerId ? 'Buyer' : 'Seller';
   };
 
   if (!user) {

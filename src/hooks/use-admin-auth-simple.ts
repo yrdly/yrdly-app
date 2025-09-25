@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useAuth } from './use-auth';
+import { useAuth } from './use-supabase-auth';
 import { AdminUser, UserRole, Permission } from '@/types/user-roles';
 
 export function useAdminAuth() {

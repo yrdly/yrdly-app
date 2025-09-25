@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { BuyButton } from '@/components/escrow/BuyButton';
 import { ChatButton } from '@/components/escrow/ChatButton';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/hooks/use-supabase-auth';
 import { Edit, Trash2, MapPin, User, Calendar, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Post } from '@/types';
 import { timeAgo } from '@/lib/utils';

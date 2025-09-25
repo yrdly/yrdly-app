@@ -7,7 +7,7 @@ import { DeliverySelector } from './DeliverySelector';
 import { DeliveryOption, DeliveryDetails, PaymentMethod } from '@/types/escrow';
 import { EscrowService } from '@/lib/escrow-service';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/hooks/use-supabase-auth';
 
 interface BuyButtonProps {
   itemId: string;
@@ -44,7 +44,7 @@ export function BuyButton({ itemId, itemTitle, price, sellerId, sellerName }: Bu
       return;
     }
 
-    if (user.uid === sellerId) {
+    if (user.id === sellerId) {
       toast({
         title: "Error",
         description: "You cannot buy your own item",
@@ -59,7 +59,7 @@ export function BuyButton({ itemId, itemTitle, price, sellerId, sellerName }: Bu
       // Create escrow transaction
       const transactionId = await EscrowService.createTransaction(
         itemId,
-        user.uid,
+        user.id,
         sellerId,
         price,
         selectedPaymentMethod,

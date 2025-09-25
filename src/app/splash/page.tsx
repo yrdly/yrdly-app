@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 // Force dynamic rendering to avoid prerender issues
 export const dynamic = 'force-dynamic';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/hooks/use-supabase-auth';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 

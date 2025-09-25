@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/hooks/use-supabase-auth';
 import { Edit, Trash2, MapPin, User, Calendar, X, ChevronLeft, ChevronRight, Clock, Link as LinkIcon } from 'lucide-react';
 import { Post } from '@/types';
 import { timeAgo } from '@/lib/utils';

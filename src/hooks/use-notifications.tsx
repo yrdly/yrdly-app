@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useAuth } from './use-auth';
+import { useAuth } from './use-supabase-auth';
 import { useToast } from './use-toast';
 
 export interface Notification {

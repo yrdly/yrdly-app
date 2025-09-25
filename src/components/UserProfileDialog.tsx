@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/hooks/use-supabase-auth';
 import type { User, FriendRequest } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -39,7 +39,7 @@ interface UserProfileDialogProps {
 }
 
 export function UserProfileDialog({ user: profileUser, open, onOpenChange }: UserProfileDialogProps) {
-    const { user: currentUser, userDetails } = useAuth();
+    const { user: currentUser, profile: userDetails } = useAuth();
     const { toast } = useToast();
     const router = useRouter();
 
@@ -60,7 +60,7 @@ export function UserProfileDialog({ user: profileUser, open, onOpenChange }: Use
                 return;
             }
             
-            setIsBlocked(userDetails.blockedUsers?.includes(profileUser.id) ?? false);
+            setIsBlocked(userDetails.blocked_users?.includes(profileUser.id) ?? false);
 
             if (userDetails.friends?.includes(profileUser.id)) {
                 setFriendshipStatus('friends');
@@ -348,7 +348,7 @@ export function UserProfileDialog({ user: profileUser, open, onOpenChange }: Use
     }
 
     const renderActionButtons = () => {
-        if (!profileUser || profileUser.uid === currentUser?.uid) return null;
+        if (!profileUser || profileUser.id === currentUser?.id) return null;
         
         if (isBlocked) {
             return (
@@ -388,7 +388,7 @@ export function UserProfileDialog({ user: profileUser, open, onOpenChange }: Use
                             <DialogTitle className="sr-only">{`Profile of ${profileUser.name}`}</DialogTitle>
                         </DialogHeader>
                         <CardHeader className="flex flex-col items-center text-center p-6 bg-muted/50 relative">
-                            {profileUser.uid !== currentUser?.uid && (
+                            {profileUser.id !== currentUser?.id && (
                                 <div className="absolute top-2 right-2">
                                      <AlertDialog>
                                         <DropdownMenu>

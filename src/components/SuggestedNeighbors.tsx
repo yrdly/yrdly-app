@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/hooks/use-supabase-auth';
 import type { User } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -12,7 +12,7 @@ import Link from 'next/link';
 import { Skeleton } from './ui/skeleton';
 
 export function SuggestedNeighbors() {
-    const { user, userDetails } = useAuth();
+    const { user, profile: userDetails } = useAuth();
     const [suggestions, setSuggestions] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
 

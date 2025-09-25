@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/hooks/use-supabase-auth';
 
 interface EmailVerificationGuardProps {
   children: React.ReactNode;
@@ -24,7 +24,7 @@ export function EmailVerificationGuard({
     if (!user) return;
 
     // If user is logged in but email is not verified, redirect to verification page
-    if (user && !user.emailVerified) {
+    if (user && !user.email_confirmed_at) {
       router.push(`${redirectTo}?email=${encodeURIComponent(user.email || '')}`);
     }
   }, [user, loading, router, redirectTo]);
@@ -39,7 +39,7 @@ export function EmailVerificationGuard({
   }
 
   // If user is not verified, don't render children (will redirect)
-  if (user && !user.emailVerified) {
+  if (user && !user.email_confirmed_at) {
     return null;
   }
 
