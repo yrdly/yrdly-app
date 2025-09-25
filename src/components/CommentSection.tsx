@@ -144,6 +144,13 @@ export function CommentSection({ postId }: CommentSectionProps) {
         }
 
         try {
+            console.log('CommentSection: Posting comment', {
+                postId,
+                userId: currentUser.id,
+                authorName: userDetails.name,
+                text: newComment
+            });
+
             // Add comment to Supabase
             const { error: commentError } = await supabase
                 .from('comments')
@@ -167,14 +174,22 @@ export function CommentSection({ postId }: CommentSectionProps) {
                 .eq('id', postId)
                 .single();
             
-            if (fetchError) throw fetchError;
-            
-            const { error: updateError } = await supabase
-                .from('posts')
-                .update({ comment_count: (postData.comment_count || 0) + 1 })
-                .eq('id', postId);
+            if (fetchError) {
+                console.error('Error fetching post for comment count update:', fetchError);
+                // Don't throw error here, comment was already posted successfully
+            } else {
+                const newCommentCount = (postData.comment_count || 0) + 1;
+                
+                const { error: updateError } = await supabase
+                    .from('posts')
+                    .update({ comment_count: newCommentCount })
+                    .eq('id', postId);
 
-            if (updateError) throw updateError;
+                if (updateError) {
+                    console.error('Error updating comment count:', updateError);
+                    // Don't throw error here, comment was already posted successfully
+                }
+            }
 
             setNewComment('');
             setReplyingTo(null);

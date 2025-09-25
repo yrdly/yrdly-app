@@ -74,9 +74,9 @@ export default function TransactionsPage() {
       case EscrowStatus.DISPUTED:
         return <AlertTriangle className="w-5 h-5 text-red-600" />;
       case EscrowStatus.CANCELLED:
-        return <XCircle className="w-5 h-5 text-gray-600" />;
+        return <XCircle className="w-5 h-5 text-gray-600 dark:text-gray-400" />;
       default:
-        return <Clock className="w-5 h-5 text-gray-600" />;
+        return <Clock className="w-5 h-5 text-gray-600 dark:text-gray-400" />;
     }
   };
 
@@ -106,8 +106,8 @@ export default function TransactionsPage() {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Transactions</h1>
-          <p className="text-gray-600">Please log in to view your transactions.</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">Transactions</h1>
+          <p className="text-gray-600 dark:text-gray-400">Please log in to view your transactions.</p>
         </div>
       </div>
     );
@@ -116,8 +116,8 @@ export default function TransactionsPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">My Transactions</h1>
-        <p className="text-gray-600">Track your marketplace purchases and sales</p>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">My Transactions</h1>
+        <p className="text-gray-600 dark:text-gray-400">Track your marketplace purchases and sales</p>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
@@ -135,13 +135,13 @@ export default function TransactionsPage() {
           {isLoading ? (
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-              <p className="mt-4 text-gray-600">Loading transactions...</p>
+              <p className="mt-4 text-gray-600 dark:text-gray-400">Loading transactions...</p>
             </div>
           ) : getFilteredTransactions().length === 0 ? (
             <div className="text-center py-8">
-              <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No transactions found</h3>
-              <p className="text-gray-600">
+              <Package className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No transactions found</h3>
+              <p className="text-gray-600 dark:text-gray-400">
                 {activeTab === 'all' 
                   ? "You haven't made any transactions yet."
                   : `No ${activeTab} transactions found.`

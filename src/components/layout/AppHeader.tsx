@@ -16,7 +16,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/use-supabase-auth';
 import { AuthService } from '@/lib/auth-service';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import Image from 'next/image';
 import { NotificationsPanel } from './NotificationsPanel';
 import { SearchDialog } from '../SearchDialog';
@@ -26,6 +26,7 @@ import { cn } from '@/lib/utils';
 export function AppHeader() {
   const { user, profile } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const unreadMessagesCount = useUnreadMessages();
 
@@ -56,10 +57,12 @@ export function AppHeader() {
         </div>
         
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setIsSearchOpen(true)}>
-            <Search className="h-5 w-5" />
-            <span className="sr-only">Search</span>
-          </Button>
+          {pathname === '/home' && (
+            <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setIsSearchOpen(true)}>
+              <Search className="h-5 w-5" />
+              <span className="sr-only">Search</span>
+            </Button>
+          )}
           <Link href="/map" className="md:hidden">
             <Button variant="ghost" size="icon" className="rounded-full">
                 <Map className="h-5 w-5" />

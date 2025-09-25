@@ -150,12 +150,7 @@ function EmptyBusinesses() {
                 <Briefcase className="h-12 w-12 text-muted-foreground" />
             </div>
             <h2 className="text-2xl font-bold">No businesses yet</h2>
-            <p className="text-muted-foreground mt-2 mb-6">Be the first to add a local business to the directory!</p>
-            <CreateBusinessDialog>
-                <Button>
-                    <Plus className="mr-2 h-4 w-4" /> Add Business
-                </Button>
-            </CreateBusinessDialog>
+            <p className="text-muted-foreground mt-2">Be the first to add a local business to the directory!</p>
         </div>
     )
 }
@@ -209,7 +204,7 @@ export default function BusinessesPage() {
        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
             <h1 className="text-2xl md:text-3xl font-bold font-headline">Local businesses</h1>
-            <p className="text-muted-foreground">Discover and support businesses in your neighborhood.</p>
+            <p className="text-muted-foreground dark:text-gray-300">Discover and support businesses in your neighborhood.</p>
         </div>
         <CreateBusinessDialog>
             <Button>
@@ -219,8 +214,11 @@ export default function BusinessesPage() {
        </div>
 
         <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            <Input placeholder="Search businesses..." className="pl-10" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground dark:text-gray-400" />
+            <Input 
+                placeholder="Search businesses..." 
+                className="pl-10 text-foreground dark:bg-gray-800 dark:text-gray-200 placeholder:text-muted-foreground dark:placeholder:text-gray-400" 
+            />
         </div>
         
         {loading ? (

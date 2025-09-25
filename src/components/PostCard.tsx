@@ -79,6 +79,12 @@ export function PostCard({ post }: PostCardProps) {
     if (!post.id) return;
     
     // Set initial values from post data
+    console.log('PostCard: Setting initial values', {
+      postId: post.id,
+      liked_by: post.liked_by,
+      comment_count: post.comment_count,
+      currentUser: currentUser?.id
+    });
     setLikes(post.liked_by?.length || 0);
     setCommentCount(post.comment_count || 0);
     if (currentUser && post.liked_by) {
@@ -97,25 +103,28 @@ export function PostCard({ post }: PostCardProps) {
           filter: `id=eq.${post.id}`,
         },
         (payload) => {
-          console.log('Post update received:', payload);
-                 if (payload.new) {
-                   const postData = payload.new as any;
-                   setLikes(postData.liked_by?.length || 0);
-                   setCommentCount(postData.comment_count || 0);
-                   if (currentUser && postData.liked_by) {
-                     setIsLiked(postData.liked_by.includes(currentUser.id));
-                   }
-                 }
+          if (payload.new) {
+            const postData = payload.new as any;
+            setLikes(postData.liked_by?.length || 0);
+            setCommentCount(postData.comment_count || 0);
+            if (currentUser && postData.liked_by) {
+              setIsLiked(postData.liked_by.includes(currentUser.id));
+            }
+          }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Post subscription status:', status);
+      });
 
     return () => {
       supabase.removeChannel(channel);
     };
   }, [post.id, post.liked_by, post.comment_count, currentUser]);
 
+
   const handleLike = async () => {
+    console.log('Like button clicked!', { currentUser: !!currentUser, postId: post.id });
     if (!currentUser || !post.id) return;
     
     // Trigger haptic feedback
@@ -131,6 +140,11 @@ export function PostCard({ post }: PostCardProps) {
 
       if (fetchError) {
         console.error('Error fetching post:', fetchError);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to like post. Please try again.",
+        });
         return;
       }
 
@@ -154,9 +168,23 @@ export function PostCard({ post }: PostCardProps) {
 
       if (updateError) {
         console.error('Error updating post:', updateError);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to like post. Please try again.",
+        });
+      } else {
+        // Update local state immediately for better UX
+        setLikes(newLikedBy.length);
+        setIsLiked(!userHasLiked);
       }
     } catch (error) {
       console.error('Error handling like:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to like post. Please try again.",
+      });
     }
   };
 
@@ -186,11 +214,11 @@ export function PostCard({ post }: PostCardProps) {
   const getCategoryBadge = (category: string) => {
     switch (category) {
       case "Event":
-        return <Badge variant="outline" className="bg-orange-100 text-orange-800 border-orange-200">{category}</Badge>;
+        return <Badge variant="outline" className="bg-orange-100 dark:bg-orange-900/20 text-orange-800 dark:text-orange-200 border-orange-200 dark:border-orange-800">{category}</Badge>;
       case "For Sale":
-        return <Badge variant="outline" className="bg-green-100 text-green-800 border-green-200">{category}</Badge>;
+        return <Badge variant="outline" className="bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-200 border-green-200 dark:border-green-800">{category}</Badge>;
       case "Business":
-         return <Badge variant="outline" className="bg-purple-100 text-purple-800 border-purple-200 flex items-center gap-1"><Briefcase className="h-3 w-3"/>{category}</Badge>;
+         return <Badge variant="outline" className="bg-purple-100 dark:bg-purple-900/20 text-purple-800 dark:text-purple-200 border-purple-200 dark:border-purple-800 flex items-center gap-1"><Briefcase className="h-3 w-3"/>{category}</Badge>;
       case "General":
       default:
         return <Badge variant="secondary">{category}</Badge>;

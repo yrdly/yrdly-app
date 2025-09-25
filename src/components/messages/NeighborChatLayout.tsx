@@ -18,8 +18,10 @@ interface Conversation {
   participant_ids: string[];
   last_message_text: string | null;
   last_message_timestamp: string | null;
+  last_message_sender_id: string | null;
   created_at: string;
   updated_at: string;
+  unread_count?: number;
 }
 
 interface ChatMessage {
@@ -28,6 +30,7 @@ interface ChatMessage {
   sender_id: string;
   sender_name: string;
   content: string;
+  text?: string; // Add text field for backward compatibility
   image_url: string | null;
   created_at: string;
   is_read: boolean;
@@ -58,8 +61,16 @@ export function NeighborChatLayout({ selectedConversationId }: NeighborChatLayou
       try {
         const { data, error } = await supabase
           .from('conversations')
-          .select('*')
-          .contains('participant_ids', [user.id])
+          .select(`
+            *,
+            messages(
+              id,
+              sender_id,
+              is_read,
+              read_by
+            )
+          `)
+          .contains('participant_ids', [user.id.toString()])
           .order('updated_at', { ascending: false });
 
         if (error) {
@@ -67,7 +78,20 @@ export function NeighborChatLayout({ selectedConversationId }: NeighborChatLayou
           return;
         }
 
-        setConversations(data || []);
+        // Calculate unread count for each conversation
+        const conversationsWithUnreadCount = (data || []).map(conv => {
+          const unreadCount = conv.messages?.filter((msg: any) => 
+            msg.sender_id !== user.id && 
+            (!msg.is_read || !msg.read_by?.includes(user.id.toString()))
+          ).length || 0;
+          
+          return {
+            ...conv,
+            unread_count: unreadCount
+          };
+        });
+
+        setConversations(conversationsWithUnreadCount);
         setLoading(false);
       } catch (error) {
         console.error('Error loading conversations:', error);
@@ -84,7 +108,7 @@ export function NeighborChatLayout({ selectedConversationId }: NeighborChatLayou
         event: '*', 
         schema: 'public', 
         table: 'conversations',
-        filter: `participant_ids.cs.{${user.id}}`
+        filter: `participant_ids.cs.{${user.id.toString()}}`
       }, () => {
         loadConversations();
       })
@@ -155,6 +179,23 @@ export function NeighborChatLayout({ selectedConversationId }: NeighborChatLayou
     }
   }, [selectedConversationId, conversations]);
 
+  // Mark messages as read when conversation is selected
+  useEffect(() => {
+    if (selectedConversation?.id && user?.id) {
+      const markAsRead = async () => {
+        try {
+          await supabase.rpc('mark_messages_as_read', {
+            p_conversation_id: selectedConversation.id,
+            p_user_id: user.id
+          });
+        } catch (error) {
+          console.error('Error marking messages as read:', error);
+        }
+      };
+      markAsRead();
+    }
+  }, [selectedConversation?.id, user?.id]);
+
   // Load messages for selected conversation
   useEffect(() => {
     if (!selectedConversation?.id) return;
@@ -163,7 +204,12 @@ export function NeighborChatLayout({ selectedConversationId }: NeighborChatLayou
       try {
         const { data, error } = await supabase
           .from('messages')
-          .select('*')
+          .select(`
+            *,
+            sender:sender_id (
+              name
+            )
+          `)
           .eq('conversation_id', selectedConversation.id)
           .order('timestamp', { ascending: true });
 
@@ -172,7 +218,19 @@ export function NeighborChatLayout({ selectedConversationId }: NeighborChatLayou
           return;
         }
 
-        setMessages(data || []);
+        // Map database fields to component interface
+        const mappedMessages = (data || []).map((msg: any) => ({
+          id: msg.id,
+          conversation_id: msg.conversation_id,
+          sender_id: msg.sender_id,
+          sender_name: msg.sender?.name || 'Unknown User',
+          content: msg.text || '', // Map 'text' field to 'content'
+          image_url: msg.image_url,
+          created_at: msg.timestamp || msg.created_at,
+          is_read: msg.is_read || false
+        }));
+
+        setMessages(mappedMessages);
       } catch (error) {
         console.error('Error loading messages:', error);
       }
@@ -242,7 +300,8 @@ export function NeighborChatLayout({ selectedConversationId }: NeighborChatLayou
         return;
       }
 
-      // Update conversation's last message
+      // The trigger will automatically update the conversation's last message
+      // But we can also update it manually to ensure it's immediate
       await supabase
         .from('conversations')
         .update({
@@ -330,11 +389,11 @@ export function NeighborChatLayout({ selectedConversationId }: NeighborChatLayou
                 >
                   <div className="relative">
                     <Avatar className="h-12 w-12 ring-2 ring-slate-200 dark:ring-slate-600 group-hover:ring-blue-300 dark:group-hover:ring-blue-600 transition-all">
-                      <AvatarImage src={otherParticipant.avatarUrl} alt={otherParticipant.name} />
+                    <AvatarImage src={otherParticipant.avatarUrl} alt={otherParticipant.name} />
                       <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-semibold">
                         {otherParticipant.name.charAt(0)}
                       </AvatarFallback>
-                    </Avatar>
+                  </Avatar>
                     {otherParticipant.isOnline && (
                       <div className="absolute -bottom-1 -right-1 h-4 w-4 bg-green-500 border-2 border-white dark:border-slate-800 rounded-full" />
                     )}
@@ -344,15 +403,29 @@ export function NeighborChatLayout({ selectedConversationId }: NeighborChatLayou
                       <h3 className="font-semibold text-slate-900 dark:text-slate-100 truncate">
                         {otherParticipant.name}
                       </h3>
-                      <span className="text-xs text-slate-500 dark:text-slate-400">
-                        {conversation.updated_at ? new Date(conversation.updated_at).toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        }) : ''}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-slate-500 dark:text-slate-400">
+                          {conversation.last_message_timestamp ? new Date(conversation.last_message_timestamp).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          }) : ''}
+                        </span>
+                        {conversation.unread_count && conversation.unread_count > 0 && (
+                          <div className="bg-blue-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-semibold">
+                            {conversation.unread_count > 99 ? '99+' : conversation.unread_count}
+                          </div>
+                        )}
+                      </div>
                     </div>
                     <p className="text-sm text-slate-600 dark:text-slate-400 truncate">
-                      {conversation.last_message_text || "No messages yet"}
+                      {conversation.last_message_text ? (
+                        <>
+                          {conversation.last_message_sender_id === user?.id ? 'You: ' : ''}
+                          {conversation.last_message_text}
+                        </>
+                      ) : (
+                        "No messages yet"
+                      )}
                     </p>
                   </div>
                   {selectedConversation?.id === conversation.id && (
@@ -406,11 +479,11 @@ export function NeighborChatLayout({ selectedConversationId }: NeighborChatLayou
           <div className="flex items-center gap-4">
             <div className="relative">
               <Avatar className="h-12 w-12 ring-2 ring-slate-200 dark:ring-slate-600">
-                <AvatarImage src={otherParticipant.avatarUrl} alt={otherParticipant.name} />
+            <AvatarImage src={otherParticipant.avatarUrl} alt={otherParticipant.name} />
                 <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-semibold">
                   {otherParticipant.name.charAt(0)}
                 </AvatarFallback>
-              </Avatar>
+          </Avatar>
               {otherParticipant.isOnline && (
                 <div className="absolute -bottom-1 -right-1 h-4 w-4 bg-green-500 border-2 border-white dark:border-slate-800 rounded-full" />
               )}
@@ -437,54 +510,54 @@ export function NeighborChatLayout({ selectedConversationId }: NeighborChatLayou
               </div>
             ) : (
               messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={cn(
-                    "flex gap-3",
-                    message.sender_id === user?.id ? "justify-end" : "justify-start"
-                  )}
-                >
-                  {message.sender_id !== user?.id && (
+              <div
+                key={message.id}
+                className={cn(
+                  "flex gap-3",
+                  message.sender_id === user?.id ? "justify-end" : "justify-start"
+                )}
+              >
+                {message.sender_id !== user?.id && (
                     <Avatar className="h-8 w-8 flex-shrink-0">
-                      <AvatarImage src={otherParticipant.avatarUrl} alt={otherParticipant.name} />
+                    <AvatarImage src={otherParticipant.avatarUrl} alt={otherParticipant.name} />
                       <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-xs">
                         {otherParticipant.name.charAt(0)}
                       </AvatarFallback>
-                    </Avatar>
-                  )}
-                  <div
-                    className={cn(
+                  </Avatar>
+                )}
+                <div
+                  className={cn(
                       "rounded-2xl px-4 py-3 max-w-xs lg:max-w-md break-words shadow-sm",
-                      message.sender_id === user?.id
+                    message.sender_id === user?.id
                         ? "bg-blue-500 text-white rounded-br-md"
                         : "bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-600 rounded-bl-md"
-                    )}
-                  >
-                    {message.image_url && (
+                  )}
+                >
+                  {message.image_url && (
                       <div className="relative w-full max-w-64 mb-2">
-                        <img
-                          src={message.image_url}
-                          alt="Chat image"
+                      <img
+                        src={message.image_url}
+                        alt="Chat image"
                           className="rounded-lg object-cover w-full h-auto max-h-64"
-                        />
-                      </div>
-                    )}
+                      />
+                    </div>
+                  )}
                     {message.content && (
                       <p className="whitespace-pre-wrap">{message.content}</p>
                     )}
-                    <p
-                      className={cn(
+                  <p
+                    className={cn(
                         "text-xs mt-2 opacity-70",
                         message.sender_id === user?.id ? "text-blue-100" : "text-slate-500 dark:text-slate-400"
-                      )}
-                    >
-                      {new Date(message.created_at).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </p>
-                  </div>
+                    )}
+                  >
+                    {new Date(message.created_at).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </p>
                 </div>
+              </div>
               ))
             )}
           </div>
@@ -637,8 +710,8 @@ export function NeighborChatLayout({ selectedConversationId }: NeighborChatLayou
                             />
                           </div>
                         )}
-                        {message.content && (
-                          <p className="whitespace-pre-wrap">{message.content}</p>
+                        {(message.content || message.text) && (
+                          <p className="whitespace-pre-wrap">{message.content || message.text}</p>
                         )}
                         <p
                           className={cn(
@@ -661,24 +734,24 @@ export function NeighborChatLayout({ selectedConversationId }: NeighborChatLayou
 
           {/* Mobile Message Input */}
           <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex-shrink-0">
-            {imagePreview && (
+          {imagePreview && (
               <div className="mb-4 relative inline-block">
-                <img
-                  src={imagePreview}
-                  alt="Preview"
+              <img
+                src={imagePreview}
+                alt="Preview"
                   className="w-32 h-32 object-cover rounded-lg border border-slate-200 dark:border-slate-600"
-                />
-                <Button
-                  type="button"
-                  variant="destructive"
-                  size="sm"
-                  className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0"
-                  onClick={removeImagePreview}
-                >
+              />
+              <Button
+                type="button"
+                variant="destructive"
+                size="sm"
+                className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0"
+                onClick={removeImagePreview}
+              >
                   &times;
-                </Button>
-              </div>
-            )}
+              </Button>
+            </div>
+          )}
             <form onSubmit={handleSendMessage} className="flex gap-3">
               <div className="flex-1 relative">
                 <Input
@@ -714,9 +787,9 @@ export function NeighborChatLayout({ selectedConversationId }: NeighborChatLayou
                 )}
               </Button>
             </form>
-          </div>
         </div>
+      </div>
       )}
-    </div>
+      </div>
   );
 }

@@ -42,6 +42,17 @@ export function WelcomeBanner() {
         }
     }, [user, profile]);
 
+    // Auto-dismiss after 4 seconds
+    useEffect(() => {
+        if (isVisible) {
+            const timer = setTimeout(() => {
+                handleDismiss();
+            }, 4000);
+
+            return () => clearTimeout(timer);
+        }
+    }, [isVisible]);
+
     const handleDismiss = () => {
         if (bannerType === 'welcome') {
             localStorage.setItem('hasSeenWelcomeBanner', 'true');

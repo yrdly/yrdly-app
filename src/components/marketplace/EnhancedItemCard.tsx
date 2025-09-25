@@ -96,7 +96,7 @@ export function EnhancedItemCard({ item, onEditItem, onDeleteItem }: EnhancedIte
                 className="w-8 h-8 p-0 bg-white/90 hover:bg-white"
                 onClick={() => onEditItem?.(item)}
               >
-                <Edit className="w-4 h-4 text-gray-700" />
+                <Edit className="w-4 h-4 text-gray-700 dark:text-gray-300" />
               </Button>
               <Button
                 size="sm"
@@ -113,12 +113,12 @@ export function EnhancedItemCard({ item, onEditItem, onDeleteItem }: EnhancedIte
         {/* Content */}
         <CardHeader className="pb-3">
           <div className="space-y-2">
-            <h3 className="font-semibold text-lg text-gray-900 line-clamp-2">
+            <h3 className="font-semibold text-lg text-foreground line-clamp-2">
               {item.title || item.text}
             </h3>
             
             {item.description && (
-              <p className="text-gray-600 text-sm line-clamp-2">
+              <p className="text-muted-foreground dark:text-gray-300 text-sm line-clamp-2">
                 {item.description}
               </p>
             )}
@@ -130,27 +130,27 @@ export function EnhancedItemCard({ item, onEditItem, onDeleteItem }: EnhancedIte
             {/* Price */}
             {item.price && (
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Price:</span>
-                <span className="font-bold text-lg text-green-600">
+                <span className="text-sm text-muted-foreground dark:text-gray-300">Price:</span>
+                <span className="font-bold text-lg text-green-600 dark:text-green-400">
                   {formatPrice(item.price)}
                 </span>
               </div>
             )}
 
             {/* Location */}
-            <div className="flex items-center space-x-2 text-sm text-gray-600">
+            <div className="flex items-center space-x-2 text-sm text-muted-foreground dark:text-gray-300">
               <MapPin className="w-4 h-4" />
               <span>Your Neighborhood</span>
             </div>
 
             {/* Author */}
-            <div className="flex items-center space-x-2 text-sm text-gray-600">
+            <div className="flex items-center space-x-2 text-sm text-muted-foreground dark:text-gray-300">
               <User className="w-4 h-4" />
               <span>{item.author_name || 'Unknown Seller'}</span>
             </div>
 
             {/* Date */}
-            <div className="flex items-center space-x-2 text-sm text-gray-600">
+            <div className="flex items-center space-x-2 text-sm text-muted-foreground dark:text-gray-300">
               <Calendar className="w-4 h-4" />
               <span>Posted {formatDate(item.timestamp)}</span>
             </div>
@@ -194,7 +194,7 @@ export function EnhancedItemCard({ item, onEditItem, onDeleteItem }: EnhancedIte
 
             {/* Owner Message */}
             {isOwner && (
-              <div className="text-center text-sm text-gray-500 py-2">
+              <div className="text-center text-sm text-muted-foreground py-2">
                 This is your item. Use the edit/delete buttons above to manage it.
               </div>
             )}
@@ -210,7 +210,7 @@ export function EnhancedItemCard({ item, onEditItem, onDeleteItem }: EnhancedIte
           </DialogHeader>
           
           <div className="space-y-4">
-            <p className="text-gray-600">
+            <p className="text-muted-foreground">
               Are you sure you want to delete &quot;{item.title || item.text}&quot;? This action cannot be undone.
             </p>
             

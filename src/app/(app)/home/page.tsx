@@ -98,7 +98,6 @@ export default function Home() {
         } else if (payload.eventType === 'UPDATE') {
           // Update existing post in the list
           const updatedPost = payload.new as PostType;
-          console.log('Updating post in home feed:', updatedPost);
           setPosts(prevPosts => 
             prevPosts.map(post => 
               post.id === updatedPost.id ? updatedPost : post

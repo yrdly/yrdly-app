@@ -6,13 +6,14 @@ import { Button } from "@/components/ui/button";
 // Force dynamic rendering to avoid prerender issues
 export const dynamic = 'force-dynamic';
 
-import { Plus, CalendarDays } from "lucide-react";
+import { Plus, CalendarDays, Search } from "lucide-react";
 import { CreateEventDialog } from "@/components/CreateEventDialog";
 import { useState, useEffect } from "react";
 import type { Post as PostType } from "@/types";
 import { supabase } from "@/lib/supabase";
 import { EventCard } from "@/components/EventCard";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
 
 function EmptyEvents() {
     return (
@@ -30,6 +31,7 @@ function EmptyEvents() {
 export default function EventsPage() {
     const [posts, setPosts] = useState<PostType[]>([]);
     const [loading, setLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState('');
 
     useEffect(() => {
         const fetchEvents = async () => {
@@ -98,7 +100,7 @@ export default function EventsPage() {
        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
             <h1 className="text-2xl md:text-3xl font-bold font-headline">Events</h1>
-            <p className="text-muted-foreground">Discover and create community events.</p>
+            <p className="text-muted-foreground dark:text-gray-300">Discover and create community events.</p>
         </div>
         <CreateEventDialog>
             <Button>
@@ -106,6 +108,16 @@ export default function EventsPage() {
             </Button>
         </CreateEventDialog>
        </div>
+
+        <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground dark:text-gray-400" />
+            <Input 
+                placeholder="Search events..." 
+                className="pl-10 h-12 rounded-full bg-muted border-none text-foreground dark:bg-gray-800 dark:text-gray-200 placeholder:text-muted-foreground dark:placeholder:text-gray-400"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+            />
+        </div>
         
         {loading ? (
              <div className="space-y-4 max-w-2xl mx-auto">
@@ -114,9 +126,16 @@ export default function EventsPage() {
              </div>
         ) : posts.length > 0 ? (
             <div className="space-y-4 max-w-2xl mx-auto">
-                {posts.map(event => (
-                    <EventCard key={event.id} event={event} />
-                ))}
+                {posts
+                    .filter(event => 
+                        searchTerm === '' || 
+                        event.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        event.text?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        event.event_location?.address?.toLowerCase().includes(searchTerm.toLowerCase())
+                    )
+                    .map(event => (
+                        <EventCard key={event.id} event={event} />
+                    ))}
             </div>
         ) : (
             <EmptyEvents />

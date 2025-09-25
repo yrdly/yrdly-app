@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Wifi, WifiOff, RefreshCw, CheckCircle, AlertCircle } from 'lucide-react';
 import { useOffline } from '@/hooks/use-offline';
 
@@ -13,7 +13,27 @@ export function OfflineStatus() {
     clearOfflineActions
   } = useOffline();
 
-  if (isOnline && !hasOfflineActions) {
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+
+  // Auto-dismiss success message after 4 seconds
+  useEffect(() => {
+    if (showSuccessMessage) {
+      const timer = setTimeout(() => {
+        setShowSuccessMessage(false);
+      }, 4000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [showSuccessMessage]);
+
+  // Show success message when all actions are synced
+  useEffect(() => {
+    if (isOnline && !hasOfflineActions && !isConnecting) {
+      setShowSuccessMessage(true);
+    }
+  }, [isOnline, hasOfflineActions, isConnecting]);
+
+  if (isOnline && !hasOfflineActions && !showSuccessMessage) {
     return null; // Don't show anything when online and no pending actions
   }
 
@@ -122,7 +142,7 @@ export function OfflineStatus() {
         )}
 
         {/* Success Message */}
-        {!hasOfflineActions && isOnline && (
+        {showSuccessMessage && (
           <div className="mt-3 flex items-center space-x-2 text-xs text-green-600 dark:text-green-400">
             <CheckCircle className="w-3 h-3" />
             <span>All data synced</span>

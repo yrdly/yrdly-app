@@ -113,44 +113,44 @@ export function BuyButton({ itemId, itemTitle, price, sellerId, sellerName }: Bu
 
         <div className="space-y-6">
           {/* Item Summary */}
-          <div className="bg-gray-50 rounded-lg p-4">
-            <h3 className="font-semibold text-gray-900">{itemTitle}</h3>
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+            <h3 className="font-semibold text-gray-900 dark:text-gray-100">{itemTitle}</h3>
             <div className="flex justify-between items-center mt-2">
-              <span className="text-gray-600">Item Price:</span>
-              <span className="font-semibold text-gray-900">₦{price.toLocaleString()}</span>
+              <span className="text-gray-600 dark:text-gray-400">Item Price:</span>
+              <span className="font-semibold text-gray-900 dark:text-gray-100">₦{price.toLocaleString()}</span>
             </div>
             <div className="flex justify-between items-center mt-1">
-              <span className="text-gray-600">Platform Fee (2%):</span>
-              <span className="text-gray-600">₦{commission.toLocaleString()}</span>
+              <span className="text-gray-600 dark:text-gray-400">Platform Fee (2%):</span>
+              <span className="text-gray-600 dark:text-gray-400">₦{commission.toLocaleString()}</span>
             </div>
             <div className="flex justify-between items-center mt-1">
-              <span className="text-gray-600">Seller Receives:</span>
-              <span className="text-gray-600">₦{sellerAmount.toLocaleString()}</span>
+              <span className="text-gray-600 dark:text-gray-400">Seller Receives:</span>
+              <span className="text-gray-600 dark:text-gray-400">₦{sellerAmount.toLocaleString()}</span>
             </div>
-            <div className="flex justify-between items-center mt-2 pt-2 border-t border-gray-200">
-              <span className="font-semibold text-gray-900">You Pay:</span>
-              <span className="font-bold text-lg text-green-600">₦{totalAmount.toLocaleString()}</span>
+            <div className="flex justify-between items-center mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
+              <span className="font-semibold text-gray-900 dark:text-gray-100">You Pay:</span>
+              <span className="font-bold text-lg text-green-600 dark:text-green-400">₦{totalAmount.toLocaleString()}</span>
             </div>
           </div>
 
           {/* Payment Method */}
-          <div className="bg-white rounded-lg border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Payment Method</h3>
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Payment Method</h3>
             <div className="space-y-3">
               {paymentMethods.map((method) => (
                 <div
                   key={method.value}
                   className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
                     selectedPaymentMethod === method.value
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-200 hover:border-gray-300'
+                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                      : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
                   }`}
                   onClick={() => setSelectedPaymentMethod(method.value)}
                 >
                   <div className="flex items-center space-x-3">
                     <div className="text-2xl">{method.icon}</div>
                     <div className="flex-1">
-                      <h4 className="font-medium text-gray-900">{method.label}</h4>
+                      <h4 className="font-medium text-gray-900 dark:text-gray-100">{method.label}</h4>
                     </div>
                     <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
                       selectedPaymentMethod === method.value

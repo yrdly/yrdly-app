@@ -44,6 +44,7 @@ export function EventCard({ event }: EventCardProps) {
   const [isAttending, setIsAttending] = useState(event.attendees?.includes(user?.id || '') || false);
   const [loadingAttending, setLoadingAttending] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -96,7 +97,7 @@ export function EventCard({ event }: EventCardProps) {
         
         toast({
           title: "Removed from event",
-          description: "You're no longer attending this event.",
+          description: "You're no longer interested in this event.",
         });
       } else {
         // Add user to attendees array
@@ -130,16 +131,16 @@ export function EventCard({ event }: EventCardProps) {
           } else {
             console.error('Failed to send event confirmation email:', emailResult.error);
             toast({
-              title: "Attendance confirmed",
-              description: "You're now attending this event!",
+              title: "Interest confirmed",
+              description: "You're now interested in this event!",
               variant: "default",
             });
           }
         } else {
-          toast({
-            title: "Attendance confirmed",
-            description: "You're now attending this event!",
-          });
+            toast({
+              title: "Interest confirmed",
+              description: "You're now interested in this event!",
+            });
         }
       }
     } catch (error) {
@@ -183,17 +184,21 @@ export function EventCard({ event }: EventCardProps) {
     <>
     <Card className="flex flex-col">
       <div onClick={handleCardClick} className="cursor-pointer">
-        {event.image_url && (
-          <div className="relative w-full h-48 rounded-t-lg overflow-hidden">
-            <Image
-              src={event.image_url}
-              alt={event.title || event.text}
-              fill
-              style={{ objectFit: "cover" }}
-              data-ai-hint="event image"
-            />
-          </div>
-        )}
+        <div className="relative w-full h-48 rounded-t-lg overflow-hidden">
+          <Image
+            src={event.image_url || event.image_urls?.[0] || '/placeholder-event.svg'}
+            alt={event.title || event.text}
+            fill
+            style={{ objectFit: "cover" }}
+            data-ai-hint="event image"
+          />
+          {/* Image count indicator for multiple images */}
+          {event.image_urls && event.image_urls.length > 1 && (
+            <div className="absolute top-2 right-2 bg-black/50 text-white px-2 py-1 rounded text-xs">
+              +{event.image_urls.length - 1}
+            </div>
+          )}
+        </div>
         <CardHeader>
            <div className="flex items-center space-x-3 mb-4">
                <Avatar>
@@ -213,16 +218,17 @@ export function EventCard({ event }: EventCardProps) {
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                             <CreateEventDialog postToEdit={event}>
-                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                    <Edit className="mr-2 h-4 w-4" />
-                                    <span>Edit</span>
-                                </DropdownMenuItem>
-                            </CreateEventDialog>
+                            <DropdownMenuItem onSelect={(e) => {
+                                e.preventDefault();
+                                setIsEditOpen(true);
+                            }}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                <span>Edit Event</span>
+                            </DropdownMenuItem>
                              <AlertDialogTrigger asChild>
                                 <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10">
                                     <Trash2 className="mr-2 h-4 w-4" />
-                                    <span>Delete</span>
+                                    <span>Delete Event</span>
                                 </DropdownMenuItem>
                             </AlertDialogTrigger>
                         </DropdownMenuContent>
@@ -279,11 +285,11 @@ export function EventCard({ event }: EventCardProps) {
           onClick={handleAttendingToggle}
           disabled={loadingAttending || !user}
         >
-          {loadingAttending ? "Processing..." : isAttending ? "Attending" : "Attend"}
+          {loadingAttending ? "Processing..." : isAttending ? "I'm interested" : "I'm interested"}
         </Button>
         
         <div className="flex flex-col items-end space-y-1">
-          <span className="text-sm text-muted-foreground">{attendeeCount} {attendeeCount === 1 ? 'attending' : 'attendees'}</span>
+          <span className="text-sm text-muted-foreground">{attendeeCount} {attendeeCount === 1 ? 'interested' : 'interested'}</span>
           
           {user?.email && (
             <p className="text-xs text-muted-foreground text-center">
@@ -300,10 +306,16 @@ export function EventCard({ event }: EventCardProps) {
       isOpen={isDetailOpen}
       onClose={() => setIsDetailOpen(false)}
       onEditEvent={(event) => {
-        // Handle edit event - you can implement this
-        console.log('Edit event:', event);
+        setIsDetailOpen(false);
+        setIsEditOpen(true);
       }}
       onDeleteEvent={handleDelete}
+    />
+
+    {/* Edit Event Dialog */}
+    <CreateEventDialog 
+      postToEdit={event}
+      onOpenChange={setIsEditOpen}
     />
     </>
   );

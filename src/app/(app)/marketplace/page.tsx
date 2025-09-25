@@ -148,15 +148,15 @@ export default function MarketplacePage() {
        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
             <h1 className="text-2xl md:text-3xl font-bold font-headline">For Sale & Free</h1>
-            <p className="text-muted-foreground">Buy and sell items in your neighborhood.</p>
+            <p className="text-muted-foreground dark:text-gray-300">Buy and sell items in your neighborhood.</p>
         </div>
        </div>
 
         <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground dark:text-gray-400" />
             <Input 
                 placeholder="Search For sale & free" 
-                className="pl-10 h-12 rounded-full bg-muted border-none"
+                className="pl-10 h-12 rounded-full bg-muted border-none text-foreground dark:bg-gray-800 dark:text-gray-200 placeholder:text-muted-foreground dark:placeholder:text-gray-400"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
             />

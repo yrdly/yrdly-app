@@ -32,6 +32,17 @@ export function EmailVerificationBanner() {
         }
     }, [lastSentTime]);
 
+    // Auto-dismiss after 4 seconds
+    useEffect(() => {
+        if (isVisible) {
+            const timer = setTimeout(() => {
+                setIsVisible(false);
+            }, 4000);
+
+            return () => clearTimeout(timer);
+        }
+    }, [isVisible]);
+
     const handleResend = async () => {
         if (!user || cooldownTime > 0) return;
         setIsSending(true);

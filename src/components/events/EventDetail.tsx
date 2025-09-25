@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useAuth } from '@/hooks/use-supabase-auth';
-import { Edit, Trash2, MapPin, User, Calendar, X, ChevronLeft, ChevronRight, Clock, Link as LinkIcon } from 'lucide-react';
+import { MapPin, User, Calendar, X, ChevronLeft, ChevronRight, Clock, Link as LinkIcon } from 'lucide-react';
 import { Post } from '@/types';
 import { timeAgo } from '@/lib/utils';
 import { CreateEventDialog } from '../CreateEventDialog';
@@ -40,8 +40,8 @@ export function EventDetail({
   const [loadingAttending, setLoadingAttending] = useState(false);
 
   const isOwner = user?.id === event.user_id;
-  const hasImages = event.image_urls && event.image_urls.length > 0;
-  const images = hasImages ? event.image_urls : ['/placeholder-event.jpg'];
+  const hasImages = (event.image_urls && event.image_urls.length > 0) || event.image_url;
+  const images = hasImages ? (event.image_urls || [event.image_url].filter(Boolean)) : ['/placeholder-event.svg'];
 
   const handleDelete = async () => {
     if (!onDeleteEvent) return;
@@ -104,15 +104,15 @@ export function EventDetail({
         } catch (emailError) {
           console.error('Failed to send confirmation email:', emailError);
           toast({
-            title: "Attendance confirmed",
-            description: "You're now attending this event!",
+            title: "Interest confirmed",
+            description: "You're now interested in this event!",
             variant: "default",
           });
         }
       } else {
         toast({
-          title: "Attendance confirmed",
-          description: "You're now attending this event!",
+          title: "Interest confirmed",
+          description: "You're now interested in this event!",
         });
       }
     } catch (error) {
@@ -226,7 +226,7 @@ export function EventDetail({
                         }`}
                       >
                         <Image
-                          src={image}
+                          src={image || '/placeholder-event.svg'}
                           alt={`Thumbnail ${index + 1}`}
                           fill
                           className="object-cover"
@@ -247,23 +247,8 @@ export function EventDetail({
                     <div className="flex items-center justify-between">
                       <h3 className="text-lg font-semibold">Event Details</h3>
                       {isOwner && (
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => onEditEvent?.(event)}
-                          >
-                            <Edit className="w-4 h-4 mr-2" />
-                            Edit
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => setIsDeleteDialogOpen(true)}
-                          >
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Delete
-                          </Button>
+                        <div className="text-sm text-muted-foreground">
+                          <p>This is your event. Use the 3 dots menu on the event card to edit or delete.</p>
                         </div>
                       )}
                     </div>
@@ -371,7 +356,7 @@ export function EventDetail({
                     <div className="text-center">
                       <p className="text-2xl font-bold text-primary">{attendeeCount}</p>
                       <p className="text-sm text-muted-foreground">
-                        {attendeeCount === 1 ? 'person attending' : 'people attending'}
+                        {attendeeCount === 1 ? 'person interested' : 'people interested'}
                       </p>
                     </div>
 
@@ -383,7 +368,7 @@ export function EventDetail({
                         variant={isAttending ? "outline" : "default"}
                       >
                         {loadingAttending ? 'Updating...' : 
-                         isAttending ? 'I\'m Attending' : 'I\'m Interested'}
+                         isAttending ? 'I\'m interested' : 'I\'m interested'}
                       </Button>
                     )}
 

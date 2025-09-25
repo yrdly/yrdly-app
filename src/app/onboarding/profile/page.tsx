@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { ArrowLeft, MapPin, User, Camera } from 'lucide-react';
+import { ArrowLeft, MapPin, User } from 'lucide-react';
 import { YrdlyLogo } from '@/components/ui/yrdly-logo';
 import { useToast } from '@/hooks/use-toast';
 import statesData from '@/data/states.json';
@@ -36,7 +36,6 @@ const profileFormSchema = z.object({
     ward: z.string().optional(),
     address: z.string().optional(),
   }),
-  avatar: z.string().optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
@@ -66,7 +65,6 @@ export default function OnboardingProfilePage() {
         ward: profile?.location?.ward || '',
         address: '',
       },
-      avatar: profile?.avatar_url || '',
     },
   });
 
@@ -149,12 +147,19 @@ export default function OnboardingProfilePage() {
       onboardingAnalytics.trackProfileSetupStarted(!!data.location.state);
 
       // Update user profile
+      console.log('Onboarding: Saving profile data:', {
+        name: data.fullName,
+        username: data.username,
+        location: data.location
+      });
+      
       await updateProfile({
         name: data.fullName,
         username: data.username,
         location: data.location,
-        avatar_url: data.avatar,
       });
+      
+      console.log('Onboarding: Profile update completed');
 
       // Complete profile setup
       await completeProfile();
@@ -163,7 +168,7 @@ export default function OnboardingProfilePage() {
       onboardingAnalytics.trackProfileSetupCompleted({
         hasUsername: !!data.username,
         hasLocation: !!data.location.state,
-        hasAvatar: !!data.avatar,
+        hasAvatar: false,
         locationCompleteness: calculateLocationCompleteness(data.location),
       });
 
@@ -364,25 +369,6 @@ export default function OnboardingProfilePage() {
                 </div>
               </div>
 
-              {/* Avatar (Optional) */}
-              <div className="space-y-2">
-                <Label htmlFor="avatar">Profile Picture (Optional)</Label>
-                <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center">
-                    <Camera className="w-6 h-6 text-muted-foreground" />
-                  </div>
-                  <div className="flex-1">
-                    <Input
-                      id="avatar"
-                      placeholder="Enter image URL"
-                      {...form.register('avatar')}
-                    />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      You can add a profile picture later
-                    </p>
-                  </div>
-                </div>
-              </div>
 
               <Alert>
                 <AlertDescription>

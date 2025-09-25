@@ -110,7 +110,7 @@ export default function MapPage() {
                     defaultZoom={10}
                     gestureHandling={'greedy'}
                     disableDefaultUI={true}
-                    mapId="1001e5ec758b37cf"
+                    mapId="7bdaf6c131a6958be5380043f"
                 >
                     {markers.map(marker => (
                          <AdvancedMarker key={marker.id} position={marker.position} onClick={() => handleMarkerClick(marker)}>

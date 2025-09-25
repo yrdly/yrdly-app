@@ -56,19 +56,47 @@ export default function ProfilePage() {
 
     useEffect(() => {
         if (profile) {
-            form.reset({
+            console.log('Profile data loaded:', {
+                name: profile.name,
+                bio: profile.bio,
+                location: profile.location,
+                state: profile.location?.state,
+                lga: profile.location?.lga,
+                fullProfile: profile
+            });
+            
+            // Reset form with profile data
+            const formData = {
                 name: profile.name || '',
                 bio: profile.bio || '',
                 locationState: profile.location?.state || '',
                 locationLga: profile.location?.lga || '',
-            });
+            };
+            
+            console.log('Resetting form with data:', formData);
+            form.reset(formData);
+            
+            // Set up LGA options if state is available
             if (profile.location?.state) {
-                setLgas(lgasByState[profile.location.state] || []);
+                const stateLgas = lgasByState[profile.location.state] || [];
+                console.log('Setting LGAs for state:', profile.location.state, stateLgas);
+                setLgas(stateLgas);
+            } else {
+                setLgas([]);
             }
         }
     }, [profile, form]);
 
+    // Debug form values
+    useEffect(() => {
+        const subscription = form.watch((value, { name, type }) => {
+            console.log('Form value changed:', { name, type, value });
+        });
+        return () => subscription.unsubscribe();
+    }, [form]);
+
     const handleStateChange = (state: string) => {
+        console.log('State changed to:', state);
         form.setValue('locationState', state);
         form.setValue('locationLga', '');
         setLgas(lgasByState[state] || []);
@@ -305,7 +333,7 @@ export default function ProfilePage() {
                                             render={({ field }) => (
                                                 <FormItem>
                                                     <FormLabel>State</FormLabel>
-                                                     <Select onValueChange={handleStateChange} defaultValue={field.value} disabled={!isEditMode}>
+                                                     <Select onValueChange={handleStateChange} value={field.value} disabled={!isEditMode} key={`state-${field.value}`}>
                                                         <FormControl><SelectTrigger><SelectValue placeholder="Select State" /></SelectTrigger></FormControl>
                                                         <SelectContent>
                                                             {allStates.map((state) => (<SelectItem key={state} value={state}>{state}</SelectItem>))}
@@ -321,7 +349,7 @@ export default function ProfilePage() {
                                             render={({ field }) => (
                                                 <FormItem>
                                                     <FormLabel>LGA</FormLabel>
-                                                    <Select onValueChange={field.onChange} value={field.value} disabled={!isEditMode || lgas.length === 0}>
+                                                    <Select onValueChange={field.onChange} value={field.value} disabled={!isEditMode || lgas.length === 0} key={`lga-${field.value}`}>
                                                         <FormControl><SelectTrigger><SelectValue placeholder="Select LGA" /></SelectTrigger></FormControl>
                                                         <SelectContent>
                                                             {lgas.map((lga) => (<SelectItem key={lga} value={lga}>{lga}</SelectItem>))}

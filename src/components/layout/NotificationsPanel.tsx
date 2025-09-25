@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, CheckCheck } from "lucide-react";
+import { Bell, CheckCheck, Trash2, X, MessageCircle, Heart, UserPlus, Calendar, ShoppingCart, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
     DropdownMenu,
@@ -14,12 +14,11 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useNotifications } from "@/hooks/use-notifications";
 import { useRouter } from "next/navigation";
-import { timeAgo } from "@/lib/utils"; // Assuming you have a timeAgo utility
-
+import { timeAgo } from "@/lib/utils";
 import { Notification } from "@/hooks/use-notifications";
-
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Trash2 } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 
 export function NotificationsPanel() {
     const { notifications, unreadCount, markAsRead, markAllAsRead, clearAllNotifications } = useNotifications();
@@ -27,28 +26,141 @@ export function NotificationsPanel() {
     const isMobile = useIsMobile();
 
     const handleNotificationClick = (notification: Notification) => {
+        // Mark as read first
         markAsRead(notification.id);
-        // Navigate to the related content
+        
+        // Navigate to the related content based on type and related_type
         switch (notification.type) {
             case 'friend_request':
             case 'friend_request_accepted':
+            case 'friend_request_declined':
                 router.push('/neighbors');
                 break;
             case 'message':
-                router.push(`/messages/${notification.relatedId}`);
+            case 'message_reaction':
+                if (notification.related_id) {
+                    router.push(`/messages/${notification.related_id}`);
+                } else {
+                    router.push('/messages');
+                }
                 break;
             case 'post_like':
-            case 'comment':
-                router.push(`/posts/${notification.relatedId}`);
+            case 'post_comment':
+            case 'post_share':
+                if (notification.related_id) {
+                    router.push(`/posts/${notification.related_id}`);
+                } else {
+                    router.push('/home');
+                }
                 break;
             case 'event_invite':
-                router.push('/events');
+            case 'event_reminder':
+            case 'event_cancelled':
+            case 'event_updated':
+                if (notification.related_id) {
+                    router.push(`/events`);
+                } else {
+                    router.push('/events');
+                }
                 break;
-            case 'post_update':
+            case 'marketplace_item_sold':
+            case 'marketplace_item_interest':
+            case 'marketplace_message':
+                if (notification.related_id) {
+                    router.push(`/marketplace`);
+                } else {
+                    router.push('/marketplace');
+                }
+                break;
+            case 'community_update':
                 router.push('/home');
                 break;
-            default:
+            case 'system_announcement':
+                router.push('/home');
                 break;
+            case 'welcome':
+                router.push('/home');
+                break;
+            case 'profile_view':
+                if (notification.sender_id) {
+                    router.push(`/neighbors`);
+                } else {
+                    router.push('/neighbors');
+                }
+                break;
+            case 'mention':
+                if (notification.related_id) {
+                    router.push(`/posts/${notification.related_id}`);
+                } else {
+                    router.push('/home');
+                }
+                break;
+            default:
+                router.push('/home');
+                break;
+        }
+    };
+
+    const getNotificationIcon = (type: string) => {
+        switch (type) {
+            case 'friend_request':
+            case 'friend_request_accepted':
+            case 'friend_request_declined':
+                return <UserPlus className="h-4 w-4" />;
+            case 'message':
+            case 'message_reaction':
+                return <MessageCircle className="h-4 w-4" />;
+            case 'post_like':
+                return <Heart className="h-4 w-4" />;
+            case 'post_comment':
+            case 'post_share':
+                return <MessageCircle className="h-4 w-4" />;
+            case 'event_invite':
+            case 'event_reminder':
+            case 'event_cancelled':
+            case 'event_updated':
+                return <Calendar className="h-4 w-4" />;
+            case 'marketplace_item_sold':
+            case 'marketplace_item_interest':
+            case 'marketplace_message':
+                return <ShoppingCart className="h-4 w-4" />;
+            case 'community_update':
+            case 'system_announcement':
+            case 'welcome':
+                return <AlertCircle className="h-4 w-4" />;
+            case 'profile_view':
+                return <UserPlus className="h-4 w-4" />;
+            case 'mention':
+                return <MessageCircle className="h-4 w-4" />;
+            default:
+                return <Bell className="h-4 w-4" />;
+        }
+    };
+
+    const getNotificationColor = (type: string) => {
+        switch (type) {
+            case 'friend_request':
+            case 'friend_request_accepted':
+                return 'text-blue-600 dark:text-blue-400';
+            case 'message':
+            case 'message_reaction':
+                return 'text-green-600 dark:text-green-400';
+            case 'post_like':
+                return 'text-red-600 dark:text-red-400';
+            case 'post_comment':
+            case 'post_share':
+                return 'text-purple-600 dark:text-purple-400';
+            case 'event_invite':
+            case 'event_reminder':
+                return 'text-orange-600 dark:text-orange-400';
+            case 'marketplace_item_sold':
+            case 'marketplace_item_interest':
+            case 'marketplace_message':
+                return 'text-emerald-600 dark:text-emerald-400';
+            case 'system_announcement':
+                return 'text-yellow-600 dark:text-yellow-400';
+            default:
+                return 'text-gray-600 dark:text-gray-400';
         }
     };
 
@@ -90,20 +202,71 @@ export function NotificationsPanel() {
                                 <DropdownMenuItem
                                     key={notif.id}
                                     onSelect={() => handleNotificationClick(notif)}
-                                    className={`flex items-start gap-3 whitespace-normal ${!notif.isRead ? 'bg-muted/50' : ''}`}
+                                    className={`flex items-start gap-3 whitespace-normal p-3 ${!notif.is_read ? 'bg-muted/50' : ''}`}
                                 >
-                                    <div className={`mt-1 h-2 w-2 rounded-full ${!notif.isRead ? 'bg-primary' : 'bg-transparent'}`} />
-                                    <div className="flex-1">
-                                        <p className="text-sm">{notif.message}</p>
-                                        <p className="text-xs text-muted-foreground">
-                                            {timeAgo(new Date(notif.createdAt))}
-                                        </p>
+                                    {/* Notification indicator */}
+                                    <div className={`mt-1 h-2 w-2 rounded-full ${!notif.is_read ? 'bg-primary' : 'bg-transparent'}`} />
+                                    
+                                    {/* Icon */}
+                                    <div className={`flex-shrink-0 ${getNotificationColor(notif.type)}`}>
+                                        {getNotificationIcon(notif.type)}
+                                    </div>
+                                    
+                                    {/* Content */}
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-start justify-between gap-2">
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-sm font-medium truncate">{notif.title}</p>
+                                                <p className="text-sm text-muted-foreground line-clamp-2">{notif.message}</p>
+                                            </div>
+                                            
+                                            {/* Type badge */}
+                                            <Badge variant="outline" className="text-xs shrink-0">
+                                                {notif.type.replace('_', ' ')}
+                                            </Badge>
+                                        </div>
+                                        
+                                        <div className="flex items-center justify-between mt-2">
+                                            <p className="text-xs text-muted-foreground">
+                                                {timeAgo(new Date(notif.created_at))}
+                                            </p>
+                                            
+                                            {/* Action buttons */}
+                                            <div className="flex items-center gap-1">
+                                                {!notif.is_read && (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="h-6 w-6 p-0"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            markAsRead(notif.id);
+                                                        }}
+                                                    >
+                                                        <CheckCheck className="h-3 w-3" />
+                                                    </Button>
+                                                )}
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        // Add delete functionality here
+                                                    }}
+                                                >
+                                                    <X className="h-3 w-3" />
+                                                </Button>
+                                            </div>
+                                        </div>
                                     </div>
                                 </DropdownMenuItem>
                             ))
                         ) : (
                             <div className="text-center text-sm text-muted-foreground py-10">
-                                You have no notifications.
+                                <Bell className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                                <p>You have no notifications.</p>
+                                <p className="text-xs mt-1">We&apos;ll notify you when something happens!</p>
                             </div>
                         )}
                     </DropdownMenuGroup>

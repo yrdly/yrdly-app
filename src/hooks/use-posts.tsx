@@ -175,7 +175,7 @@ export const usePosts = () => {
         const finalBusinessData = {
             ...businessData,
             owner_id: user.id,
-            imageUrls,
+            image_urls: imageUrls,
         }
 
         if (businessIdToUpdate) {

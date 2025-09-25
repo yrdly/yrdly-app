@@ -48,8 +48,7 @@ const getFormSchema = (isEditMode: boolean, postToEdit?: Post) => z.object({
   location: z.custom<LocationValue>().refine(value => value && value.address.length > 0, {
     message: "Location is required.",
   }),
-  eventDate: z.string().min(1, "Date can't be empty."),
-  eventTime: z.string().min(1, "Time can't be empty."),
+  eventDateTime: z.string().min(1, "Date and time are required."),
   eventLink: z.string().url("Please enter a valid URL.").min(1, "Event link is required."),
   image: z.any().refine((files) => files && (files.length > 0 || (Array.isArray(files) && files.some(f => typeof f === 'string'))), "An image is required for the event."),
 });
@@ -77,8 +76,7 @@ const CreateEventDialogComponent = memo(function CreateEventDialog({ children, o
       title: "",
       description: "",
       location: { address: "" },
-      eventDate: "",
-      eventTime: "",
+      eventDateTime: "",
       eventLink: "",
       image: undefined,
     },
@@ -95,12 +93,16 @@ const CreateEventDialogComponent = memo(function CreateEventDialog({ children, o
       // Use setTimeout to ensure this runs after the dialog is fully opened
       const timer = setTimeout(() => {
         if (isEditMode && postToEdit) {
+          // Combine date and time for datetime-local input
+          const eventDateTime = postToEdit.event_date && postToEdit.event_time 
+            ? `${postToEdit.event_date}T${postToEdit.event_time}`
+            : '';
+          
           stableFormReset({
             title: postToEdit.title,
             description: postToEdit.description,
             location: postToEdit.event_location,
-            eventDate: postToEdit.event_date,
-            eventTime: postToEdit.event_time,
+            eventDateTime: eventDateTime,
             eventLink: postToEdit.event_link,
             image: postToEdit.image_urls || [],
           });
@@ -109,8 +111,7 @@ const CreateEventDialogComponent = memo(function CreateEventDialog({ children, o
             title: "",
             description: "",
             location: { address: "" },
-            eventDate: "",
-            eventTime: "",
+            eventDateTime: "",
             eventLink: "",
             image: undefined,
           });
@@ -123,13 +124,19 @@ const CreateEventDialogComponent = memo(function CreateEventDialog({ children, o
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
+    
+    // Parse datetime-local input to separate date and time
+    const eventDateTime = new Date(values.eventDateTime);
+    const eventDate = eventDateTime.toISOString().split('T')[0];
+    const eventTime = eventDateTime.toTimeString().split(' ')[0].substring(0, 5);
+    
     const eventData: Partial<Post> = {
         category: "Event",
         text: values.description,
         title: values.title,
         event_location: values.location,
-        event_date: values.eventDate,
-        event_time: values.eventTime,
+        event_date: eventDate,
+        event_time: eventTime,
         event_link: values.eventLink,
         attendees: postToEdit?.attendees || [],
     };
@@ -216,30 +223,23 @@ const CreateEventDialogComponent = memo(function CreateEventDialog({ children, o
                                 </FormItem>
                               )}
                             />
-                            <div className="grid grid-cols-2 gap-4">
-                                <FormField
-                                    control={form.control}
-                                    name="eventDate"
-                                    render={({ field }) => (
-                                      <FormItem>
-                                         <FormLabel>Date</FormLabel>
-                                        <FormControl><Input type="date" {...field} /></FormControl>
-                                         <FormMessage />
-                                      </FormItem>
-                                    )}
-                                  />
-                                 <FormField
-                                    control={form.control}
-                                    name="eventTime"
-                                    render={({ field }) => (
-                                      <FormItem>
-                                         <FormLabel>Time</FormLabel>
-                                        <FormControl><Input type="time" {...field} /></FormControl>
-                                        <FormMessage />
-                                      </FormItem>
-                                    )}
-                                  />
-                            </div>
+                            <FormField
+                                control={form.control}
+                                name="eventDateTime"
+                                render={({ field }) => (
+                                  <FormItem>
+                                     <FormLabel>Date & Time</FormLabel>
+                                    <FormControl>
+                                        <Input 
+                                            type="datetime-local" 
+                                            {...field}
+                                            min={new Date().toISOString().slice(0, 16)}
+                                        />
+                                    </FormControl>
+                                     <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
                             <FormField
                                 control={form.control}
                                 name="eventLink"
@@ -333,30 +333,23 @@ const CreateEventDialogComponent = memo(function CreateEventDialog({ children, o
                         </FormItem>
                       )}
                     />
-                    <div className="grid grid-cols-2 gap-4">
-                        <FormField
-                            control={form.control}
-                            name="eventDate"
-                            render={({ field }) => (
-                              <FormItem>
-                                 <FormLabel>Date</FormLabel>
-                                <FormControl><Input type="date" {...field} /></FormControl>
-                                 <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                         <FormField
-                            control={form.control}
-                            name="eventTime"
-                            render={({ field }) => (
-                              <FormItem>
-                                 <FormLabel>Time</FormLabel>
-                                <FormControl><Input type="time" {...field} /></FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                    </div>
+                    <FormField
+                        control={form.control}
+                        name="eventDateTime"
+                        render={({ field }) => (
+                          <FormItem>
+                             <FormLabel>Date & Time</FormLabel>
+                            <FormControl>
+                                <Input 
+                                    type="datetime-local" 
+                                    {...field}
+                                    min={new Date().toISOString().slice(0, 16)}
+                                />
+                            </FormControl>
+                             <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                     <FormField
                         control={form.control}
                         name="eventLink"

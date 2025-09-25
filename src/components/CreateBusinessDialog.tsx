@@ -25,6 +25,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Form,
   FormControl,
   FormField,
@@ -42,10 +49,32 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { LocationInput, LocationValue } from "./LocationInput";
 import type { Business } from "@/types";
 
+// Business categories list
+const BUSINESS_CATEGORIES = [
+  "Restaurant & Food",
+  "Retail & Shopping",
+  "Health & Wellness",
+  "Beauty & Personal Care",
+  "Automotive",
+  "Home & Garden",
+  "Professional Services",
+  "Entertainment & Recreation",
+  "Education & Training",
+  "Technology & Electronics",
+  "Real Estate",
+  "Financial Services",
+  "Travel & Tourism",
+  "Sports & Fitness",
+  "Arts & Crafts",
+  "Pet Services",
+  "Cleaning Services",
+  "Repair & Maintenance",
+  "Other"
+];
 
 const getFormSchema = (isEditMode: boolean, postToEdit?: Business) => z.object({
   name: z.string().min(1, "Business name can't be empty."),
-  category: z.string().min(1, "Category can't be empty."),
+  category: z.string().min(1, "Please select a category."),
   description: z.string().optional(),
   location: z.custom<LocationValue>().refine(value => value && value.address.length > 0, {
     message: "Location is required.",
@@ -191,7 +220,20 @@ const CreateBusinessDialogComponent = ({ children, postToEdit, onOpenChange }: C
                                 render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Category</FormLabel>
-                                    <FormControl><Input placeholder="e.g., Food & Drink" {...field} autoComplete="off" /></FormControl>
+                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                        <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select a category" />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            {BUSINESS_CATEGORIES.map((category) => (
+                                                <SelectItem key={category} value={category}>
+                                                    {category}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                     <FormMessage />
                                 </FormItem>
                                 )}
@@ -297,7 +339,20 @@ const CreateBusinessDialogComponent = ({ children, postToEdit, onOpenChange }: C
                         render={({ field }) => (
                         <FormItem>
                             <FormLabel>Category</FormLabel>
-                            <FormControl><Input placeholder="e.g., Food & Drink" {...field} autoComplete="off" /></FormControl>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select a category" />
+                                    </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    {BUSINESS_CATEGORIES.map((category) => (
+                                        <SelectItem key={category} value={category}>
+                                            {category}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                             <FormMessage />
                         </FormItem>
                         )}

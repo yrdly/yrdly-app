@@ -8,9 +8,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useRouter } from 'next/navigation';
-import { Loader2, User as UserIcon, Calendar, Map, ShoppingCart, FileText } from 'lucide-react';
+import { Loader2, User as UserIcon, Calendar, Map, ShoppingCart, FileText, Image as ImageIcon } from 'lucide-react';
 import { UserProfileDialog } from './UserProfileDialog';
 import { useAuth } from '@/hooks/use-supabase-auth';
+import Image from 'next/image';
 
 
 type SearchResult = 
@@ -70,7 +71,7 @@ export function SearchDialog({ open, onOpenChange }: { open: boolean, onOpenChan
                 const { data: usersData, error: usersError } = await supabase
                     .from('users')
                     .select('*')
-                    .ilike('name', `%${searchTerm}%`);
+                    .or(`name.ilike.%${searchTerm}%,bio.ilike.%${searchTerm}%`);
                 
                 if (!usersError && usersData) {
                     const usersResults = usersData.map(user => ({ type: 'user', data: user as User } as SearchResult));
@@ -81,13 +82,14 @@ export function SearchDialog({ open, onOpenChange }: { open: boolean, onOpenChan
                 const { data: postsData, error: postsError } = await supabase
                     .from('posts')
                     .select('*')
-                    .or(`text.ilike.%${searchTerm}%,title.ilike.%${searchTerm}%`);
+                    .or(`text.ilike.%${searchTerm}%,title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
                 
                 if (!postsError && postsData) {
                     const postsResults = postsData
                         .filter(post => 
                             post.text?.toLowerCase().includes(lowerCaseSearchTerm) || 
-                            post.title?.toLowerCase().includes(lowerCaseSearchTerm)
+                            post.title?.toLowerCase().includes(lowerCaseSearchTerm) ||
+                            post.description?.toLowerCase().includes(lowerCaseSearchTerm)
                         )
                         .map(post => ({ type: 'post', data: post as Post } as SearchResult));
                     searchResults.push(...postsResults);
@@ -113,26 +115,78 @@ export function SearchDialog({ open, onOpenChange }: { open: boolean, onOpenChan
             case 'user':
                 const user = result.data;
                 return (
-                    <div key={`user-${user.id}`} className="flex items-center gap-4 p-2 rounded-md hover:bg-muted cursor-pointer" onClick={() => handleResultClick(result)}>
-                        <Avatar className="h-9 w-9"><AvatarImage src={user.avatarUrl} alt={user.name} /><AvatarFallback>{user.name.charAt(0)}</AvatarFallback></Avatar>
-                        <div><p className="font-semibold">{user.name}</p><p className="text-sm text-muted-foreground">{user.location?.lga}</p></div>
+                    <div key={`user-${user.id}`} className="flex items-center gap-4 p-3 rounded-md hover:bg-muted cursor-pointer" onClick={() => handleResultClick(result)}>
+                        <Avatar className="h-12 w-12">
+                            <AvatarImage src={user.avatarUrl} alt={user.name} />
+                            <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                            <p className="font-semibold truncate">{user.name}</p>
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                {user.location?.lga && <span>{user.location.lga}</span>}
+                                {user.location?.state && <span>• {user.location.state}</span>}
+                                {user.bio && <span>• {user.bio}</span>}
+                            </div>
+                        </div>
                     </div>
                 );
             case 'post':
                 const post = result.data;
-                const Icon = post.category === 'Event' ? Calendar : FileText;
+                const hasImages = post.image_urls && post.image_urls.length > 0;
+                const firstImage = hasImages && post.image_urls ? post.image_urls[0] : null;
+                const Icon = post.category === 'Event' ? Calendar : post.category === 'For Sale' ? ShoppingCart : FileText;
+                
                 return (
-                    <div key={`post-${post.id}`} className="flex items-center gap-4 p-2 rounded-md hover:bg-muted cursor-pointer" onClick={() => handleResultClick(result)}>
-                        <div className="bg-muted p-2 rounded-md"><Icon className="h-5 w-5 text-muted-foreground"/></div>
-                        <div><p className="font-semibold">{post.title || post.text}</p><p className="text-sm text-muted-foreground">{post.category}</p></div>
+                    <div key={`post-${post.id}`} className="flex items-center gap-4 p-3 rounded-md hover:bg-muted cursor-pointer" onClick={() => handleResultClick(result)}>
+                        {/* Image or Icon */}
+                        <div className="flex-shrink-0">
+                            {firstImage ? (
+                                <div className="relative w-12 h-12 rounded-md overflow-hidden">
+                                    <Image
+                                        src={firstImage}
+                                        alt={post.title || post.text}
+                                        fill
+                                        className="object-cover"
+                                        sizes="48px"
+                                    />
+                                </div>
+                            ) : (
+                                <div className="w-12 h-12 bg-muted rounded-md flex items-center justify-center">
+                                    <Icon className="h-6 w-6 text-muted-foreground"/>
+                                </div>
+                            )}
+                        </div>
+                        
+                        {/* Content */}
+                        <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                                <p className="font-semibold truncate">{post.title || post.text}</p>
+                                <span className="text-xs bg-muted px-2 py-1 rounded-full text-muted-foreground">
+                                    {post.category}
+                                </span>
+                            </div>
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <span>by {post.author_name}</span>
+                                {post.price && (
+                                    <span className="text-green-600 dark:text-green-400 font-medium">
+                                        ₦{post.price.toLocaleString()}
+                                    </span>
+                                )}
+                            </div>
+                        </div>
                     </div>
                 );
             case 'page':
                 const page = result.data;
                 return (
-                    <div key={`page-${page.path}`} className="flex items-center gap-4 p-2 rounded-md hover:bg-muted cursor-pointer" onClick={() => handleResultClick(result)}>
-                        <div className="bg-muted p-2 rounded-md"><page.icon className="h-5 w-5 text-muted-foreground"/></div>
-                        <div><p className="font-semibold">{page.name}</p><p className="text-sm text-muted-foreground">Page</p></div>
+                    <div key={`page-${page.path}`} className="flex items-center gap-4 p-3 rounded-md hover:bg-muted cursor-pointer" onClick={() => handleResultClick(result)}>
+                        <div className="w-12 h-12 bg-muted rounded-md flex items-center justify-center">
+                            <page.icon className="h-6 w-6 text-muted-foreground"/>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <p className="font-semibold">{page.name}</p>
+                            <p className="text-sm text-muted-foreground">Navigate to page</p>
+                        </div>
                     </div>
                 );
         }

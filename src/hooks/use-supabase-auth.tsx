@@ -240,9 +240,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const updateProfile = async (updates: Partial<AuthUser>) => {
     if (!user) throw new Error('No user logged in');
     
+    console.log('Auth hook: updateProfile called with:', updates);
+    
     try {
       await AuthService.updateUserProfile(user.id, updates);
-      setProfile(prev => prev ? { ...prev, ...updates } : null);
+      console.log('Auth hook: Profile updated in database');
+      
+      const updatedProfile = profile ? { ...profile, ...updates } : null;
+      console.log('Auth hook: Setting profile to:', updatedProfile);
+      setProfile(updatedProfile);
     } catch (error) {
       console.error('Error updating profile:', error);
       throw error;
