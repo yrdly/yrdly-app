@@ -90,7 +90,6 @@ export function NeighborChatLayout({ selectedConversationId }: NeighborChatLayou
             unread_count: unreadCount
           };
         });
-
         setConversations(conversationsWithUnreadCount);
         setLoading(false);
       } catch (error) {
@@ -204,12 +203,7 @@ export function NeighborChatLayout({ selectedConversationId }: NeighborChatLayou
       try {
         const { data, error } = await supabase
           .from('messages')
-          .select(`
-            *,
-            sender:sender_id (
-              name
-            )
-          `)
+          .select('*')
           .eq('conversation_id', selectedConversation.id)
           .order('timestamp', { ascending: true });
 
@@ -219,16 +213,19 @@ export function NeighborChatLayout({ selectedConversationId }: NeighborChatLayou
         }
 
         // Map database fields to component interface
-        const mappedMessages = (data || []).map((msg: any) => ({
-          id: msg.id,
-          conversation_id: msg.conversation_id,
-          sender_id: msg.sender_id,
-          sender_name: msg.sender?.name || 'Unknown User',
-          content: msg.text || '', // Map 'text' field to 'content'
-          image_url: msg.image_url,
-          created_at: msg.timestamp || msg.created_at,
-          is_read: msg.is_read || false
-        }));
+        const mappedMessages = (data || []).map((msg: any) => {
+          const senderName = participants[msg.sender_id]?.name || 'Unknown User';
+          return {
+            id: msg.id,
+            conversation_id: msg.conversation_id,
+            sender_id: msg.sender_id,
+            sender_name: senderName,
+            content: msg.text || '', // Map 'text' field to 'content'
+            image_url: msg.image_url,
+            created_at: msg.timestamp || msg.created_at,
+            is_read: msg.is_read || false
+          };
+        });
 
         setMessages(mappedMessages);
       } catch (error) {
@@ -254,7 +251,7 @@ export function NeighborChatLayout({ selectedConversationId }: NeighborChatLayou
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [selectedConversation?.id]);
+  }, [selectedConversation?.id, participants]);
 
   // Scroll to bottom when messages change
   useEffect(() => {

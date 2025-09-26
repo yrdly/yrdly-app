@@ -222,18 +222,47 @@ export function CommentSection({ postId }: CommentSectionProps) {
                 ? uidsForEmoji.filter((uid) => uid !== currentUser.id)
                 : [...uidsForEmoji, currentUser.id];
 
+            const newReactions = {
+                ...reactions,
+                [emoji]: newUidsForEmoji
+            };
+
             // Update the comment with new reactions
             const { error: updateError } = await supabase
                 .from('comments')
                 .update({
-                    reactions: {
-                        ...reactions,
-                        [emoji]: newUidsForEmoji
-                    }
+                    reactions: newReactions
                 })
                 .eq('id', commentId);
 
             if (updateError) throw updateError;
+            
+            // Manually refresh the comment to ensure UI updates
+            const { data: updatedComment, error: refreshError } = await supabase
+                .from('comments')
+                .select('id, user_id, post_id, author_name, author_image, text, timestamp, parent_id, reactions')
+                .eq('id', commentId)
+                .single();
+                
+            if (!refreshError && updatedComment) {
+                const refreshedComment: Comment = {
+                    id: updatedComment.id,
+                    userId: updatedComment.user_id,
+                    authorName: updatedComment.author_name,
+                    authorImage: updatedComment.author_image,
+                    text: updatedComment.text,
+                    timestamp: updatedComment.timestamp,
+                    parentId: updatedComment.parent_id,
+                    reactions: updatedComment.reactions || {}
+                };
+                
+                setComments(prev => {
+                    const existing = prev.filter(c => c.id !== refreshedComment.id);
+                    return [...existing, refreshedComment].sort((a, b) => 
+                        new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+                    );
+                });
+            }
         } catch (error) {
             console.error("Error handling reaction: ", error);
             toast({ variant: "destructive", title: "Error", description: "Could not add reaction." });
