@@ -4,7 +4,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, Users, ShoppingCart, Calendar, Briefcase } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 const navLinks = [
   { href: "/home", icon: Home, label: "Home" },
@@ -18,24 +18,24 @@ export function AppBottomNav() {
   const pathname = usePathname();
 
   return (
-    <div className="md:hidden fixed bottom-0 left-0 right-0 bg-background border-t z-50">
-      <nav className="flex justify-around items-center h-16">
+    <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-sm bg-white/95 dark:bg-gray-950/95 backdrop-blur-sm border-t border-border z-50">
+      <div className="flex items-center justify-around py-3">
         {navLinks.map(({ href, icon: Icon, label }) => {
           const isActive = pathname.startsWith(href);
           return (
-            <Link 
-              href={href} 
-              key={href} 
-              className="flex flex-col items-center justify-center text-center w-full h-full"
-            >
-              <Icon className={cn("h-6 w-6 mb-1", isActive ? "text-primary" : "text-muted-foreground")} />
-              <span className={cn("text-xs", isActive ? "text-primary font-semibold" : "text-muted-foreground")}>
-                {label}
-              </span>
+            <Link href={href} key={href} className="flex-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                className={`flex flex-col gap-1 w-full ${isActive ? "text-primary" : "text-muted-foreground"}`}
+              >
+                <Icon className="w-5 h-5" />
+                <span className="text-xs">{label}</span>
+              </Button>
             </Link>
           );
         })}
-      </nav>
+      </div>
     </div>
   );
 }

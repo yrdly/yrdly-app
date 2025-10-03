@@ -3,8 +3,8 @@
 
 import type { User, Post } from "@/types";
 import { useState, useEffect, useCallback } from "react";
-import Image from "next/image";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { PostImage, AvatarImage } from "@/components/ui/optimized-image";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
@@ -333,7 +333,7 @@ export function PostCard({ post }: PostCardProps) {
             <h4 className="font-semibold text-md mb-2">Seller Information</h4>
             <button onClick={openProfile} className="flex items-center gap-3 hover:bg-muted p-2 rounded-lg w-full text-left">
                 <Avatar>
-                    <AvatarImage src={author?.avatarUrl} alt={author?.name} />
+                    <AvatarImage src={author?.avatarUrl || '/placeholder.svg'} alt={author?.name || 'User'} />
                     <AvatarFallback>{author?.name?.charAt(0)}</AvatarFallback>
                 </Avatar>
                 <div>
@@ -381,8 +381,8 @@ export function PostCard({ post }: PostCardProps) {
 
   return (
     <>
-    <Card className="overflow-hidden mb-4">
-       <div onClick={handleCardClick} className="cursor-pointer">
+    <Card className="overflow-hidden mb-6 shadow-sm hover:shadow-md transition-shadow duration-200">
+      <div onClick={handleCardClick} className="cursor-pointer">
       {selectedUser && (
           <UserProfileDialog 
               user={selectedUser} 
@@ -395,7 +395,7 @@ export function PostCard({ post }: PostCardProps) {
               }} 
           />
       )}
-      <CardHeader className="flex flex-row items-center gap-3 p-3 pb-2">
+      <CardHeader className="flex flex-row items-center gap-3 p-4 pb-3">
         {loadingAuthor ? (
             <div className="flex items-center gap-3 w-full">
                 <Skeleton className="h-10 w-10 rounded-full" />
@@ -408,7 +408,12 @@ export function PostCard({ post }: PostCardProps) {
             <>
                 <button onClick={openProfile} className="cursor-pointer">
                     <Avatar className="h-10 w-10">
-                        <AvatarImage src={author.avatarUrl} alt={author.name} data-ai-hint="person portrait" />
+                        <AvatarImage 
+                          src={author.avatarUrl || '/placeholder.svg'} 
+                          alt={author.name || 'User'} 
+                          size={40}
+                          data-ai-hint="person portrait" 
+                        />
                         <AvatarFallback>{author.name?.charAt(0)}</AvatarFallback>
                     </Avatar>
                 </button>
@@ -464,17 +469,11 @@ export function PostCard({ post }: PostCardProps) {
         {post.image_urls && post.image_urls.length > 0 && (
             <div className="px-3 pb-2">
               {post.image_urls.length === 1 ? (
-                <div 
-                  className="relative w-full aspect-video rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
+                <PostImage
+                  src={post.image_urls[0]}
+                  alt="Post image"
                   onClick={() => handleImageClick(0)}
-                >
-                  <Image
-                    src={post.image_urls[0]}
-                    alt="Post image"
-                    fill
-                    className="object-cover"
-                  />
-                </div>
+                />
               ) : (
                 <div className="grid gap-1" style={{ 
                   gridTemplateColumns: post.image_urls.length === 2 ? '1fr 1fr' : '1fr 1fr', 
@@ -486,11 +485,10 @@ export function PostCard({ post }: PostCardProps) {
                       className="relative aspect-square rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
                       onClick={() => handleImageClick(index)}
                     >
-                      <Image
+                      <PostImage
                         src={imageUrl}
                         alt={`Post image ${index + 1}`}
-                        fill
-                        className="object-cover"
+                        className="absolute inset-0"
                       />
                       {index === 3 && post.image_urls && post.image_urls.length > 4 && (
                         <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
@@ -508,21 +506,21 @@ export function PostCard({ post }: PostCardProps) {
           {post.category === 'For Sale' ? renderMarketplaceContent() : renderDefaultContent()}
         </div>
 
-        <CardFooter className="p-3 pt-2 bg-background/50">
+        <CardFooter className="p-4 pt-3 bg-muted/30 border-t border-border">
             <div className="flex justify-around w-full">
-            <Button variant="ghost" className="flex-1 gap-2" onClick={handleLike}>
-                <Heart className={`h-5 w-5 ${isLiked ? "text-red-500 fill-current" : ""}`} />
-                <span className="text-sm">{likes}</span>
+            <Button variant="ghost" className="flex-1 gap-2 hover:bg-muted/50 transition-colors" onClick={handleLike}>
+                <Heart className={`h-5 w-5 ${isLiked ? "text-red-500 fill-current" : "text-muted-foreground"}`} />
+                <span className="text-sm font-medium">{likes}</span>
             </Button>
              <CollapsibleTrigger asChild>
-                 <Button variant="ghost" className="flex-1 gap-2">
-                    <MessageCircle className="h-5 w-5" />
-                    <span className="text-sm">{commentCount}</span>
+                 <Button variant="ghost" className="flex-1 gap-2 hover:bg-muted/50 transition-colors">
+                    <MessageCircle className="h-5 w-5 text-muted-foreground" />
+                    <span className="text-sm font-medium">{commentCount}</span>
                 </Button>
              </CollapsibleTrigger>
-            <Button variant="ghost" className="flex-1 gap-2" onClick={handleShare}>
-                <Share2 className="h-5 w-5" />
-                <span className="text-sm">Share</span>
+            <Button variant="ghost" className="flex-1 gap-2 hover:bg-muted/50 transition-colors" onClick={handleShare}>
+                <Share2 className="h-5 w-5 text-muted-foreground" />
+                <span className="text-sm font-medium">Share</span>
             </Button>
             </div>
         </CardFooter>

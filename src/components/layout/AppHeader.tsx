@@ -2,119 +2,105 @@
 "use client";
 
 import { useState } from 'react';
-import { Search, LogOut, MessageCircle, Map, Settings, User as UserIcon } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import { Search, Map, MessageCircle, Bell } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/use-supabase-auth';
-import { AuthService } from '@/lib/auth-service';
-import { useRouter, usePathname } from 'next/navigation';
-import Image from 'next/image';
-import { NotificationsPanel } from './NotificationsPanel';
-import { SearchDialog } from '../SearchDialog';
+import { NotificationsPanel } from '@/components/layout/NotificationsPanel';
 import { useUnreadMessages } from '@/hooks/use-unread-messages';
-import { cn } from '@/lib/utils';
+import { ProfileDropdown } from '@/components/ProfileDropdown';
+import { SearchDialog } from '@/components/SearchDialog';
 
 export function AppHeader() {
-  const { user, profile } = useAuth();
-  const router = useRouter();
   const pathname = usePathname();
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const { user, profile } = useAuth();
+  const [showSearch, setShowSearch] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
   const unreadMessagesCount = useUnreadMessages();
 
-  const handleLogout = async () => {
-    const { error } = await AuthService.signOut();
-    if (!error) {
-      router.push('/login');
+  const handleProfileAction = (action: string) => {
+    setShowProfile(false);
+    if (action === "profile") {
+      window.location.href = "/profile";
+    } else if (action === "settings") {
+      window.location.href = "/settings";
     }
   };
+
+  // Check if we're on the home page
+  const isHomePage = pathname === "/home" || pathname === "/";
 
   const avatarUrl = profile?.avatar_url || user?.user_metadata?.avatar_url || `https://placehold.co/100x100.png`;
   const displayName = profile?.name || user?.user_metadata?.name || 'User';
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 md:relative z-50 flex h-16 items-center justify-between border-b bg-background/95 backdrop-blur-sm px-4 shadow-sm">
-        <div className="flex items-center gap-4">
-          <Link href="/home" className="flex items-center gap-2 text-xl font-bold text-foreground">
-            <Image 
-              src="/yrdly-logo.png" 
-              alt="Yrdly Logo" 
-              width={32} 
-              height={32}
-              style={{ width: "auto", height: "auto" }}
-            />
-            <span className="font-headline">Yrdly</span>
+      {/* Fixed Header */}
+      <div className="fixed top-0 left-1/2 transform -translate-x-1/2 w-full max-w-sm bg-white/95 dark:bg-gray-950/95 backdrop-blur-sm border-b border-border z-50">
+        <div className="flex items-center justify-between p-4">
+          {/* Logo */}
+          <Link href="/home" className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full yrdly-gradient flex items-center justify-center">
+              <span className="text-white font-bold text-sm">Y</span>
+            </div>
+            <h1 className="text-xl font-bold text-foreground">Yrdly</h1>
           </Link>
+
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2">
+            {isHomePage && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-muted-foreground hover:text-foreground"
+                onClick={() => setShowSearch(true)}
+              >
+                <Search className="w-5 h-5" />
+              </Button>
+            )}
+            <Link href="/map">
+              <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+                <Map className="w-5 h-5" />
+              </Button>
+            </Link>
+            <Link href="/messages">
+              <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground relative">
+                <MessageCircle className="w-5 h-5" />
+                {unreadMessagesCount > 0 && (
+                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-accent rounded-full flex items-center justify-center">
+                    <span className="text-xs text-white font-bold">{unreadMessagesCount}</span>
+                  </div>
+                )}
+              </Button>
+            </Link>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground hover:text-foreground relative"
+              onClick={() => setShowNotifications(true)}
+            >
+              <Bell className="w-5 h-5" />
+              <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"></div>
+            </Button>
+            <Button variant="ghost" size="sm" className="p-0" onClick={() => setShowProfile(!showProfile)}>
+              <Avatar className="w-8 h-8">
+                <AvatarImage src={avatarUrl} />
+                <AvatarFallback className="bg-primary text-primary-foreground text-sm">
+                  {displayName.substring(0, 2).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+            </Button>
+          </div>
         </div>
-        
-        <div className="flex items-center gap-2">
-          {pathname === '/home' && (
-            <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setIsSearchOpen(true)}>
-              <Search className="h-5 w-5" />
-              <span className="sr-only">Search</span>
-            </Button>
-          )}
-          <Link href="/map" className="md:hidden">
-            <Button variant="ghost" size="icon" className="rounded-full">
-                <Map className="h-5 w-5" />
-                <span className="sr-only">Map</span>
-            </Button>
-          </Link>
-          <Link href="/messages">
-            <Button variant="ghost" size="icon" className="rounded-full relative">
-              <MessageCircle className="h-5 w-5" />
-              {unreadMessagesCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground rounded-full h-4 w-4 flex items-center justify-center text-xs font-bold">
-                  {unreadMessagesCount}
-                </span>
-              )}
-              <span className="sr-only">Messages</span>
-            </Button>
-          </Link>
-          <NotificationsPanel />
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="rounded-full">
-                 <Avatar className="h-8 w-8">
-                   <AvatarImage src={avatarUrl} alt={displayName} data-ai-hint="person portrait" />
-                   <AvatarFallback>{displayName.charAt(0)}</AvatarFallback>
-                 </Avatar>
-               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>My Account</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link href="/settings/profile">
-                  <UserIcon className="mr-2 h-4 w-4" />
-                  <span>Profile</span>
-                </Link>
-              </DropdownMenuItem>
-               <DropdownMenuItem asChild>
-                 <Link href="/settings">
-                   <Settings className="mr-2 h-4 w-4" />
-                   <span>Settings</span>
-                 </Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onSelect={handleLogout}>
-                <LogOut className="mr-2 h-4 w-4" />
-                <span>Log out</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </header>
-      <SearchDialog open={isSearchOpen} onOpenChange={setIsSearchOpen} />
+      </div>
+
+      {/* Modals */}
+      {showSearch && <SearchDialog onClose={() => setShowSearch(false)} />}
+      {showNotifications && <NotificationsPanel onClose={() => setShowNotifications(false)} />}
+      {showProfile && <ProfileDropdown onClose={() => setShowProfile(false)} onAction={handleProfileAction} />}
     </>
   );
 }

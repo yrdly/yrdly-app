@@ -6,16 +6,17 @@ import { Button } from "@/components/ui/button";
 // Force dynamic rendering to avoid prerender issues
 export const dynamic = 'force-dynamic';
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Briefcase } from "lucide-react";
+import { Search, Plus, Briefcase, Star } from "lucide-react";
 import { useState, useEffect } from "react";
 import type { Business } from "@/types";
 import { supabase } from "@/lib/supabase";
-import { Skeleton } from "@/components/ui/skeleton";
+import { BusinessCardSkeleton } from "@/components/ui/post-skeleton";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { MapPin } from "lucide-react";
 
 import { AspectRatio } from "@/components/ui/aspect-ratio";
-import Image from "next/image";
+import { BusinessImage, AvatarImage } from "@/components/ui/optimized-image";
 import { MoreHorizontal, Edit, Trash2 } from "lucide-react";
 import {
   DropdownMenu,
@@ -48,7 +49,7 @@ function BusinessCard({ business }: { business: Business }) {
     }
 
     return (
-        <Card className="overflow-hidden flex flex-col h-full">
+        <Card className="overflow-hidden flex flex-col h-full group hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
             {business.image_urls && business.image_urls.length > 0 ? (
                 business.image_urls.length > 1 ? (
                     <Carousel className="w-full">
@@ -56,41 +57,39 @@ function BusinessCard({ business }: { business: Business }) {
                             {business.image_urls.map((url, index) => (
                                 <CarouselItem key={index}>
                                     <AspectRatio ratio={16 / 9}>
-                                        <Image
+                                        <BusinessImage
                                             src={url}
                                             alt={`${business.name} image ${index + 1}`}
-                                            fill
-                                            className="object-cover"
+                                            className="absolute inset-0 group-hover:scale-105 transition-transform duration-300"
                                         />
                                     </AspectRatio>
                                 </CarouselItem>
                             ))}
                         </CarouselContent>
-                        <CarouselPrevious className="left-2" />
-                        <CarouselNext className="right-2" />
+                        <CarouselPrevious className="left-2 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <CarouselNext className="right-2 opacity-0 group-hover:opacity-100 transition-opacity" />
                     </Carousel>
                 ) : (
                     <AspectRatio ratio={16 / 9}>
-                        <Image
+                        <BusinessImage
                             src={business.image_urls[0]}
                             alt={`${business.name} image 1`}
-                            fill
-                            className="object-cover"
+                            className="absolute inset-0 group-hover:scale-105 transition-transform duration-300"
                         />
                     </AspectRatio>
                 )
             ) : (
                 <AspectRatio ratio={16/9}>
-                    <div className="bg-muted flex items-center justify-center h-full">
-                        <Briefcase className="h-12 w-12 text-muted-foreground" />
+                    <div className="bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center h-full group-hover:from-primary/10 group-hover:to-primary/5 transition-colors">
+                        <Briefcase className="h-12 w-12 text-muted-foreground group-hover:text-primary transition-colors" />
                     </div>
                 </AspectRatio>
             )}
            
-            <CardHeader className="flex-row items-start justify-between">
-                <div>
-                    <CardTitle className="text-lg">{business.name}</CardTitle>
-                    <CardDescription>{business.category}</CardDescription>
+            <CardHeader className="flex-row items-start justify-between p-4 pb-3">
+                <div className="flex-1 min-w-0">
+                    <CardTitle className="text-lg font-semibold group-hover:text-primary transition-colors truncate">{business.name}</CardTitle>
+                    <CardDescription className="text-sm text-muted-foreground mt-1">{business.category}</CardDescription>
                 </div>
                 {user?.id === business.owner_id && (
                     <AlertDialog>
@@ -130,13 +129,13 @@ function BusinessCard({ business }: { business: Business }) {
                     </AlertDialog>
                 )}
             </CardHeader>
-            <CardContent className="flex-grow">
-                <p className="text-sm text-muted-foreground line-clamp-3">{business.description}</p>
+            <CardContent className="flex-grow p-4 pt-0">
+                <p className="text-sm text-muted-foreground line-clamp-3 leading-relaxed">{business.description}</p>
             </CardContent>
-            <CardFooter>
-                 <div className="flex items-center text-sm text-muted-foreground">
-                    <MapPin className="h-4 w-4 mr-1 flex-shrink-0"/>
-                    <span className="truncate">{business.location.address}</span>
+            <CardFooter className="p-4 pt-3 border-t border-border/50 bg-muted/30">
+                 <div className="flex items-center text-sm text-muted-foreground group-hover:text-foreground transition-colors">
+                    <MapPin className="h-4 w-4 mr-2 flex-shrink-0"/>
+                    <span className="truncate font-medium">{business.location.address}</span>
                 </div>
             </CardFooter>
         </Card>
@@ -145,12 +144,18 @@ function BusinessCard({ business }: { business: Business }) {
 
 function EmptyBusinesses() {
     return (
-        <div className="text-center py-16">
-            <div className="inline-block bg-muted p-4 rounded-full mb-4">
-                <Briefcase className="h-12 w-12 text-muted-foreground" />
+        <div className="text-center py-20">
+            <div className="inline-block bg-gradient-to-br from-primary/10 to-accent/10 p-6 rounded-2xl mb-6 shadow-sm">
+                <Briefcase className="h-16 w-16 text-primary" />
             </div>
-            <h2 className="text-2xl font-bold">No businesses yet</h2>
-            <p className="text-muted-foreground mt-2">Be the first to add a local business to the directory!</p>
+            <h2 className="text-3xl font-bold mb-3">No businesses yet</h2>
+            <p className="text-muted-foreground text-lg mb-6 max-w-md mx-auto">Be the first to add a local business to the directory and help your neighbors discover great places!</p>
+            <CreateBusinessDialog>
+                <Button size="lg" className="shadow-sm">
+                    <Plus className="mr-2 h-5 w-5" />
+                    Add Your Business
+                </Button>
+            </CreateBusinessDialog>
         </div>
     )
 }
@@ -158,6 +163,12 @@ function EmptyBusinesses() {
 export default function BusinessesPage() {
     const [businesses, setBusinesses] = useState<Business[]>([]);
     const [loading, setLoading] = useState(true);
+    const [categoryCounts, setCategoryCounts] = useState({
+        food: 0,
+        retail: 0,
+        fitness: 0,
+        beauty: 0
+    });
 
     useEffect(() => {
         const fetchBusinesses = async () => {
@@ -173,6 +184,16 @@ export default function BusinessesPage() {
                 }
 
                 setBusinesses(data as Business[]);
+
+                // Calculate category counts
+                const counts = {
+                    food: data?.filter(b => b.category?.toLowerCase().includes('food') || b.category?.toLowerCase().includes('restaurant')).length || 0,
+                    retail: data?.filter(b => b.category?.toLowerCase().includes('retail') || b.category?.toLowerCase().includes('shop')).length || 0,
+                    fitness: data?.filter(b => b.category?.toLowerCase().includes('fitness') || b.category?.toLowerCase().includes('gym')).length || 0,
+                    beauty: data?.filter(b => b.category?.toLowerCase().includes('beauty') || b.category?.toLowerCase().includes('salon')).length || 0,
+                };
+                setCategoryCounts(counts);
+
                 setLoading(false);
             } catch (error) {
                 console.error('Error fetching businesses:', error);
@@ -200,44 +221,168 @@ export default function BusinessesPage() {
     }, []);
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pt-16 pb-20">
-       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-            <h1 className="text-2xl md:text-3xl font-bold font-headline">Local businesses</h1>
-            <p className="text-muted-foreground dark:text-gray-300">Discover and support businesses in your neighborhood.</p>
-        </div>
-        <CreateBusinessDialog>
-            <Button>
-                <Plus className="mr-2 h-4 w-4" /> Add Your Business
+    <div className="p-4 space-y-6 pb-24">
+      {/* Page Header */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-foreground">Local Businesses</h2>
+            <p className="text-muted-foreground">Discover and support businesses in your neighborhood</p>
+          </div>
+          <CreateBusinessDialog>
+            <Button className="bg-primary text-primary-foreground hover:bg-primary/90 yrdly-shadow">
+              <Plus className="w-4 h-4 mr-2" />
+              Add Business
             </Button>
-        </CreateBusinessDialog>
-       </div>
-
-        <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground dark:text-gray-400" />
-            <Input 
-                placeholder="Search businesses..." 
-                className="pl-10 text-foreground dark:bg-gray-800 dark:text-gray-200 placeholder:text-muted-foreground dark:placeholder:text-gray-400" 
-            />
+          </CreateBusinessDialog>
         </div>
-        
-        {loading ? (
-             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                <Skeleton className="h-80 w-full" />
-                <Skeleton className="h-80 w-full" />
-                <Skeleton className="h-80 w-full" />
-                <Skeleton className="h-80 w-full" />
-            </div>
-        ) : businesses.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                {businesses.map(business => (
-                    <BusinessCard key={business.id} business={business} />
-                ))}
-            </div>
-        ) : (
-            <EmptyBusinesses />
-        )}
 
+        {/* Search Bar */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input placeholder="Search businesses..." className="pl-10 bg-card border-border focus:border-primary" />
+        </div>
+      </div>
+
+      {/* Featured Business */}
+      {businesses.length > 0 && (
+        <Card className="p-0 overflow-hidden yrdly-shadow">
+          <div className="relative h-32">
+            <img
+              src={businesses[0].image_urls?.[0] || "/placeholder.svg"}
+              alt={businesses[0].name}
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+            <div className="absolute bottom-4 left-4 text-white">
+              <h3 className="text-xl font-bold">{businesses[0].name}</h3>
+              <p className="text-sm text-white/90">{businesses[0].category}</p>
+            </div>
+            <Button
+              size="sm"
+              className="absolute bottom-4 right-4 bg-white text-primary hover:bg-white/90"
+            >
+              Visit
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      {/* Business Categories */}
+      <div className="space-y-3">
+        <h3 className="text-lg font-semibold text-foreground">Categories</h3>
+        <div className="grid grid-cols-2 gap-3">
+          <Card className="p-4 yrdly-shadow hover:shadow-lg transition-shadow cursor-pointer">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                <span className="text-lg">🍽️</span>
+              </div>
+              <div>
+                <h4 className="font-semibold text-foreground">Food & Dining</h4>
+                <p className="text-sm text-muted-foreground">{categoryCounts.food} businesses</p>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="p-4 yrdly-shadow hover:shadow-lg transition-shadow cursor-pointer">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">
+                <span className="text-lg">🛍️</span>
+              </div>
+              <div>
+                <h4 className="font-semibold text-foreground">Retail</h4>
+                <p className="text-sm text-muted-foreground">{categoryCounts.retail} businesses</p>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="p-4 yrdly-shadow hover:shadow-lg transition-shadow cursor-pointer">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
+                <span className="text-lg">💪</span>
+              </div>
+              <div>
+                <h4 className="font-semibold text-foreground">Health & Fitness</h4>
+                <p className="text-sm text-muted-foreground">{categoryCounts.fitness} businesses</p>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="p-4 yrdly-shadow hover:shadow-lg transition-shadow cursor-pointer">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
+                <span className="text-lg">✂️</span>
+              </div>
+              <div>
+                <h4 className="font-semibold text-foreground">Beauty</h4>
+                <p className="text-sm text-muted-foreground">{categoryCounts.beauty} businesses</p>
+              </div>
+            </div>
+          </Card>
+        </div>
+      </div>
+
+      {/* Nearby Businesses */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold text-foreground">Nearby Businesses</h3>
+
+        {loading ? (
+          <div className="space-y-4">
+            <BusinessCardSkeleton />
+            <BusinessCardSkeleton />
+            <BusinessCardSkeleton />
+          </div>
+        ) : businesses.length > 0 ? (
+          businesses.map((business) => (
+            <Card key={business.id} className="p-4 yrdly-shadow">
+              <div className="flex gap-4">
+                <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
+                  <img
+                    src={business.image_urls?.[0] || "/placeholder.svg"}
+                    alt={business.name}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="flex-1 space-y-2 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <h4 className="font-semibold text-foreground truncate">{business.name}</h4>
+                    <Badge variant="outline" className="text-primary border-primary bg-primary/10 flex-shrink-0">
+                      {business.category}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <div className="flex items-center gap-1">
+                      <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                      <span className="text-sm">4.5</span>
+                    </div>
+                    <span className="text-sm text-muted-foreground">•</span>
+                    <span className="text-sm text-muted-foreground">0.3 km away</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground line-clamp-2">{business.description}</p>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      className="bg-primary text-primary-foreground hover:bg-primary/90"
+                      onClick={() => console.log('Visit business:', business.name)}
+                    >
+                      Visit
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-primary text-primary hover:bg-primary hover:text-primary-foreground bg-transparent"
+                    >
+                      Call
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          ))
+        ) : (
+          <EmptyBusinesses />
+        )}
+      </div>
     </div>
   );
 }

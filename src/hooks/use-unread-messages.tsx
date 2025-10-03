@@ -12,39 +12,18 @@ export const useUnreadMessages = () => {
       return;
     }
 
-    // Set up real-time subscription for unread messages
-    const channel = supabase
-      .channel(`unread_messages_${user.id}`)
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'messages',
-        filter: `to_user_id=eq.${user.id}&is_read=eq.false`
-      }, (payload) => {
-        // Re-fetch count on any change to relevant messages
-        fetchUnreadCount();
-      })
-      .subscribe();
+    // For now, return 0 since the messages table doesn't have read status
+    // This would need to be implemented with a proper read status system
+    setUnreadCount(0);
 
-    const fetchUnreadCount = async () => {
-      const { count, error } = await supabase
-        .from('messages')
-        .select('*', { count: 'exact' })
-        .eq('to_user_id', user.id)
-        .eq('is_read', false);
-
-      if (error) {
-        console.error('Error fetching unread messages:', error);
-        setUnreadCount(0);
-      } else {
-        setUnreadCount(count || 0);
-      }
-    };
-
-    fetchUnreadCount();
+    // TODO: Implement proper unread message tracking
+    // This would require either:
+    // 1. Adding read status to the messages table
+    // 2. Creating a separate message_reads table
+    // 3. Using a different approach to track unread messages
 
     return () => {
-      supabase.removeChannel(channel);
+      // No cleanup needed for now
     };
   }, [user]);
 

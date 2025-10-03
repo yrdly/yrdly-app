@@ -41,24 +41,29 @@ export function AppSidebar({ onProfileClick }: { onProfileClick: () => void }) {
   ];
 
   return (
-    <Sidebar>
-      <SidebarHeader>
-        <Link href="/home" className="flex items-center gap-2">
-            <Image src="/yrdly-logo.png" alt="Yrdly Logo" width={32} height={32} />
-            <span className="font-bold text-lg font-headline">Yrdly</span>
+    <Sidebar className="border-r border-border/50">
+      <SidebarHeader className="p-6 border-b border-border/50">
+        <Link href="/home" className="flex items-center gap-3 group">
+            <div className="p-2 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
+              <Image src="/yrdly-logo.png" alt="Yrdly Logo" width={24} height={24} style={{ width: "auto", height: "auto" }} />
+            </div>
+            <span className="font-bold text-xl font-headline bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text">Yrdly</span>
         </Link>
       </SidebarHeader>
-      <SidebarContent className="p-4">
-        <SidebarMenu>
+      <SidebarContent className="p-4 space-y-2">
+        <SidebarMenu className="space-y-1">
           <SidebarMenuItem>
             <SidebarMenuButton
               asChild
               isActive={pathname.startsWith('/settings/profile')}
               tooltip={{ children: 'My Profile', side: 'right' }}
+              className="group hover:bg-primary/10 transition-colors"
             >
-              <Link href="/settings/profile">
-                <UserIcon />
-                <span>My Profile</span>
+              <Link href="/settings/profile" className="flex items-center gap-3">
+                <div className="p-1.5 rounded-md bg-muted group-hover:bg-primary/20 transition-colors">
+                  <UserIcon className="h-4 w-4" />
+                </div>
+                <span className="font-medium">My Profile</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -68,14 +73,17 @@ export function AppSidebar({ onProfileClick }: { onProfileClick: () => void }) {
                 asChild
                 isActive={pathname.startsWith(item.href)}
                 tooltip={{ children: item.label, side: 'right' }}
+                className="group hover:bg-primary/10 transition-colors"
               >
                 <Link href={item.href} className="flex justify-between items-center w-full">
                   <div className="flex items-center gap-3">
-                    <item.icon />
-                    <span>{item.label}</span>
+                    <div className="p-1.5 rounded-md bg-muted group-hover:bg-primary/20 transition-colors">
+                      <item.icon className="h-4 w-4" />
+                    </div>
+                    <span className="font-medium">{item.label}</span>
                   </div>
                   {item.badge != null && item.badge > 0 && (
-                    <Badge className="h-6 w-6 flex items-center justify-center text-xs">
+                    <Badge className="h-5 w-5 flex items-center justify-center text-xs bg-primary text-primary-foreground">
                       {item.badge}
                     </Badge>
                   )}
@@ -85,17 +93,20 @@ export function AppSidebar({ onProfileClick }: { onProfileClick: () => void }) {
           ))}
         </SidebarMenu>
       </SidebarContent>
-      <SidebarFooter className="p-4">
-         <SidebarMenu>
+      <SidebarFooter className="p-4 border-t border-border/50">
+         <SidebarMenu className="space-y-1">
           <SidebarMenuItem>
              <SidebarMenuButton
                 asChild
                 isActive={pathname.startsWith('/settings') && !pathname.startsWith('/settings/profile')}
                  tooltip={{ children: 'Settings', side: 'right' }}
+                 className="group hover:bg-primary/10 transition-colors"
               >
-                <Link href="/settings">
-                  <Settings />
-                  <span>Settings</span>
+                <Link href="/settings" className="flex items-center gap-3">
+                  <div className="p-1.5 rounded-md bg-muted group-hover:bg-primary/20 transition-colors">
+                    <Settings className="h-4 w-4" />
+                  </div>
+                  <span className="font-medium">Settings</span>
                 </Link>
               </SidebarMenuButton>
           </SidebarMenuItem>
@@ -103,9 +114,12 @@ export function AppSidebar({ onProfileClick }: { onProfileClick: () => void }) {
              <SidebarMenuButton
                 onClick={handleLogout}
                 tooltip={{ children: 'Log out', side: 'right' }}
+                className="group hover:bg-destructive/10 transition-colors text-muted-foreground hover:text-destructive"
               >
-                <LogOut />
-                <span>Log out</span>
+                <div className="p-1.5 rounded-md bg-muted group-hover:bg-destructive/20 transition-colors">
+                  <LogOut className="h-4 w-4" />
+                </div>
+                <span className="font-medium">Log out</span>
               </SidebarMenuButton>
           </SidebarMenuItem>
          </SidebarMenu>

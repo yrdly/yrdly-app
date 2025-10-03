@@ -1,236 +1,48 @@
-
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/lib/supabase';
-import type { User, Post, FriendRequest } from "../types";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useRouter } from 'next/navigation';
-import { Loader2, User as UserIcon, Calendar, Map, ShoppingCart, FileText, Image as ImageIcon } from 'lucide-react';
-import { UserProfileDialog } from './UserProfileDialog';
-import { useAuth } from '@/hooks/use-supabase-auth';
-import Image from 'next/image';
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { X, Search } from "lucide-react";
 
+interface SearchDialogProps {
+  onClose: () => void;
+}
 
-type SearchResult = 
-    | { type: 'user'; data: User }
-    | { type: 'post'; data: Post }
-    | { type: 'page'; data: { name: string; path: string; icon: React.ElementType }};
+export function SearchDialog({ onClose }: SearchDialogProps) {
+  const [searchTerm, setSearchTerm] = useState("");
 
-const allPages = [
-    { name: 'Events', path: '/events', icon: Calendar },
-    { name: 'Map', path: '/map', icon: Map },
-    { name: 'Marketplace', path: '/marketplace', icon: ShoppingCart },
-    { name: 'Community', path: '/neighbors', icon: UserIcon },
-];
-
-type FriendshipStatus = 'friends' | 'request_sent' | 'request_received' | 'none';
-
-export function SearchDialog({ open, onOpenChange }: { open: boolean, onOpenChange: (open: boolean) => void; }) {
-    const [searchTerm, setSearchTerm] = useState('');
-    const [results, setResults] = useState<SearchResult[]>([]);
-    const [loading, setLoading] = useState(false);
-    const router = useRouter();
-    const { user: currentUser, profile: userDetails } = useAuth();
-    const [selectedUser, setSelectedUser] = useState<User | null>(null);
-
-    const handleResultClick = (result: SearchResult) => {
-        onOpenChange(false);
-        setSearchTerm('');
-        setResults([]);
-        if (result.type === 'user') {
-            setSelectedUser(result.data);
-        } else if (result.type === 'page') {
-            router.push(result.data.path);
-        } else if (result.type === 'post') {
-            router.push(`/posts/${result.data.id}`);
-        }
-    };
-
-    useEffect(() => {
-        const performSearch = async () => {
-            if (searchTerm.trim().length < 2) {
-                setResults([]);
-                return;
-            }
-            setLoading(true);
-
-            try {
-                const searchResults: SearchResult[] = [];
-                const lowerCaseSearchTerm = searchTerm.toLowerCase();
-
-                // Page search
-                const pageResults = allPages
-                    .filter(page => page.name.toLowerCase().includes(lowerCaseSearchTerm))
-                    .map(page => ({ type: 'page', data: page } as SearchResult));
-                searchResults.push(...pageResults);
-
-                // User search
-                const { data: usersData, error: usersError } = await supabase
-                    .from('users')
-                    .select('*')
-                    .or(`name.ilike.%${searchTerm}%,bio.ilike.%${searchTerm}%`);
-                
-                if (!usersError && usersData) {
-                    const usersResults = usersData.map(user => ({ type: 'user', data: user as User } as SearchResult));
-                    searchResults.push(...usersResults);
-                }
-                
-                // Post search (listings and events)
-                const { data: postsData, error: postsError } = await supabase
-                    .from('posts')
-                    .select('*')
-                    .or(`text.ilike.%${searchTerm}%,title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
-                
-                if (!postsError && postsData) {
-                    const postsResults = postsData
-                        .filter(post => 
-                            post.text?.toLowerCase().includes(lowerCaseSearchTerm) || 
-                            post.title?.toLowerCase().includes(lowerCaseSearchTerm) ||
-                            post.description?.toLowerCase().includes(lowerCaseSearchTerm)
-                        )
-                        .map(post => ({ type: 'post', data: post as Post } as SearchResult));
-                    searchResults.push(...postsResults);
-                }
-
-                setResults(searchResults);
-            } catch (error) {
-                console.error("Error searching:", error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        const debounceTimeout = setTimeout(() => {
-            performSearch();
-        }, 300); // 300ms debounce
-
-        return () => clearTimeout(debounceTimeout);
-    }, [searchTerm]);
-    
-    const renderResult = (result: SearchResult) => {
-        switch(result.type) {
-            case 'user':
-                const user = result.data;
-                return (
-                    <div key={`user-${user.id}`} className="flex items-center gap-4 p-3 rounded-md hover:bg-muted cursor-pointer" onClick={() => handleResultClick(result)}>
-                        <Avatar className="h-12 w-12">
-                            <AvatarImage src={user.avatarUrl} alt={user.name} />
-                            <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 min-w-0">
-                            <p className="font-semibold truncate">{user.name}</p>
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                {user.location?.lga && <span>{user.location.lga}</span>}
-                                {user.location?.state && <span>• {user.location.state}</span>}
-                                {user.bio && <span>• {user.bio}</span>}
-                            </div>
-                        </div>
-                    </div>
-                );
-            case 'post':
-                const post = result.data;
-                const hasImages = post.image_urls && post.image_urls.length > 0;
-                const firstImage = hasImages && post.image_urls ? post.image_urls[0] : null;
-                const Icon = post.category === 'Event' ? Calendar : post.category === 'For Sale' ? ShoppingCart : FileText;
-                
-                return (
-                    <div key={`post-${post.id}`} className="flex items-center gap-4 p-3 rounded-md hover:bg-muted cursor-pointer" onClick={() => handleResultClick(result)}>
-                        {/* Image or Icon */}
-                        <div className="flex-shrink-0">
-                            {firstImage ? (
-                                <div className="relative w-12 h-12 rounded-md overflow-hidden">
-                                    <Image
-                                        src={firstImage}
-                                        alt={post.title || post.text}
-                                        fill
-                                        className="object-cover"
-                                        sizes="48px"
-                                    />
-                                </div>
-                            ) : (
-                                <div className="w-12 h-12 bg-muted rounded-md flex items-center justify-center">
-                                    <Icon className="h-6 w-6 text-muted-foreground"/>
-                                </div>
-                            )}
-                        </div>
-                        
-                        {/* Content */}
-                        <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                                <p className="font-semibold truncate">{post.title || post.text}</p>
-                                <span className="text-xs bg-muted px-2 py-1 rounded-full text-muted-foreground">
-                                    {post.category}
-                                </span>
-                            </div>
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                <span>by {post.author_name}</span>
-                                {post.price && (
-                                    <span className="text-green-600 dark:text-green-400 font-medium">
-                                        ₦{post.price.toLocaleString()}
-                                    </span>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                );
-            case 'page':
-                const page = result.data;
-                return (
-                    <div key={`page-${page.path}`} className="flex items-center gap-4 p-3 rounded-md hover:bg-muted cursor-pointer" onClick={() => handleResultClick(result)}>
-                        <div className="w-12 h-12 bg-muted rounded-md flex items-center justify-center">
-                            <page.icon className="h-6 w-6 text-muted-foreground"/>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                            <p className="font-semibold">{page.name}</p>
-                            <p className="text-sm text-muted-foreground">Navigate to page</p>
-                        </div>
-                    </div>
-                );
-        }
-    }
-
-    return (
-        <>
-        {selectedUser && <UserProfileDialog 
-            user={selectedUser}
-            open={!!selectedUser} 
-            onOpenChange={(wasChanged) => !open && setSelectedUser(null)} 
-        />}
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                    <DialogTitle>Search Yrdly</DialogTitle>
-                </DialogHeader>
-                <div className="p-4 pb-0">
-                    <Input
-                        placeholder="Search for anything..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                </div>
-                <div className="p-4 min-h-[200px]">
-                    {loading && <div className="flex justify-center items-center h-full"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>}
-                    {!loading && results.length > 0 && (
-                        <div className="space-y-2">
-                            {results.map(renderResult)}
-                        </div>
-                    )}
-                    {!loading && results.length === 0 && searchTerm.length > 1 && (
-                        <div className="text-center text-muted-foreground pt-10">
-                            <p>No results found for &quot;{searchTerm}&quot;</p>
-                        </div>
-                    )}
-                     {!loading && results.length === 0 && searchTerm.length < 2 && (
-                        <div className="text-center text-muted-foreground pt-10">
-                            <p>Search for people, posts, events, and more.</p>
-                        </div>
-                    )}
-                </div>
-            </DialogContent>
-        </Dialog>
-        </>
-    );
+  return (
+    <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm flex flex-col">
+      <div className="flex items-center h-16 px-4 border-b">
+        <Button variant="ghost" size="icon" onClick={onClose} className="mr-2">
+          <X className="h-5 w-5" />
+          <span className="sr-only">Close</span>
+        </Button>
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input 
+            placeholder="Search..." 
+            className="pl-10"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            autoFocus
+          />
+        </div>
+      </div>
+      <div className="flex-1 p-4 overflow-auto">
+        {searchTerm ? (
+          <div className="text-center py-8">
+            <p className="text-muted-foreground">Search results for &quot;{searchTerm}&quot;</p>
+            <p className="text-sm text-muted-foreground mt-2">No results found</p>
+          </div>
+        ) : (
+          <div className="text-center py-8">
+            <Search className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <p className="text-muted-foreground">Start typing to search...</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }

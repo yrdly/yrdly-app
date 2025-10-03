@@ -64,24 +64,24 @@ export function EnhancedItemCard({ item, onEditItem, onDeleteItem }: EnhancedIte
 
   return (
     <>
-      <Card className="h-full flex flex-col hover:shadow-lg transition-shadow">
+      <Card className="h-full flex flex-col group hover:shadow-lg hover:-translate-y-1 transition-all duration-300 overflow-hidden">
         {/* Image Section */}
         <div 
-          className="relative aspect-square overflow-hidden rounded-t-lg cursor-pointer"
+          className="relative aspect-square overflow-hidden cursor-pointer"
           onClick={() => setIsDetailOpen(true)}
         >
           <Image
             src={firstImage}
             alt={item.title || 'Item image'}
             fill
-            className="object-cover hover:scale-105 transition-transform duration-300"
+            className="object-cover group-hover:scale-105 transition-transform duration-300"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           />
           
           {/* Price Badge */}
           {item.price && (
             <div className="absolute top-3 right-3">
-              <Badge className="bg-green-600 text-white px-3 py-1 text-sm font-semibold">
+              <Badge className="bg-primary text-primary-foreground px-3 py-1 text-sm font-semibold shadow-sm">
                 {formatPrice(item.price)}
               </Badge>
             </div>
@@ -89,68 +89,68 @@ export function EnhancedItemCard({ item, onEditItem, onDeleteItem }: EnhancedIte
 
           {/* Owner Actions */}
           {isOwner && (
-            <div className="absolute top-3 left-3 flex space-x-2">
+            <div className="absolute top-3 left-3 flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
               <Button
                 size="sm"
                 variant="secondary"
-                className="w-8 h-8 p-0 bg-white/90 hover:bg-white"
+                className="w-8 h-8 p-0 bg-background/90 hover:bg-background shadow-sm"
                 onClick={() => onEditItem?.(item)}
               >
-                <Edit className="w-4 h-4 text-gray-700 dark:text-gray-300" />
+                <Edit className="w-4 h-4" />
               </Button>
               <Button
                 size="sm"
                 variant="destructive"
-                className="w-8 h-8 p-0 bg-red-500/90 hover:bg-red-500"
+                className="w-8 h-8 p-0 bg-destructive/90 hover:bg-destructive shadow-sm"
                 onClick={() => setIsDeleteDialogOpen(true)}
               >
-                <Trash2 className="w-4 h-4 text-white" />
+                <Trash2 className="w-4 h-4" />
               </Button>
             </div>
           )}
         </div>
 
         {/* Content */}
-        <CardHeader className="pb-3">
+        <CardHeader className="p-4 pb-3">
           <div className="space-y-2">
-            <h3 className="font-semibold text-lg text-foreground line-clamp-2">
+            <h3 className="font-semibold text-lg text-foreground line-clamp-2 group-hover:text-primary transition-colors">
               {item.title || item.text}
             </h3>
             
             {item.description && (
-              <p className="text-muted-foreground dark:text-gray-300 text-sm line-clamp-2">
+              <p className="text-muted-foreground text-sm line-clamp-2 leading-relaxed">
                 {item.description}
               </p>
             )}
           </div>
         </CardHeader>
 
-        <CardContent className="pb-3 flex-1">
+        <CardContent className="p-4 pb-3 flex-1">
           <div className="space-y-3">
             {/* Price */}
             {item.price && (
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground dark:text-gray-300">Price:</span>
-                <span className="font-bold text-lg text-green-600 dark:text-green-400">
+              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                <span className="text-sm text-muted-foreground font-medium">Price:</span>
+                <span className="font-bold text-lg text-primary">
                   {formatPrice(item.price)}
                 </span>
               </div>
             )}
 
             {/* Location */}
-            <div className="flex items-center space-x-2 text-sm text-muted-foreground dark:text-gray-300">
+            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
               <MapPin className="w-4 h-4" />
               <span>Your Neighborhood</span>
             </div>
 
             {/* Author */}
-            <div className="flex items-center space-x-2 text-sm text-muted-foreground dark:text-gray-300">
+            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
               <User className="w-4 h-4" />
               <span>{item.author_name || 'Unknown Seller'}</span>
             </div>
 
             {/* Date */}
-            <div className="flex items-center space-x-2 text-sm text-muted-foreground dark:text-gray-300">
+            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
               <Calendar className="w-4 h-4" />
               <span>Posted {formatDate(item.timestamp)}</span>
             </div>
@@ -158,12 +158,12 @@ export function EnhancedItemCard({ item, onEditItem, onDeleteItem }: EnhancedIte
         </CardContent>
 
         {/* Actions */}
-        <CardFooter className="pt-0">
+        <CardFooter className="p-4 pt-0 space-y-3">
           <div className="w-full space-y-3">
             {/* View Details Button */}
             <Button 
               variant="outline" 
-              className="w-full"
+              className="w-full shadow-sm hover:shadow-md transition-shadow"
               onClick={() => setIsDetailOpen(true)}
             >
               <Eye className="w-4 h-4 mr-2" />
@@ -194,7 +194,7 @@ export function EnhancedItemCard({ item, onEditItem, onDeleteItem }: EnhancedIte
 
             {/* Owner Message */}
             {isOwner && (
-              <div className="text-center text-sm text-muted-foreground py-2">
+              <div className="text-center text-sm text-muted-foreground py-3 px-4 bg-muted/50 rounded-lg">
                 This is your item. Use the edit/delete buttons above to manage it.
               </div>
             )}

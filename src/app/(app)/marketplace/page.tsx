@@ -2,27 +2,35 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 // Force dynamic rendering to avoid prerender issues
 export const dynamic = 'force-dynamic';
 import { Input } from "@/components/ui/input";
-import { Search, Plus, ShoppingCart } from "lucide-react";
+import { Search, Plus, ShoppingCart, Heart, MessageCircle } from "lucide-react";
 import { CreateItemDialog } from "@/components/CreateItemDialog";
 import { useState, useEffect, useMemo } from "react";
 import type { Post as PostType } from "@/types";
 import { supabase } from "@/lib/supabase";
-import { EnhancedItemCard } from "@/components/marketplace/EnhancedItemCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 
 function EmptyMarketplace() {
     return (
-        <div className="text-center py-16">
-            <div className="inline-block bg-muted p-4 rounded-full mb-4">
-                <ShoppingCart className="h-12 w-12 text-muted-foreground" />
+        <div className="text-center py-20">
+            <div className="inline-block bg-gradient-to-br from-primary/10 to-accent/10 p-6 rounded-2xl mb-6 shadow-sm">
+                <ShoppingCart className="h-16 w-16 text-primary" />
             </div>
-            <h2 className="text-2xl font-bold">The marketplace is empty</h2>
-            <p className="text-muted-foreground mt-2 mb-6">Be the first to list an item for sale in your neighborhood!</p>
+            <h2 className="text-3xl font-bold mb-3">The marketplace is empty</h2>
+            <p className="text-muted-foreground text-lg mb-6 max-w-md mx-auto">Be the first to list an item for sale in your neighborhood and help your neighbors discover great deals!</p>
+            <CreateItemDialog>
+                <Button size="lg" className="shadow-sm">
+                    <Plus className="mr-2 h-5 w-5" />
+                    List Your First Item
+                </Button>
+            </CreateItemDialog>
         </div>
     )
 }
@@ -144,68 +152,146 @@ export default function MarketplacePage() {
     };
 
   return (
-    <div className="space-y-8 pt-16">
-       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-            <h1 className="text-2xl md:text-3xl font-bold font-headline">For Sale & Free</h1>
-            <p className="text-muted-foreground dark:text-gray-300">Buy and sell items in your neighborhood.</p>
+    <div className="p-4 space-y-6 pb-24">
+      {/* Page Header */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-foreground">For Sale & Free</h2>
+            <p className="text-muted-foreground">Buy and sell items in your neighborhood</p>
+          </div>
+          <CreateItemDialog>
+            <Button className="bg-primary text-primary-foreground hover:bg-primary/90 yrdly-shadow">
+              <Plus className="w-4 h-4 mr-2" />
+              Sell Item
+            </Button>
+          </CreateItemDialog>
         </div>
-       </div>
 
+        {/* Search Bar */}
         <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground dark:text-gray-400" />
-            <Input 
-                placeholder="Search For sale & free" 
-                className="pl-10 h-12 rounded-full bg-muted border-none text-foreground dark:bg-gray-800 dark:text-gray-200 placeholder:text-muted-foreground dark:placeholder:text-gray-400"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-            />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input 
+            placeholder="Search For sale & free" 
+            className="pl-10 bg-card border-border focus:border-primary" 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
         </div>
-        
-        {loading ? (
-             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                {[...Array(10)].map((_, i) => <Skeleton key={i} className="h-48 w-full" />)}
-            </div>
-        ) : filteredItems.length > 0 ? (
-             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                {filteredItems.map(item => (
-                    <EnhancedItemCard 
-                        key={item.id} 
-                        item={item}
-                        onEditItem={handleEditItem}
-                        onDeleteItem={handleDeleteItem}
-                    />
-                ))}
-            </div>
-        ) : (
-            searchTerm ? (
-                <div className="text-center py-16">
-                    <div className="inline-block bg-muted p-4 rounded-full mb-4">
-                        <Search className="h-12 w-12 text-muted-foreground" />
-                    </div>
-                    <h2 className="text-2xl font-bold">No items found for &quot;{searchTerm}&quot;</h2>
-                    <p className="text-muted-foreground mt-2 mb-6">Try searching for something else.</p>
-                </div>
-            ) : (
-                <EmptyMarketplace />
-            )
-        )}
-        
-        <div className="fixed bottom-20 right-4 z-20">
-            <CreateItemDialog>
-                <Button className="rounded-full h-14 w-14 shadow-lg" style={{backgroundColor: '#34A853'}}>
-                    <Plus className="h-6 w-6" />
-                </Button>
-             </CreateItemDialog>
-        </div>
+      </div>
 
-        {/* Edit Item Dialog */}
-        {editingItem && (
-            <CreateItemDialog 
-                postToEdit={editingItem}
-                onOpenChange={setIsEditDialogOpen}
-            />
-        )}
+      {/* Items Grid */}
+      {loading ? (
+        <div className="grid grid-cols-2 gap-4">
+          {[...Array(10)].map((_, i) => <Skeleton key={i} className="h-80 w-full rounded-lg" />)}
+        </div>
+      ) : filteredItems.length > 0 ? (
+        <div className="grid grid-cols-2 gap-4">
+          {filteredItems.map((item) => (
+            <Card key={item.id} className="p-0 overflow-hidden yrdly-shadow">
+              <div className="relative cursor-pointer" onClick={() => handleEditItem(item)}>
+                <img
+                  src={item.image_urls?.[0] || "/placeholder.svg"}
+                  alt={item.title || item.text}
+                  className="w-full aspect-square object-cover"
+                />
+                <Badge
+                  className={`absolute top-2 left-2 ${
+                    item.price === 0
+                      ? "bg-green-500 text-white"
+                      : item.price && item.price > 20000
+                        ? "bg-accent text-accent-foreground"
+                        : "bg-primary text-primary-foreground"
+                  }`}
+                >
+                  {item.price === 0 ? "FREE" : `₦${item.price?.toLocaleString()}`}
+                </Badge>
+                <Button variant="ghost" size="icon" className="absolute top-2 right-2 bg-white/80 hover:bg-white">
+                  <Heart className="w-4 h-4" />
+                </Button>
+              </div>
+              <div className="p-3 space-y-2">
+                <h4 className="font-semibold text-foreground text-sm cursor-pointer" onClick={() => handleEditItem(item)}>
+                  {item.title || item.text}
+                </h4>
+                <p className="text-xs text-muted-foreground line-clamp-2">{item.description}</p>
+                <div className="flex items-center gap-2">
+                  <Avatar className="w-5 h-5 flex-shrink-0">
+                    <AvatarImage src={item.author_image || "/placeholder.svg"} />
+                    <AvatarFallback
+                      className={`text-xs ${
+                        item.price === 0 ? "bg-green-500 text-white" : "bg-primary text-primary-foreground"
+                      }`}
+                    >
+                      {item.author_name?.slice(0, 2).toUpperCase() || "U"}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="text-xs text-muted-foreground truncate">{item.author_name}</span>
+                </div>
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>Posted {new Date(item.timestamp).toLocaleDateString()}</span>
+                </div>
+                <div className="flex gap-1">
+                  <Button
+                    size="sm"
+                    className={`flex-1 text-xs ${
+                      item.price === 0
+                        ? "bg-green-500 text-white hover:bg-green-600"
+                        : item.price && item.price > 20000
+                          ? "bg-accent text-accent-foreground hover:bg-accent/90"
+                          : "bg-primary text-primary-foreground hover:bg-primary/90"
+                    }`}
+                    onClick={() => handleEditItem(item)}
+                  >
+                    {item.price === 0 ? "Claim Free" : `Buy Now - ₦${item.price?.toLocaleString()}`}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className={`${
+                      item.price === 0
+                        ? "border-green-500 text-green-500"
+                        : item.price && item.price > 20000
+                          ? "border-accent text-accent"
+                          : "border-primary text-primary"
+                    } bg-transparent`}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      // TODO: Implement message seller functionality
+                      console.log('Message seller:', item.author_name)
+                    }}
+                  >
+                    <MessageCircle className="w-3 h-3" />
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        searchTerm ? (
+          <div className="text-center py-20">
+            <div className="inline-block bg-gradient-to-br from-muted/50 to-muted/30 p-6 rounded-2xl mb-6 shadow-sm">
+              <Search className="h-16 w-16 text-muted-foreground" />
+            </div>
+            <h2 className="text-3xl font-bold mb-3">No items found for &quot;{searchTerm}&quot;</h2>
+            <p className="text-muted-foreground text-lg mb-6 max-w-md mx-auto">Try searching for something else or browse all available items.</p>
+            <Button variant="outline" onClick={() => setSearchTerm("")}>
+              Clear Search
+            </Button>
+          </div>
+        ) : (
+          <EmptyMarketplace />
+        )
+      )}
+      {/* Edit Item Dialog */}
+      {editingItem && (
+        <CreateItemDialog 
+          postToEdit={editingItem}
+          open={isEditDialogOpen}
+          onOpenChange={handleEditDialogClose}
+        />
+      )}
     </div>
   );
 }

@@ -7,7 +7,8 @@ import { StorageService } from "@/lib/storage-service";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { OptimizedImage, AvatarImage } from "@/components/ui/optimized-image";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ImagePlus, Send, MessageCircle, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -386,7 +387,7 @@ export function NeighborChatLayout({ selectedConversationId }: NeighborChatLayou
                 >
                   <div className="relative">
                     <Avatar className="h-12 w-12 ring-2 ring-slate-200 dark:ring-slate-600 group-hover:ring-blue-300 dark:group-hover:ring-blue-600 transition-all">
-                    <AvatarImage src={otherParticipant.avatarUrl} alt={otherParticipant.name} />
+                    <AvatarImage src={otherParticipant.avatarUrl || '/placeholder.svg'} alt={otherParticipant.name || 'User'} />
                       <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-semibold">
                         {otherParticipant.name.charAt(0)}
                       </AvatarFallback>
@@ -476,7 +477,7 @@ export function NeighborChatLayout({ selectedConversationId }: NeighborChatLayou
           <div className="flex items-center gap-4">
             <div className="relative">
               <Avatar className="h-12 w-12 ring-2 ring-slate-200 dark:ring-slate-600">
-            <AvatarImage src={otherParticipant.avatarUrl} alt={otherParticipant.name} />
+            <AvatarImage src={otherParticipant.avatarUrl || '/placeholder.svg'} alt={otherParticipant.name || 'User'} />
                 <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-semibold">
                   {otherParticipant.name.charAt(0)}
                 </AvatarFallback>
@@ -516,7 +517,7 @@ export function NeighborChatLayout({ selectedConversationId }: NeighborChatLayou
               >
                 {message.sender_id !== user?.id && (
                     <Avatar className="h-8 w-8 flex-shrink-0">
-                    <AvatarImage src={otherParticipant.avatarUrl} alt={otherParticipant.name} />
+                    <AvatarImage src={otherParticipant.avatarUrl || '/placeholder.svg'} alt={otherParticipant.name || 'User'} />
                       <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-xs">
                         {otherParticipant.name.charAt(0)}
                       </AvatarFallback>
@@ -532,10 +533,13 @@ export function NeighborChatLayout({ selectedConversationId }: NeighborChatLayou
                 >
                   {message.image_url && (
                       <div className="relative w-full max-w-64 mb-2">
-                      <img
+                      <OptimizedImage
                         src={message.image_url}
                         alt="Chat image"
-                          className="rounded-lg object-cover w-full h-auto max-h-64"
+                        width={256}
+                        height={256}
+                        className="rounded-lg object-cover w-full h-auto max-h-64"
+                        sizes="(max-width: 768px) 100vw, 256px"
                       />
                     </div>
                   )}
@@ -564,10 +568,13 @@ export function NeighborChatLayout({ selectedConversationId }: NeighborChatLayou
         <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
           {imagePreview && (
             <div className="mb-4 relative inline-block">
-              <img
+              <OptimizedImage
                 src={imagePreview}
                 alt="Preview"
+                width={128}
+                height={128}
                 className="w-32 h-32 object-cover rounded-lg border border-slate-200 dark:border-slate-600"
+                sizes="128px"
               />
               <Button
                 type="button"
@@ -645,7 +652,7 @@ export function NeighborChatLayout({ selectedConversationId }: NeighborChatLayou
             </Button>
             <div className="flex items-center gap-3 flex-1">
               <Avatar className="h-10 w-10">
-                <AvatarImage src={getOtherParticipant(selectedConversation)?.avatarUrl} />
+                <AvatarImage src={getOtherParticipant(selectedConversation)?.avatarUrl || '/placeholder.svg'} alt={getOtherParticipant(selectedConversation)?.name || 'User'} />
                 <AvatarFallback>
                   {getOtherParticipant(selectedConversation)?.name.charAt(0)}
                 </AvatarFallback>
@@ -684,7 +691,7 @@ export function NeighborChatLayout({ selectedConversationId }: NeighborChatLayou
                     >
                       {message.sender_id !== user?.id && (
                         <Avatar className="h-8 w-8 flex-shrink-0">
-                          <AvatarImage src={getOtherParticipant(selectedConversation)?.avatarUrl} alt={getOtherParticipant(selectedConversation)?.name} />
+                          <AvatarImage src={getOtherParticipant(selectedConversation)?.avatarUrl || '/placeholder.svg'} alt={getOtherParticipant(selectedConversation)?.name || 'User'} />
                           <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-xs">
                             {getOtherParticipant(selectedConversation)?.name.charAt(0)}
                           </AvatarFallback>
@@ -700,10 +707,13 @@ export function NeighborChatLayout({ selectedConversationId }: NeighborChatLayou
                       >
                         {message.image_url && (
                           <div className="relative w-full max-w-64 mb-2">
-                            <img
+                            <OptimizedImage
                               src={message.image_url}
                               alt="Chat image"
+                              width={256}
+                              height={256}
                               className="rounded-lg object-cover w-full h-auto max-h-64"
+                              sizes="(max-width: 768px) 100vw, 256px"
                             />
                           </div>
                         )}
@@ -733,10 +743,13 @@ export function NeighborChatLayout({ selectedConversationId }: NeighborChatLayou
           <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex-shrink-0">
           {imagePreview && (
               <div className="mb-4 relative inline-block">
-              <img
+              <OptimizedImage
                 src={imagePreview}
                 alt="Preview"
-                  className="w-32 h-32 object-cover rounded-lg border border-slate-200 dark:border-slate-600"
+                width={128}
+                height={128}
+                className="w-32 h-32 object-cover rounded-lg border border-slate-200 dark:border-slate-600"
+                sizes="128px"
               />
               <Button
                 type="button"

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from 'react';
-import Image from 'next/image';
+import { OptimizedImage } from '@/components/ui/optimized-image';
 import { Button } from '@/components/ui/button';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -120,12 +120,13 @@ export function ImageSwiper({ images, isOpen, onClose, initialIndex = 0 }: Image
         onTouchEnd={handleTouchEnd}
       >
         <div className="relative w-full h-full">
-          <Image
+          <OptimizedImage
             src={images[currentIndex]}
             alt={`Image ${currentIndex + 1}`}
             fill
             className="object-contain"
             priority
+            showSkeleton={false}
           />
         </div>
       </div>

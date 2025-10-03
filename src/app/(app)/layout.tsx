@@ -68,10 +68,10 @@ function ProtectedLayout({ children }: { children: React.ReactNode }) {
           <div className="md:hidden">
               <AppHeader />
           </div>
-          {/* Enhanced spacing for mobile layout with proper header and bottom nav clearance */}
-          <main className="pt-20 pb-24 p-4 sm:p-6 lg:p-8 md:pt-6 md:pb-8 safe-area-inset">
+          {/* Screen Content with proper spacing for new UI */}
+          <div className="pt-20 pb-20">
             {children}
-          </main>
+          </div>
           <AppBottomNav />
           {/* Offline Status Component */}
           <OfflineStatus />

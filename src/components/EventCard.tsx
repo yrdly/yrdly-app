@@ -4,11 +4,11 @@ import type { Post as PostType } from "@/types";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { MapPin, Calendar, LinkIcon, MoreHorizontal, Edit, Trash2 } from "lucide-react";
-import Image from "next/image";
+import { PostImage, AvatarImage } from "@/components/ui/optimized-image";
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/use-supabase-auth";
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import { Avatar, AvatarFallback } from "./ui/avatar";
 import { timeAgo } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import {
@@ -185,11 +185,10 @@ export function EventCard({ event }: EventCardProps) {
     <Card className="flex flex-col">
       <div onClick={handleCardClick} className="cursor-pointer">
         <div className="relative w-full h-48 rounded-t-lg overflow-hidden">
-          <Image
+          <PostImage
             src={event.image_url || event.image_urls?.[0] || '/placeholder-event.svg'}
             alt={event.title || event.text}
-            fill
-            style={{ objectFit: "cover" }}
+            className="absolute inset-0"
             data-ai-hint="event image"
           />
           {/* Image count indicator for multiple images */}
@@ -202,7 +201,12 @@ export function EventCard({ event }: EventCardProps) {
         <CardHeader>
            <div className="flex items-center space-x-3 mb-4">
                <Avatar>
-                   <AvatarImage src={event.author_image} alt={event.author_name} data-ai-hint="person portrait"/>
+                   <AvatarImage 
+                     src={event.author_image || '/placeholder.svg'} 
+                     alt={event.author_name || 'User'} 
+                     size={40}
+                     data-ai-hint="person portrait"
+                   />
                    <AvatarFallback>{event.author_name?.charAt(0) || 'U'}</AvatarFallback>
                </Avatar>
                <div className="flex-1">

@@ -2,7 +2,7 @@
 "use client";
 
 import type { Post } from "@/types";
-import Image from "next/image";
+import { MarketplaceImage } from "@/components/ui/optimized-image";
 import Link from "next/link";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { formatPrice } from "@/lib/utils";
@@ -17,15 +17,11 @@ export function MarketplaceItemCard({ item }: MarketplaceItemCardProps) {
         <Link href={`/posts/${item.id}`}>
             <Card className="overflow-hidden group cursor-pointer">
                 <CardContent className="p-0">
-                    <div className="relative w-full aspect-square overflow-hidden">
-                        <Image
-                            src={item.image_urls?.[0] || `https://placehold.co/400x400.png`}
-                            alt={item.text}
-                            fill
-                            className="object-cover group-hover:scale-105 transition-transform duration-300"
-                            data-ai-hint="product image"
-                        />
-                    </div>
+                    <MarketplaceImage
+                        src={item.image_urls?.[0] || `https://placehold.co/400x400.png`}
+                        alt={item.text}
+                        data-ai-hint="product image"
+                    />
                 </CardContent>
                 <CardFooter className="p-3 flex-col items-start">
                     <p className="font-semibold truncate w-full">{item.text}</p>
