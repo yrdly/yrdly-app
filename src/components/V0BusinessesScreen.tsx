@@ -263,7 +263,6 @@ export function V0BusinessesScreen({ className }: V0BusinessesScreenProps) {
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isCreateBusinessDialogOpen, setIsCreateBusinessDialogOpen] = useState(false);
   const [categoryStats, setCategoryStats] = useState<Array<{
     name: string;
     count: number;
@@ -382,13 +381,12 @@ export function V0BusinessesScreen({ className }: V0BusinessesScreenProps) {
             <h2 className="text-2xl font-bold text-foreground">Local Businesses</h2>
             <p className="text-muted-foreground">Discover and support businesses in your neighborhood</p>
           </div>
-          <Button 
-            className="bg-primary text-primary-foreground hover:bg-primary/90 yrdly-shadow"
-            onClick={() => setIsCreateBusinessDialogOpen(true)}
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Add Your Business
-          </Button>
+          <CreateBusinessDialog>
+            <Button className="bg-primary text-primary-foreground hover:bg-primary/90 yrdly-shadow">
+              <Plus className="w-4 h-4 mr-2" />
+              Add Your Business
+            </Button>
+          </CreateBusinessDialog>
         </div>
 
         {/* Search */}
@@ -501,7 +499,6 @@ export function V0BusinessesScreen({ className }: V0BusinessesScreenProps) {
         <EmptyBusinesses />
       )}
 
-      {/* Create Business Dialog - handled by header button */}
     </div>
   );
 }

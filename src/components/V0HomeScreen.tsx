@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
-import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   Heart,
   MessageCircle,
@@ -30,6 +30,8 @@ import { SuggestedNeighbors } from "@/components/SuggestedNeighbors";
 // Email verification banner removed - users verify during registration
 import { CreatePostDialog } from "@/components/CreatePostDialog";
 import { PostCard } from "@/components/PostCard";
+import { CommentSection } from "@/components/CommentSection";
+import { useToast } from "@/hooks/use-toast";
 
 interface V0HomeScreenProps {
   onViewProfile?: (user: any) => void;
@@ -38,9 +40,10 @@ interface V0HomeScreenProps {
 export function V0HomeScreen({ onViewProfile }: V0HomeScreenProps) {
   const { user, profile } = useAuth();
   const { triggerHaptic } = useHaptics();
+  const { toast } = useToast();
   const [posts, setPosts] = useState<PostType[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showCreatePost, setShowCreatePost] = useState(false);
+  const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set());
   // Email verification banner removed - users verify during registration
   // Welcome banner removed as requested
 
@@ -121,6 +124,99 @@ export function V0HomeScreen({ onViewProfile }: V0HomeScreenProps) {
     };
   }, [user]);
 
+  // Handle like functionality
+  const handleLike = async (postId: string) => {
+    if (!user) return;
+    
+    triggerHaptic('light');
+    
+    try {
+      // Get current post data
+      const { data: postData, error: fetchError } = await supabase
+        .from('posts')
+        .select('liked_by')
+        .eq('id', postId)
+        .single();
+
+      if (fetchError) {
+        console.error('Error fetching post:', fetchError);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to like post. Please try again.",
+        });
+        return;
+      }
+
+      const currentLikedBy = postData.liked_by || [];
+      const userHasLiked = currentLikedBy.includes(user.id);
+
+      let newLikedBy;
+      if (userHasLiked) {
+        // Remove user from liked_by array
+        newLikedBy = currentLikedBy.filter((id: string) => id !== user.id);
+      } else {
+        // Add user to liked_by array
+        newLikedBy = [...currentLikedBy, user.id];
+      }
+
+      // Update the post
+      const { error: updateError } = await supabase
+        .from('posts')
+        .update({ liked_by: newLikedBy })
+        .eq('id', postId);
+
+      if (updateError) {
+        console.error('Error updating post:', updateError);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to like post. Please try again.",
+        });
+      }
+    } catch (error) {
+      console.error('Error handling like:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to like post. Please try again.",
+      });
+    }
+  };
+
+  // Handle comment toggle
+  const handleCommentToggle = (postId: string) => {
+    const newExpanded = new Set(expandedComments);
+    if (newExpanded.has(postId)) {
+      newExpanded.delete(postId);
+    } else {
+      newExpanded.add(postId);
+    }
+    setExpandedComments(newExpanded);
+  };
+
+  // Handle share functionality
+  const handleShare = async (postId: string) => {
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: 'Check out this post on Yrdly',
+          text: 'Check out this post on Yrdly',
+          url: window.location.origin + `/posts/${postId}`
+        });
+      } else {
+        // Fallback to clipboard
+        await navigator.clipboard.writeText(window.location.origin + `/posts/${postId}`);
+        toast({
+          title: "Link copied",
+          description: "Post link has been copied to clipboard.",
+        });
+      }
+    } catch (error) {
+      console.error('Error sharing:', error);
+    }
+  };
+
   return (
     <div ref={containerRef} className="p-4 space-y-4 pb-24 max-w-2xl mx-auto">
       {/* Email verification banner removed - users verify during registration */}
@@ -136,13 +232,14 @@ export function V0HomeScreen({ onViewProfile }: V0HomeScreenProps) {
               {profile?.name?.charAt(0) || "U"}
             </AvatarFallback>
           </Avatar>
-          <Button
-            variant="outline"
-            className="flex-1 justify-start text-muted-foreground bg-transparent"
-            onClick={() => setShowCreatePost(true)}
-          >
-            What&apos;s happening in your neighborhood?
-          </Button>
+          <CreatePostDialog>
+            <Button
+              variant="outline"
+              className="flex-1 justify-start text-muted-foreground bg-transparent"
+            >
+              What&apos;s happening in your neighborhood?
+            </Button>
+          </CreatePostDialog>
         </div>
       </Card>
 
@@ -235,15 +332,30 @@ export function V0HomeScreen({ onViewProfile }: V0HomeScreenProps) {
 
               <div className="flex items-center justify-between pt-3 border-t border-border flex-wrap gap-2">
                 <div className="flex items-center gap-4">
-                  <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-red-500">
-                    <Heart className="w-4 h-4 mr-1" />
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className={`text-muted-foreground hover:text-red-500 ${post.liked_by?.includes(user?.id || '') ? 'text-red-500' : ''}`}
+                    onClick={() => handleLike(post.id)}
+                  >
+                    <Heart className={`w-4 h-4 mr-1 ${post.liked_by?.includes(user?.id || '') ? 'fill-current' : ''}`} />
                     <span className="text-sm">{post.liked_by?.length || 0}</span>
                   </Button>
-                  <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="text-muted-foreground hover:text-primary"
+                    onClick={() => handleCommentToggle(post.id)}
+                  >
                     <MessageCircle className="w-4 h-4 mr-1" />
                     <span className="text-sm">{post.comment_count || 0}</span>
                   </Button>
-                  <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-accent">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="text-muted-foreground hover:text-accent"
+                    onClick={() => handleShare(post.id)}
+                  >
                     <Share className="w-4 h-4 mr-1" />
                     <span className="text-sm">Share</span>
                   </Button>
@@ -254,6 +366,13 @@ export function V0HomeScreen({ onViewProfile }: V0HomeScreenProps) {
                   </Button>
                 )}
               </div>
+              
+              {/* Comments Section */}
+              {expandedComments.has(post.id) && (
+                <div className="mt-4 pt-4 border-t border-border">
+                  <CommentSection postId={post.id} />
+                </div>
+              )}
             </Card>
           ))
         ) : (
@@ -261,59 +380,6 @@ export function V0HomeScreen({ onViewProfile }: V0HomeScreenProps) {
         )}
       </div>
 
-      {/* Create Post Modal */}
-      {showCreatePost && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-end">
-          <div className="w-full max-w-2xl mx-auto bg-background rounded-t-xl p-4 space-y-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-foreground">Create Post</h3>
-              <Button variant="ghost" size="sm" onClick={() => setShowCreatePost(false)}>
-                ✕
-              </Button>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <Avatar className="w-10 h-10 flex-shrink-0">
-                <AvatarImage src={profile?.avatar_url || "/diverse-user-avatars.png"} />
-                <AvatarFallback className="bg-primary text-primary-foreground">
-                  {profile?.name?.charAt(0) || "U"}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <h4 className="font-semibold text-foreground">{profile?.name || "User"}</h4>
-                <p className="text-sm text-muted-foreground">Posting to neighborhood</p>
-              </div>
-            </div>
-
-            <CreatePostDialog>
-              <div className="w-full">
-                <Textarea 
-                  placeholder="What's happening in your neighborhood?" 
-                  className="min-h-[100px] resize-none" 
-                />
-              </div>
-            </CreatePostDialog>
-
-            <div className="flex items-center gap-2 flex-wrap">
-              <Button variant="outline" size="sm">
-                <ImageIcon className="w-4 h-4 mr-2" />
-                Photo
-              </Button>
-              <Button variant="outline" size="sm">
-                <MapPin className="w-4 h-4 mr-2" />
-                Location
-              </Button>
-            </div>
-
-            <div className="flex gap-2">
-              <Button variant="outline" className="flex-1 bg-transparent" onClick={() => setShowCreatePost(false)}>
-                Cancel
-              </Button>
-              <Button className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90">Post</Button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
