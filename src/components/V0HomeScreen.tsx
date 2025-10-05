@@ -40,7 +40,6 @@ export function V0HomeScreen({ onViewProfile }: V0HomeScreenProps) {
   const { triggerHaptic } = useHaptics();
   const [posts, setPosts] = useState<PostType[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showCreatePost, setShowCreatePost] = useState(false);
   // Email verification banner removed - users verify during registration
   // Welcome banner removed as requested
 
@@ -136,13 +135,14 @@ export function V0HomeScreen({ onViewProfile }: V0HomeScreenProps) {
               {profile?.name?.charAt(0) || "U"}
             </AvatarFallback>
           </Avatar>
-          <Button
-            variant="outline"
-            className="flex-1 justify-start text-muted-foreground bg-transparent"
-            onClick={() => setShowCreatePost(true)}
-          >
-            What&apos;s happening in your neighborhood?
-          </Button>
+          <CreatePostDialog>
+            <Button
+              variant="outline"
+              className="flex-1 justify-start text-muted-foreground bg-transparent"
+            >
+              What&apos;s happening in your neighborhood?
+            </Button>
+          </CreatePostDialog>
         </div>
       </Card>
 
@@ -261,59 +261,6 @@ export function V0HomeScreen({ onViewProfile }: V0HomeScreenProps) {
         )}
       </div>
 
-      {/* Create Post Modal */}
-      {showCreatePost && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-end">
-          <div className="w-full max-w-2xl mx-auto bg-background rounded-t-xl p-4 space-y-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-foreground">Create Post</h3>
-              <Button variant="ghost" size="sm" onClick={() => setShowCreatePost(false)}>
-                ✕
-              </Button>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <Avatar className="w-10 h-10 flex-shrink-0">
-                <AvatarImage src={profile?.avatar_url || "/diverse-user-avatars.png"} />
-                <AvatarFallback className="bg-primary text-primary-foreground">
-                  {profile?.name?.charAt(0) || "U"}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <h4 className="font-semibold text-foreground">{profile?.name || "User"}</h4>
-                <p className="text-sm text-muted-foreground">Posting to neighborhood</p>
-              </div>
-            </div>
-
-            <CreatePostDialog>
-              <div className="w-full">
-                <Textarea 
-                  placeholder="What's happening in your neighborhood?" 
-                  className="min-h-[100px] resize-none" 
-                />
-              </div>
-            </CreatePostDialog>
-
-            <div className="flex items-center gap-2 flex-wrap">
-              <Button variant="outline" size="sm">
-                <ImageIcon className="w-4 h-4 mr-2" />
-                Photo
-              </Button>
-              <Button variant="outline" size="sm">
-                <MapPin className="w-4 h-4 mr-2" />
-                Location
-              </Button>
-            </div>
-
-            <div className="flex gap-2">
-              <Button variant="outline" className="flex-1 bg-transparent" onClick={() => setShowCreatePost(false)}>
-                Cancel
-              </Button>
-              <Button className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90">Post</Button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

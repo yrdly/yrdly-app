@@ -105,7 +105,6 @@ export function V0EventsScreen({ className }: V0EventsScreenProps) {
   const [events, setEvents] = useState<PostType[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isCreateEventDialogOpen, setIsCreateEventDialogOpen] = useState(false);
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -207,13 +206,12 @@ export function V0EventsScreen({ className }: V0EventsScreenProps) {
             <h2 className="text-2xl font-bold text-foreground">Events</h2>
             <p className="text-muted-foreground">Discover and create community events</p>
           </div>
-          <Button 
-            className="bg-primary text-primary-foreground hover:bg-primary/90 yrdly-shadow"
-            onClick={() => setIsCreateEventDialogOpen(true)}
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Create Event
-          </Button>
+          <CreateEventDialog>
+            <Button className="bg-primary text-primary-foreground hover:bg-primary/90 yrdly-shadow">
+              <Plus className="w-4 h-4 mr-2" />
+              Create Event
+            </Button>
+          </CreateEventDialog>
         </div>
 
         {/* Search */}
@@ -310,7 +308,6 @@ export function V0EventsScreen({ className }: V0EventsScreenProps) {
         <EmptyEvents />
       )}
 
-      {/* Create Event Dialog - handled by header button */}
     </div>
   );
 }
