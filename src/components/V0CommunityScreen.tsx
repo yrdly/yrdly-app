@@ -167,21 +167,86 @@ export function V0CommunityScreen({ className }: V0CommunityScreenProps) {
     if (!currentUser) return;
 
     try {
-      // TODO: Implement like functionality
-      toast({ title: "Like functionality will be implemented" });
+      // Get current post data
+      const { data: postData, error: fetchError } = await supabase
+        .from('posts')
+        .select('liked_by')
+        .eq('id', postId)
+        .single();
+
+      if (fetchError) {
+        console.error('Error fetching post:', fetchError);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to like post. Please try again.",
+        });
+        return;
+      }
+
+      const currentLikedBy = postData.liked_by || [];
+      const userHasLiked = currentLikedBy.includes(currentUser.id);
+
+      let newLikedBy;
+      if (userHasLiked) {
+        // Remove user from liked_by array
+        newLikedBy = currentLikedBy.filter((id: string) => id !== currentUser.id);
+      } else {
+        // Add user to liked_by array
+        newLikedBy = [...currentLikedBy, currentUser.id];
+      }
+
+      // Update the post
+      const { error: updateError } = await supabase
+        .from('posts')
+        .update({ liked_by: newLikedBy })
+        .eq('id', postId);
+
+      if (updateError) {
+        console.error('Error updating post:', updateError);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to like post. Please try again.",
+        });
+      }
     } catch (error) {
-      console.error('Error liking post:', error);
+      console.error('Error handling like:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to like post. Please try again.",
+      });
     }
   };
 
   const handleComment = async (postId: string) => {
-    // TODO: Implement comment functionality
-    toast({ title: "Comment functionality will be implemented" });
+    // For now, just show a toast - comment functionality would need a modal or expanded view
+    toast({ 
+      title: "Comments", 
+      description: "Comment functionality is available in the full post view." 
+    });
   };
 
   const handleShare = async (postId: string) => {
-    // TODO: Implement share functionality
-    toast({ title: "Share functionality will be implemented" });
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: 'Check out this post on Yrdly',
+          text: 'Check out this post on Yrdly',
+          url: window.location.origin + `/posts/${postId}`
+        });
+      } else {
+        // Fallback to clipboard
+        await navigator.clipboard.writeText(window.location.origin + `/posts/${postId}`);
+        toast({
+          title: "Link copied",
+          description: "Post link has been copied to clipboard.",
+        });
+      }
+    } catch (error) {
+      console.error('Error sharing:', error);
+    }
   };
 
   if (loading) {
@@ -311,10 +376,10 @@ export function V0CommunityScreen({ className }: V0CommunityScreenProps) {
                 <Button 
                   variant="ghost" 
                   size="sm" 
-                  className="text-muted-foreground hover:text-red-500"
+                  className={`text-muted-foreground hover:text-red-500 ${post.liked_by?.includes(currentUser?.id || '') ? 'text-red-500' : ''}`}
                   onClick={() => handleLike(post.id)}
                 >
-                  <Heart className="w-4 h-4 mr-1" />
+                  <Heart className={`w-4 h-4 mr-1 ${post.liked_by?.includes(currentUser?.id || '') ? 'fill-current' : ''}`} />
                   <span className="text-sm">{post.liked_by?.length || 0}</span>
                 </Button>
                 <Button 
