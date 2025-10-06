@@ -36,7 +36,6 @@ import { SuggestedNeighbors } from "@/components/SuggestedNeighbors";
 import { CreatePostDialog } from "@/components/CreatePostDialog";
 import { PostCard } from "@/components/PostCard";
 import { CommentSection } from "@/components/CommentSection";
-import { useToast } from "@/hooks/use-toast";
 
 interface V0HomeScreenProps {
   onViewProfile?: (user: any) => void;

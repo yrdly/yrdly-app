@@ -21,7 +21,8 @@ import {
   MoreHorizontal,
   Edit,
   Trash2,
-  Clock
+  Clock,
+  Building
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-supabase-auth";
 import { supabase } from "@/lib/supabase";
