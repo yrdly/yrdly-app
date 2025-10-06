@@ -6,11 +6,12 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Heart, MessageCircle, Search, Plus } from "lucide-react";
+import { Heart, MessageCircle, Search, Plus, Edit, Trash2 } from "lucide-react";
 import { CreateItemDialog } from "@/components/CreateItemDialog";
 import { EnhancedItemCard } from "@/components/marketplace/EnhancedItemCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-supabase-auth";
 import { supabase } from "@/lib/supabase";
 import type { Post as PostType } from "@/types";
 
@@ -20,12 +21,57 @@ interface V0MarketplaceScreenProps {
 }
 
 export function V0MarketplaceScreen({ onItemClick, onMessageSeller }: V0MarketplaceScreenProps) {
+  const { user } = useAuth();
   const [items, setItems] = useState<PostType[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [editingItem, setEditingItem] = useState<PostType | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const { toast } = useToast();
+
+  // Handle edit item
+  const handleEditItem = (item: PostType) => {
+    setEditingItem(item);
+    setIsEditDialogOpen(true);
+  };
+
+  // Handle delete item
+  const handleDeleteItem = async (itemId: string) => {
+    if (!user) return;
+    
+    try {
+      const { error } = await supabase
+        .from('posts')
+        .delete()
+        .eq('id', itemId)
+        .eq('user_id', user.id); // Ensure user can only delete their own items
+
+      if (error) {
+        console.error('Error deleting item:', error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to delete item. Please try again.",
+        });
+        return;
+      }
+
+      // Remove item from local state
+      setItems(prevItems => prevItems.filter(item => item.id !== itemId));
+      
+      toast({
+        title: "Item Deleted",
+        description: "Your item has been deleted successfully.",
+      });
+    } catch (error) {
+      console.error('Error deleting item:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to delete item. Please try again.",
+      });
+    }
+  };
 
   // Fetch items from Supabase
   useEffect(() => {
@@ -215,7 +261,15 @@ export function V0MarketplaceScreen({ onItemClick, onMessageSeller }: V0Marketpl
                 <p className="text-xs text-muted-foreground line-clamp-2">
                   {item.description || item.text || "No description available"}
                 </p>
-                <div className="flex items-center gap-1 sm:gap-2">
+                <div 
+                  className="flex items-center gap-1 sm:gap-2 cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (item.user_id) {
+                      window.location.href = `/profile/${item.user_id}`;
+                    }
+                  }}
+                >
                   <Avatar className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0">
                     <AvatarImage src={item.user?.avatar_url || "/placeholder.svg"} />
                     <AvatarFallback className={`text-xs ${getPriceColor(item.price || 0)}`}>
@@ -230,24 +284,56 @@ export function V0MarketplaceScreen({ onItemClick, onMessageSeller }: V0Marketpl
                   <span>Posted {new Date(item.timestamp).toLocaleDateString()}</span>
                 </div>
                 <div className="flex gap-1">
-                  <Button
-                    size="sm"
-                    className={`flex-1 text-xs ${getButtonColor(item.price || 0)} h-7 sm:h-8`}
-                    onClick={() => onItemClick?.(item)}
-                  >
-                    {item.price === 0 ? "Claim Free" : "Buy Now"}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className={`${getBorderColor(item.price || 0)} bg-transparent w-7 h-7 sm:w-8 sm:h-8`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onMessageSeller?.(item);
-                    }}
-                  >
-                    <MessageCircle className="w-3 h-3" />
-                  </Button>
+                  {user && item.user_id === user.id ? (
+                    // Show Edit/Delete for own items
+                    <>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1 text-xs h-7 sm:h-8"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditItem(item);
+                        }}
+                      >
+                        <Edit className="w-3 h-3 mr-1" />
+                        Edit
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50 w-7 h-7 sm:w-8 sm:h-8"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteItem(item.id);
+                        }}
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    </>
+                  ) : (
+                    // Show Buy Now/Chat for others' items
+                    <>
+                      <Button
+                        size="sm"
+                        className={`flex-1 text-xs ${getButtonColor(item.price || 0)} h-7 sm:h-8`}
+                        onClick={() => onItemClick?.(item)}
+                      >
+                        {item.price === 0 ? "Claim Free" : "Buy Now"}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className={`${getBorderColor(item.price || 0)} bg-transparent w-7 h-7 sm:w-8 sm:h-8`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onMessageSeller?.(item);
+                        }}
+                      >
+                        <MessageCircle className="w-3 h-3" />
+                      </Button>
+                    </>
+                  )}
                 </div>
               </div>
             </Card>

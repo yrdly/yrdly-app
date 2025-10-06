@@ -44,14 +44,16 @@ function EmptyEvents() {
   );
 }
 
-function EventCard({ event, onLike, onComment, onShare, onClick }: { 
+function EventCard({ event, onLike, onComment, onShare, onClick, onRSVP, isRSVPLoading, currentUser }: { 
   event: PostType; 
   onLike: (eventId: string) => void;
   onComment: (eventId: string) => void;
   onShare: (eventId: string) => void;
   onClick: (eventId: string) => void;
+  onRSVP: (eventId: string) => void;
+  isRSVPLoading: boolean;
+  currentUser: any;
 }) {
-  const { user } = useAuth();
   
   const getEventBadge = (eventDate: string | undefined) => {
     if (!eventDate) return { text: "TBD", variant: "outline" as const, className: "text-muted-foreground border-muted-foreground" };
@@ -91,18 +93,18 @@ function EventCard({ event, onLike, onComment, onShare, onClick }: {
           </AvatarFallback>
         </Avatar>
         <div className="flex-1 space-y-2">
-          <div className="flex items-center justify-between">
-            <h4 className="font-semibold text-foreground">{event.title || "Event"}</h4>
+          <div className="flex items-center justify-between gap-2">
+            <h4 className="font-semibold text-foreground truncate flex-1">{event.title || "Event"}</h4>
             <Badge variant={badge.variant} className={badge.className}>
               {badge.text}
             </Badge>
           </div>
-          <p className="text-sm text-muted-foreground">{event.text || "No description available"}</p>
+          <p className="text-sm text-muted-foreground line-clamp-2">{event.text || "No description available"}</p>
           <div className="flex items-center gap-4 text-xs text-muted-foreground">
             {event.event_location?.address && (
-              <div className="flex items-center gap-1">
-                <MapPin className="w-3 h-3" />
-                <span>{event.event_location.address}</span>
+              <div className="flex items-center gap-1 min-w-0">
+                <MapPin className="w-3 h-3 flex-shrink-0" />
+                <span className="truncate">{event.event_location.address}</span>
               </div>
             )}
             <div className="flex items-center gap-1">
@@ -114,9 +116,19 @@ function EventCard({ event, onLike, onComment, onShare, onClick }: {
             <Button
               size="sm"
               variant="outline"
-              className="border-primary text-primary hover:bg-primary hover:text-primary-foreground bg-transparent"
+              className={`border-primary text-primary hover:bg-primary hover:text-primary-foreground bg-transparent ${
+                currentUser && event.attendees?.includes(currentUser.id) 
+                  ? 'bg-primary text-primary-foreground' 
+                  : ''
+              }`}
+              onClick={(e) => {
+                e.stopPropagation();
+                onRSVP(event.id);
+              }}
+              disabled={isRSVPLoading}
             >
-              RSVP
+              {isRSVPLoading ? 'Loading...' : 
+               currentUser && event.attendees?.includes(currentUser.id) ? 'Attending' : 'RSVP'}
             </Button>
           </div>
           
@@ -173,6 +185,88 @@ export function V0EventsScreen({ className }: V0EventsScreenProps) {
   const [events, setEvents] = useState<PostType[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [rsvpLoading, setRsvpLoading] = useState<Set<string>>(new Set());
+
+  // Handle RSVP functionality
+  const handleRSVP = async (eventId: string) => {
+    if (!user) {
+      toast({
+        variant: "destructive",
+        title: "Login Required",
+        description: "Please log in to RSVP for events.",
+      });
+      return;
+    }
+
+    setRsvpLoading(prev => new Set(prev).add(eventId));
+    triggerHaptic('light');
+
+    try {
+      // Get current event data
+      const { data: eventData, error: fetchError } = await supabase
+        .from('posts')
+        .select('attendees')
+        .eq('id', eventId)
+        .single();
+
+      if (fetchError) {
+        console.error('Error fetching event:', fetchError);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to RSVP. Please try again.",
+        });
+        return;
+      }
+
+      const currentAttendees = eventData.attendees || [];
+      const userHasRSVPed = currentAttendees.includes(user.id);
+
+      let newAttendees;
+      if (userHasRSVPed) {
+        // Remove user from attendees array
+        newAttendees = currentAttendees.filter((id: string) => id !== user.id);
+      } else {
+        // Add user to attendees array
+        newAttendees = [...currentAttendees, user.id];
+      }
+
+      // Update the event
+      const { error: updateError } = await supabase
+        .from('posts')
+        .update({ attendees: newAttendees })
+        .eq('id', eventId);
+
+      if (updateError) {
+        console.error('Error updating event:', updateError);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to RSVP. Please try again.",
+        });
+      } else {
+        toast({
+          title: userHasRSVPed ? "RSVP Cancelled" : "RSVP Confirmed",
+          description: userHasRSVPed 
+            ? "You're no longer attending this event." 
+            : "You're now attending this event!",
+        });
+      }
+    } catch (error) {
+      console.error('Error handling RSVP:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to RSVP. Please try again.",
+      });
+    } finally {
+      setRsvpLoading(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(eventId);
+        return newSet;
+      });
+    }
+  };
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -399,6 +493,9 @@ export function V0EventsScreen({ className }: V0EventsScreenProps) {
             onComment={handleComment}
             onShare={handleShare}
             onClick={handleEventClick}
+            onRSVP={handleRSVP}
+            isRSVPLoading={rsvpLoading.has(featuredEvent.id)}
+            currentUser={user}
           />
         </div>
       )}
@@ -421,6 +518,9 @@ export function V0EventsScreen({ className }: V0EventsScreenProps) {
               onComment={handleComment}
               onShare={handleShare}
               onClick={handleEventClick}
+              onRSVP={handleRSVP}
+              isRSVPLoading={rsvpLoading.has(event.id)}
+              currentUser={user}
             />
           ))}
         </div>

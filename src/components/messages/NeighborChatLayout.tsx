@@ -484,7 +484,10 @@ export function NeighborChatLayout({ selectedConversationId }: NeighborChatLayou
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <div className="relative">
+            <div 
+              className="relative cursor-pointer hover:opacity-80 transition-opacity"
+              onClick={() => router.push(`/profile/${otherParticipant.id}`)}
+            >
               <Avatar className="h-12 w-12 ring-2 ring-slate-200 dark:ring-slate-600">
             <AvatarImage src={otherParticipant.avatarUrl} alt={otherParticipant.name} />
                 <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-semibold">
@@ -495,7 +498,10 @@ export function NeighborChatLayout({ selectedConversationId }: NeighborChatLayou
                 <div className="absolute -bottom-1 -right-1 h-4 w-4 bg-green-500 border-2 border-white dark:border-slate-800 rounded-full" />
               )}
             </div>
-            <div className="flex-1">
+            <div 
+              className="flex-1 cursor-pointer hover:opacity-80 transition-opacity"
+              onClick={() => router.push(`/profile/${otherParticipant.id}`)}
+            >
               <h3 className="font-bold text-lg text-slate-900 dark:text-slate-100">{otherParticipant.name}</h3>
               <p className="text-sm text-slate-600 dark:text-slate-400">
                 {otherParticipant.isOnline ? 'Online' : 'Last seen recently'}

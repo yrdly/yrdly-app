@@ -17,8 +17,33 @@ export default function MarketplacePage() {
   const { toast } = useToast();
 
   const handleItemClick = (item: PostType) => {
-    // Navigate to item detail page if needed
-    console.log('Item clicked:', item);
+    if (!user) {
+      toast({
+        variant: "destructive",
+        title: "Login Required",
+        description: "Please log in to purchase items.",
+      });
+      return;
+    }
+
+    if (user.id === item.user_id) {
+      toast({
+        variant: "destructive",
+        title: "Cannot Buy Own Item",
+        description: "You cannot purchase your own item.",
+      });
+      return;
+    }
+
+    // For now, show a message about contacting seller
+    // In a real app, this would integrate with a payment system
+    toast({
+      title: "Contact Seller",
+      description: `To purchase "${item.title || item.text || 'this item'}", please contact the seller directly.`,
+    });
+    
+    // Optionally navigate to seller profile or open chat
+    handleMessageSeller(item);
   };
 
   const handleMessageSeller = async (item: PostType) => {
