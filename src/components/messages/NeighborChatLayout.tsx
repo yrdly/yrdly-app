@@ -13,6 +13,7 @@ import { ImagePlus, Send, MessageCircle, Users, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import type { User } from "@/types";
+import Image from "next/image";
 
 interface Conversation {
   id: string;
@@ -320,7 +321,7 @@ export function NeighborChatLayout({ selectedConversationId }: NeighborChatLayou
     } finally {
       setUploading(false);
     }
-  }, [newMessage, imageFile, selectedConversation, user, profile?.name]);
+  }, [newMessage, imageFile, selectedConversation, user]);
 
   const handleImageSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -339,10 +340,10 @@ export function NeighborChatLayout({ selectedConversationId }: NeighborChatLayou
     setImagePreview(null);
   }, []);
 
-  const getOtherParticipant = (conversation: Conversation) => {
+  const getOtherParticipant = useCallback((conversation: Conversation) => {
     const otherId = conversation.participant_ids.find(id => id !== user?.id);
     return otherId ? participants[otherId] : null;
-  };
+  }, [user?.id, participants]);
 
   const ConversationList = useMemo(() => (
     <div className="h-full flex flex-col bg-white dark:bg-slate-800">
@@ -447,7 +448,7 @@ export function NeighborChatLayout({ selectedConversationId }: NeighborChatLayou
         )}
       </ScrollArea>
     </div>
-  ), [conversations, loading, selectedConversation, participants, user?.id]);
+  ), [conversations, loading, selectedConversation, user?.id, getOtherParticipant]);
 
   const ChatView = useMemo(() => {
     if (!selectedConversation) {
@@ -484,7 +485,10 @@ export function NeighborChatLayout({ selectedConversationId }: NeighborChatLayou
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <div className="relative">
+            <div 
+              className="relative cursor-pointer hover:opacity-80 transition-opacity"
+              onClick={() => router.push(`/profile/${otherParticipant.id}`)}
+            >
               <Avatar className="h-12 w-12 ring-2 ring-slate-200 dark:ring-slate-600">
             <AvatarImage src={otherParticipant.avatarUrl} alt={otherParticipant.name} />
                 <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-semibold">
@@ -495,7 +499,10 @@ export function NeighborChatLayout({ selectedConversationId }: NeighborChatLayou
                 <div className="absolute -bottom-1 -right-1 h-4 w-4 bg-green-500 border-2 border-white dark:border-slate-800 rounded-full" />
               )}
             </div>
-            <div className="flex-1">
+            <div 
+              className="flex-1 cursor-pointer hover:opacity-80 transition-opacity"
+              onClick={() => router.push(`/profile/${otherParticipant.id}`)}
+            >
               <h3 className="font-bold text-lg text-slate-900 dark:text-slate-100">{otherParticipant.name}</h3>
               <p className="text-sm text-slate-600 dark:text-slate-400">
                 {otherParticipant.isOnline ? 'Online' : 'Last seen recently'}
@@ -542,10 +549,12 @@ export function NeighborChatLayout({ selectedConversationId }: NeighborChatLayou
                 >
                   {message.image_url && (
                       <div className="relative w-full max-w-64 mb-2">
-                      <img
+                      <Image
                         src={message.image_url}
                         alt="Chat image"
-                          className="rounded-lg object-cover w-full h-auto max-h-64"
+                        width={256}
+                        height={256}
+                        className="rounded-lg object-cover w-full h-auto max-h-64"
                       />
                     </div>
                   )}
@@ -574,9 +583,11 @@ export function NeighborChatLayout({ selectedConversationId }: NeighborChatLayou
         <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
           {imagePreview && (
             <div className="mb-4 relative inline-block">
-              <img
+              <Image
                 src={imagePreview}
                 alt="Preview"
+                width={128}
+                height={128}
                 className="w-32 h-32 object-cover rounded-lg border border-slate-200 dark:border-slate-600"
               />
               <Button
@@ -628,7 +639,7 @@ export function NeighborChatLayout({ selectedConversationId }: NeighborChatLayou
         </div>
       </div>
     );
-  }, [selectedConversation, messages, user?.id, participants, newMessage, imageFile, imagePreview, uploading, handleSendMessage, handleImageSelect, removeImagePreview]);
+  }, [selectedConversation, messages, user?.id, newMessage, imageFile, imagePreview, uploading, handleSendMessage, handleImageSelect, removeImagePreview, getOtherParticipant, router]);
 
   return (
     <div className="h-full w-full flex bg-white dark:bg-slate-800 rounded-2xl shadow-xl overflow-hidden">
@@ -710,9 +721,11 @@ export function NeighborChatLayout({ selectedConversationId }: NeighborChatLayou
                       >
                         {message.image_url && (
                           <div className="relative w-full max-w-64 mb-2">
-                            <img
+                            <Image
                               src={message.image_url}
                               alt="Chat image"
+                              width={256}
+                              height={256}
                               className="rounded-lg object-cover w-full h-auto max-h-64"
                             />
                           </div>
@@ -743,10 +756,12 @@ export function NeighborChatLayout({ selectedConversationId }: NeighborChatLayou
           <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex-shrink-0">
           {imagePreview && (
               <div className="mb-4 relative inline-block">
-              <img
+              <Image
                 src={imagePreview}
                 alt="Preview"
-                  className="w-32 h-32 object-cover rounded-lg border border-slate-200 dark:border-slate-600"
+                width={128}
+                height={128}
+                className="w-32 h-32 object-cover rounded-lg border border-slate-200 dark:border-slate-600"
               />
               <Button
                 type="button"

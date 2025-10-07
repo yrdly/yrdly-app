@@ -13,6 +13,7 @@ import { ProfileDropdown } from "@/components/ProfileDropdown";
 import { NotificationsDropdown } from "@/components/NotificationsDropdown";
 import { supabase } from "@/lib/supabase";
 import type { User } from "@/types";
+import Image from "next/image";
 
 interface V0MainLayoutProps {
   children: React.ReactNode;
@@ -155,15 +156,17 @@ export function V0MainLayout({ children }: V0MainLayoutProps) {
       {/* Fixed Header - Hidden in chat */}
       {!isChatPage && (
         <Suspense fallback={<div>Loading...</div>}>
-          <div className="fixed top-0 left-0 right-0 w-full bg-white/95 dark:bg-gray-950/95 backdrop-blur-sm border-b border-border z-50 h-16 sm:h-20">
-            <div className="max-w-sm mx-auto px-4 sm:px-6">
+          <div className="fixed top-0 left-0 right-0 w-full bg-white/95 dark:bg-gray-950/95 backdrop-blur-sm border-b border-border z-50 h-16 sm:h-20" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+            <div className="max-w-sm sm:max-w-2xl md:max-w-4xl lg:max-w-6xl xl:max-w-7xl mx-auto px-4 sm:px-6 py-2">
               <div className="flex items-center justify-between h-full">
                 {/* Yrdly Logo - Top Left */}
                 <Link href="/" className="flex items-center">
-                  <img 
+                  <Image 
                     src="/yrdly-logo.png" 
                     alt="Yrdly" 
-                    className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 object-contain"
+                    width={60}
+                    height={60}
+                    className="w-15 h-15 sm:w-17 sm:h-17 md:w-19 md:h-19 object-contain"
                   />
                 </Link>
 
@@ -188,8 +191,10 @@ export function V0MainLayout({ children }: V0MainLayoutProps) {
                     <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground relative p-2">
                       <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5" />
                       {unreadMessagesCount > 0 && (
-                        <div className="absolute -top-1 -right-1 w-3 h-3 bg-accent rounded-full flex items-center justify-center">
-                          <span className="text-xs text-white font-bold">{unreadMessagesCount}</span>
+                        <div className="absolute top-1 right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
+                          <span className="text-xs text-white font-bold leading-none">
+                            {unreadMessagesCount > 9 ? '9+' : unreadMessagesCount}
+                          </span>
                         </div>
                       )}
                     </Button>
@@ -202,7 +207,7 @@ export function V0MainLayout({ children }: V0MainLayoutProps) {
                   >
                     <Bell className="w-4 h-4 sm:w-5 sm:h-5" />
                     {unreadCount > 0 && (
-                      <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"></div>
+                      <div className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></div>
                     )}
                   </Button>
                   <Button variant="ghost" size="sm" className="p-1" onClick={() => setShowProfile(!showProfile)}>
@@ -227,7 +232,7 @@ export function V0MainLayout({ children }: V0MainLayoutProps) {
             {children}
           </div>
         ) : (
-          <div className="w-full max-w-sm mx-auto">
+          <div className="w-full max-w-sm sm:max-w-2xl md:max-w-4xl lg:max-w-6xl xl:max-w-7xl mx-auto">
             <div className="px-3 sm:px-4 md:px-6">
               {children}
             </div>
@@ -239,7 +244,7 @@ export function V0MainLayout({ children }: V0MainLayoutProps) {
       {!isChatPage && (
         <Suspense fallback={<div>Loading...</div>}>
           <div className="fixed bottom-0 left-0 right-0 w-full bg-white/95 dark:bg-gray-950/95 backdrop-blur-sm border-t border-border z-50 h-16 sm:h-20">
-            <div className="max-w-sm mx-auto">
+            <div className="max-w-sm sm:max-w-2xl md:max-w-4xl lg:max-w-6xl xl:max-w-7xl mx-auto">
               <div className="flex items-center justify-around py-2 sm:py-3">
                 <Link href="/" className="flex-1">
                   <Button

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/use-supabase-auth';
 import { useOnboarding } from '@/hooks/use-onboarding';
@@ -63,7 +63,7 @@ function VerifyEmailContent() {
     }
   }, [isEmailVerified, updateOnboardingStatus, router, user?.id]);
 
-  const handleTokenVerification = async () => {
+  const handleTokenVerification = useCallback(async () => {
     if (!user || !token) return;
     
     setIsChecking(true);
@@ -90,7 +90,7 @@ function VerifyEmailContent() {
     } finally {
       setIsChecking(false);
     }
-  };
+  }, [user, token, updateOnboardingStatus, toast, router]);
 
   // Handle email verification from link
   useEffect(() => {

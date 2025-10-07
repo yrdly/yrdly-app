@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/use-supabase-auth';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -42,6 +42,15 @@ export function WelcomeBanner() {
         }
     }, [user, profile]);
 
+    const handleDismiss = useCallback(() => {
+        if (bannerType === 'welcome') {
+            localStorage.setItem('hasSeenWelcomeBanner', 'true');
+        } else {
+            localStorage.setItem('hasDismissedProfileReminder', 'true');
+        }
+        setIsVisible(false);
+    }, [bannerType]);
+
     // Auto-dismiss after 4 seconds
     useEffect(() => {
         if (isVisible) {
@@ -51,16 +60,7 @@ export function WelcomeBanner() {
 
             return () => clearTimeout(timer);
         }
-    }, [isVisible]);
-
-    const handleDismiss = () => {
-        if (bannerType === 'welcome') {
-            localStorage.setItem('hasSeenWelcomeBanner', 'true');
-        } else {
-            localStorage.setItem('hasDismissedProfileReminder', 'true');
-        }
-        setIsVisible(false);
-    };
+    }, [isVisible, handleDismiss]);
 
     if (!isVisible) return null;
 

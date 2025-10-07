@@ -134,7 +134,7 @@ export const useNotifications = () => {
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [user, fetchNotifications, toast]);
+    }, [user, fetchNotifications, toast, notifications]);
 
     const markAsRead = useCallback(async (notificationId: string) => {
         if (!user) return;

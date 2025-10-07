@@ -17,8 +17,8 @@ export default function MarketplacePage() {
   const { toast } = useToast();
 
   const handleItemClick = (item: PostType) => {
-    // Navigate to item detail page if needed
-    console.log('Item clicked:', item);
+    // Navigate to detailed item page
+    router.push(`/marketplace/${item.id}`);
   };
 
   const handleMessageSeller = async (item: PostType) => {

@@ -407,7 +407,10 @@ export function V0BusinessesScreen({ className }: V0BusinessesScreenProps) {
 
       {/* Featured Business */}
       {filteredBusinesses.length > 0 && (
-        <Card className="p-0 overflow-hidden yrdly-shadow-lg border-0">
+        <Card 
+          className="p-0 overflow-hidden yrdly-shadow-lg border-0 cursor-pointer hover:shadow-xl transition-all"
+          onClick={() => router.push(`/businesses/${filteredBusinesses[0].id}`)}
+        >
           <div className="relative h-32">
             {(filteredBusinesses[0].image_urls && filteredBusinesses[0].image_urls.length > 0) ? (
               <img

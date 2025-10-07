@@ -369,8 +369,8 @@ export function PostCard({ post }: PostCardProps) {
 
   const renderMarketplaceContent = () => (
     <CardContent className="p-4 pt-2">
-        <h2 className="text-3xl font-bold">{formatPrice(post.price)}</h2>
-        <h3 className="text-xl font-semibold mt-2">{post.text}</h3>
+        <h2 className="text-3xl font-bold text-primary dark:text-primary">{formatPrice(post.price)}</h2>
+        <h3 className="text-xl font-semibold mt-2 text-foreground">{post.text}</h3>
         
         <div className="mt-6">
             <h4 className="font-semibold text-md mb-2">Description</h4>

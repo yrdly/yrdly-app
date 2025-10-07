@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -25,27 +25,35 @@ import { supabase } from "@/lib/supabase";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRouter } from "next/navigation";
 import type { User, Post } from "@/types";
+import { FriendsList } from "./FriendsList";
 
 interface V0ProfileScreenProps {
   onBack?: () => void;
   user?: User;
   isOwnProfile?: boolean;
+  targetUserId?: string;
+  targetUser?: any;
 }
 
-export function V0ProfileScreen({ onBack, user, isOwnProfile = true }: V0ProfileScreenProps) {
+export function V0ProfileScreen({ onBack, user, isOwnProfile = true, targetUserId, targetUser: externalTargetUser }: V0ProfileScreenProps) {
   const router = useRouter();
   const { user: currentUser, profile: currentProfile } = useAuth();
   const [profileData, setProfileData] = useState<User | null>(null);
   const [userPosts, setUserPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showFriendsList, setShowFriendsList] = useState(false);
   const [stats, setStats] = useState({
     friends: 0,
     events: 0,
   });
 
-  // Use provided user or current user
-  const targetUser = user || currentUser;
+  // Use provided user, external target user, or current user
+  const targetUser = user || externalTargetUser || currentUser;
   const targetProfile = user ? null : currentProfile;
+  const isExternalProfile = !!targetUserId && targetUserId !== currentUser?.id;
+  
+  // Determine if this is the user's own profile
+  const actualIsOwnProfile = isOwnProfile !== undefined ? isOwnProfile : !isExternalProfile;
 
   useEffect(() => {
     if (!targetUser) return;
@@ -103,7 +111,36 @@ export function V0ProfileScreen({ onBack, user, isOwnProfile = true }: V0Profile
     };
 
     fetchProfileData();
-  }, [targetUser]);
+  }, [targetUser, targetProfile]);
+
+  // Refresh data when user returns to the page (e.g., after editing profile)
+  useEffect(() => {
+    const handleFocus = () => {
+      if (targetUser && !loading) {
+        // Refresh profile data when user returns to the page
+        const refreshData = async () => {
+          try {
+            const { data: userData } = await supabase
+              .from('users')
+              .select('*')
+              .eq('id', targetUser.id)
+              .single();
+            
+            if (userData) {
+              setProfileData(userData);
+            }
+          } catch (error) {
+            console.error('Error refreshing profile data:', error);
+          }
+        };
+        
+        refreshData();
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [targetUser, loading]);
 
   if (loading) {
     return (
@@ -166,7 +203,12 @@ export function V0ProfileScreen({ onBack, user, isOwnProfile = true }: V0Profile
             </h3>
             <div className="flex items-center gap-2 text-muted-foreground">
               <MapPin className="w-4 h-4" />
-              <span>{displayProfile?.location?.state || "Location not set"}</span>
+              <span>
+                {displayProfile?.location?.state && displayProfile?.location?.lga 
+                  ? `${displayProfile.location.state}, ${displayProfile.location.lga}`
+                  : displayProfile?.location?.state || "Location not set"
+                }
+              </span>
             </div>
             <div className="flex items-center gap-2 text-muted-foreground">
               <Calendar className="w-4 h-4" />
@@ -174,7 +216,7 @@ export function V0ProfileScreen({ onBack, user, isOwnProfile = true }: V0Profile
             </div>
           </div>
 
-          {isOwnProfile && (
+          {actualIsOwnProfile && (
             <div className="flex items-center gap-4">
               <Button 
                 className="bg-primary text-primary-foreground hover:bg-primary/90"
@@ -194,7 +236,10 @@ export function V0ProfileScreen({ onBack, user, isOwnProfile = true }: V0Profile
 
       {/* Stats */}
       <div className="grid grid-cols-2 gap-4">
-        <Card className="p-4 text-center yrdly-shadow">
+        <Card 
+          className="p-4 text-center yrdly-shadow cursor-pointer hover:bg-muted/50 transition-colors"
+          onClick={() => setShowFriendsList(true)}
+        >
           <div className="space-y-2">
             <Users className="w-6 h-6 mx-auto text-primary" />
             <p className="text-2xl font-bold text-foreground">{stats.friends}</p>
@@ -311,7 +356,7 @@ export function V0ProfileScreen({ onBack, user, isOwnProfile = true }: V0Profile
         </Tabs>
       )}
 
-      {!isOwnProfile && (
+      {!actualIsOwnProfile && (
         <div className="flex gap-3">
           <Button className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90">
             <Users className="w-4 h-4 mr-2" />
@@ -321,6 +366,20 @@ export function V0ProfileScreen({ onBack, user, isOwnProfile = true }: V0Profile
             <MessageCircle className="w-4 h-4 mr-2" />
             Message
           </Button>
+        </div>
+      )}
+
+      {/* Friends List Modal */}
+      {showFriendsList && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-md max-h-[80vh] overflow-hidden">
+            <CardContent className="p-0">
+              <FriendsList 
+                userId={targetUser?.id || ''} 
+                onBack={() => setShowFriendsList(false)} 
+              />
+            </CardContent>
+          </Card>
         </div>
       )}
     </div>
