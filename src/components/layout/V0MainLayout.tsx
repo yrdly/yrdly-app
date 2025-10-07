@@ -147,7 +147,7 @@ export function V0MainLayout({ children }: V0MainLayoutProps) {
   }, [user]);
 
   // Check if we're on the home page
-  const isHomePage = pathname === "/";
+  const isHomePage = pathname === "/home";
   
   // Check if we're in a chat conversation or business chat
   const isChatPage = (pathname.startsWith("/messages/") && pathname !== "/messages") || 
