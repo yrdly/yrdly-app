@@ -23,6 +23,8 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import type { Post } from "@/types";
 import { useToast } from "@/hooks/use-toast";
+import { CommentSection } from "./CommentSection";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface V0CommunityScreenProps {
   className?: string;
@@ -60,6 +62,9 @@ export function V0CommunityScreen({ className }: V0CommunityScreenProps) {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [showUserSearch, setShowUserSearch] = useState(false);
+  const [users, setUsers] = useState<any[]>([]);
+  const [userSearchLoading, setUserSearchLoading] = useState(false);
+  const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set());
   const [stats, setStats] = useState({
     totalUsers: 0,
     activeToday: 0,
@@ -165,6 +170,46 @@ export function V0CommunityScreen({ className }: V0CommunityScreenProps) {
     );
   }, [posts, searchQuery]);
 
+  const searchUsers = async (query: string) => {
+    if (!query.trim()) {
+      setUsers([]);
+      setShowUserSearch(false);
+      return;
+    }
+
+    setUserSearchLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, name, email, avatar_url, created_at')
+        .ilike('name', `%${query}%`)
+        .limit(10);
+
+      if (error) throw error;
+      setUsers(data || []);
+      setShowUserSearch(true);
+    } catch (error) {
+      console.error('Error searching users:', error);
+      toast({
+        title: "Error",
+        description: "Failed to search users",
+        variant: "destructive",
+      });
+    } finally {
+      setUserSearchLoading(false);
+    }
+  };
+
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+    if (value.trim()) {
+      searchUsers(value);
+    } else {
+      setShowUserSearch(false);
+      setUsers([]);
+    }
+  };
+
   const handleLike = async (postId: string) => {
     if (!currentUser) return;
 
@@ -224,9 +269,14 @@ export function V0CommunityScreen({ className }: V0CommunityScreenProps) {
 
   const handleComment = async (postId: string) => {
     // For now, just show a toast - comment functionality would need a modal or expanded view
-    toast({ 
-      title: "Comments", 
-      description: "Comment functionality is available in the full post view." 
+    setExpandedComments(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(postId)) {
+        newSet.delete(postId);
+      } else {
+        newSet.add(postId);
+      }
+      return newSet;
     });
   };
 
@@ -276,7 +326,7 @@ export function V0CommunityScreen({ className }: V0CommunityScreenProps) {
             placeholder="Search for neighbors..."
             className="pl-10"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
           />
         </div>
       </div>
@@ -305,6 +355,62 @@ export function V0CommunityScreen({ className }: V0CommunityScreenProps) {
           <div className="text-xs text-muted-foreground">New Posts</div>
         </Card>
       </div>
+
+      {/* User Search Results */}
+      {showUserSearch && (
+        <div className="space-y-4 mb-6">
+          <h3 className="font-semibold text-foreground">Users</h3>
+          {userSearchLoading ? (
+            <div className="space-y-3">
+              {[...Array(3)].map((_, i) => (
+                <Card key={i} className="p-3">
+                  <div className="flex items-center gap-3">
+                    <Skeleton className="h-10 w-10 rounded-full" />
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-4 w-32" />
+                      <Skeleton className="h-3 w-24" />
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          ) : users.length > 0 ? (
+            <div className="space-y-2">
+              {users.map((user) => (
+                <Card 
+                  key={user.id} 
+                  className="p-3 cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => router.push(`/profile/${user.id}`)}
+                >
+                  <div className="flex items-center gap-3">
+                    <Avatar className="w-10 h-10">
+                      <AvatarImage src={user.avatar_url || "/placeholder.svg"} />
+                      <AvatarFallback className="bg-primary text-primary-foreground">
+                        {user.name?.substring(0, 2).toUpperCase() || "U"}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-foreground truncate">
+                        {user.name || "Unknown User"}
+                      </h4>
+                      <p className="text-sm text-muted-foreground truncate">
+                        {user.email}
+                      </p>
+                    </div>
+                    <Button variant="ghost" size="sm">
+                      <MessageCircle className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-4">
+              <p className="text-sm text-muted-foreground">No users found</p>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="space-y-4">
         <h3 className="font-semibold text-foreground">Community Feed</h3>
@@ -430,6 +536,18 @@ export function V0CommunityScreen({ className }: V0CommunityScreenProps) {
                   <span className="text-sm">Share</span>
                 </Button>
               </div>
+
+              {/* Comments Section */}
+              <Collapsible 
+                open={expandedComments.has(post.id)}
+                onOpenChange={() => handleComment(post.id)}
+              >
+                <CollapsibleContent>
+                  <div className="pt-3 border-t border-border">
+                    <CommentSection postId={post.id} />
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
             </Card>
           ))
         )}

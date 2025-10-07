@@ -65,15 +65,15 @@ export function V0EditProfileScreen({ onBack }: V0EditProfileScreenProps) {
   }, [profile, form]);
 
   // Update LGAs when state changes
+  const selectedState = form.watch('locationState');
   useEffect(() => {
-    const selectedState = form.watch('locationState');
     if (selectedState) {
       setLgas(lgasByState[selectedState] || []);
       form.setValue('locationLga', ''); // Reset LGA when state changes
     } else {
       setLgas([]);
     }
-  }, [form.watch('locationState')]);
+  }, [selectedState, form]);
 
   const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -107,7 +107,7 @@ export function V0EditProfileScreen({ onBack }: V0EditProfileScreenProps) {
 
       // Update profile in Supabase
       const { error } = await supabase
-        .from('profiles')
+        .from('users')
         .update({
           name: values.name,
           bio: values.bio,

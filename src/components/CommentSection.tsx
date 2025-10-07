@@ -199,7 +199,7 @@ export function CommentSection({ postId }: CommentSectionProps) {
             console.error("Error posting comment: ", error);
             toast({ variant: 'destructive', title: 'Error', description: 'Could not post comment.' });
         }
-    }, [currentUser, userDetails, newComment, postId, replyingTo, toast]);
+    }, [currentUser, userDetails, newComment, postId, replyingTo, toast, authTimeout, isAuthLoading, loading]);
 
     const handleReaction = useCallback(async (commentId: string, emoji: string) => {
         if (!currentUser) return;

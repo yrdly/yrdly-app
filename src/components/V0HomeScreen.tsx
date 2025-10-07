@@ -32,6 +32,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyFeed } from "@/components/EmptyFeed";
 import { WelcomeBanner } from "@/components/WelcomeBanner";
 import { SuggestedNeighbors } from "@/components/SuggestedNeighbors";
+import Image from "next/image";
 // Email verification banner removed - users verify during registration
 import { CreatePostDialog } from "@/components/CreatePostDialog";
 import { PostCard } from "@/components/PostCard";
@@ -336,9 +337,11 @@ export function V0HomeScreen({ onViewProfile }: V0HomeScreenProps) {
 
               <div className="mb-2 sm:mb-3">
                 {(post.image_url || (post.image_urls && post.image_urls.length > 0)) && (
-                  <img
+                  <Image
                     src={post.image_url || post.image_urls?.[0] || "/placeholder.svg"}
                     alt={post.title || "Post image"}
+                    width={400}
+                    height={192}
                     className="w-full h-40 sm:h-48 object-cover rounded-lg mb-2 sm:mb-3"
                   />
                 )}

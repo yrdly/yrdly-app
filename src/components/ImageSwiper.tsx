@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -26,6 +26,14 @@ export function ImageSwiper({ images, isOpen, onClose, initialIndex = 0 }: Image
     }
   }, [isOpen, initialIndex]);
 
+  const goToPrevious = useCallback(() => {
+    setCurrentIndex((prev) => (prev > 0 ? prev - 1 : images.length - 1));
+  }, [images.length]);
+
+  const goToNext = useCallback(() => {
+    setCurrentIndex((prev) => (prev < images.length - 1 ? prev + 1 : 0));
+  }, [images.length]);
+
   // Handle keyboard navigation
   useEffect(() => {
     if (!isOpen) return;
@@ -42,15 +50,7 @@ export function ImageSwiper({ images, isOpen, onClose, initialIndex = 0 }: Image
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen]);
-
-  const goToPrevious = () => {
-    setCurrentIndex((prev) => (prev > 0 ? prev - 1 : images.length - 1));
-  };
-
-  const goToNext = () => {
-    setCurrentIndex((prev) => (prev < images.length - 1 ? prev + 1 : 0));
-  };
+  }, [isOpen, onClose, goToNext, goToPrevious]);
 
   const handleTouchStart = (e: React.TouchEvent) => {
     setTouchEnd(null);
