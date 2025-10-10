@@ -76,7 +76,7 @@ export function PostCard({ post, onDelete, onCreatePost }: PostCardProps) {
       avatarUrl: post.author_image || 'https://placehold.co/100x100.png',
       timestamp: (post.user as any)?.created_at || post.timestamp // Use user creation date, fallback to post date
     });
-  }, [post.user_id, post.author_name, post.author_image, (post.user as any)?.created_at, post.timestamp]);
+  }, [post.user_id, post.author_name, post.author_image, post.user, post.timestamp]);
 
   useEffect(() => {
     if (!post.id) return;

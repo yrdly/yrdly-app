@@ -184,45 +184,43 @@ export function V0MapScreen({ className }: V0MapScreenProps) {
           disableDefaultUI={true}
           mapId="7bdaf6c131a6958be5380043f"
           className="w-full h-full"
-          options={{
-            styles: [
-              {
-                featureType: "all",
-                elementType: "geometry",
-                stylers: [{ color: "#2d3748" }]
-              },
-              {
-                featureType: "water",
-                elementType: "geometry",
-                stylers: [{ color: "#1a202c" }]
-              },
-              {
-                featureType: "road",
-                elementType: "geometry",
-                stylers: [{ color: "#4a5568" }]
-              },
-              {
-                featureType: "poi",
-                elementType: "labels.text.fill",
-                stylers: [{ color: "#9ca3af" }]
-              },
-              {
-                featureType: "poi",
-                elementType: "labels.text.stroke",
-                stylers: [{ color: "#1a202c" }]
-              },
-              {
-                featureType: "administrative",
-                elementType: "labels.text.fill",
-                stylers: [{ color: "#9ca3af" }]
-              },
-              {
-                featureType: "administrative",
-                elementType: "labels.text.stroke",
-                stylers: [{ color: "#1a202c" }]
-              }
-            ]
-          }}
+          styles={[
+            {
+              featureType: "all",
+              elementType: "geometry",
+              stylers: [{ color: "#2d3748" }]
+            },
+            {
+              featureType: "water",
+              elementType: "geometry",
+              stylers: [{ color: "#1a202c" }]
+            },
+            {
+              featureType: "road",
+              elementType: "geometry",
+              stylers: [{ color: "#4a5568" }]
+            },
+            {
+              featureType: "poi",
+              elementType: "labels.text.fill",
+              stylers: [{ color: "#9ca3af" }]
+            },
+            {
+              featureType: "poi",
+              elementType: "labels.text.stroke",
+              stylers: [{ color: "#1a202c" }]
+            },
+            {
+              featureType: "administrative",
+              elementType: "labels.text.fill",
+              stylers: [{ color: "#9ca3af" }]
+            },
+            {
+              featureType: "administrative",
+              elementType: "labels.text.stroke",
+              stylers: [{ color: "#1a202c" }]
+            }
+          ]}
         >
           {filteredMarkers.map(marker => (
             <AdvancedMarker 
