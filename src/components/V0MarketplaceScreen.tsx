@@ -344,7 +344,7 @@ export function V0MarketplaceScreen({ onItemClick, onMessageSeller }: V0Marketpl
       {/* Floating Action Button */}
       <div className="fixed bottom-20 right-4 z-20">
         <CreateItemDialog>
-          <Button className="rounded-full h-14 w-14 shadow-lg yrdly-gradient">
+          <Button className="rounded-full h-14 w-14 shadow-lg yrdly-gradient p-0">
             <Plus className="h-6 w-6" />
           </Button>
         </CreateItemDialog>

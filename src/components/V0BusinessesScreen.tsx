@@ -528,11 +528,11 @@ export function V0BusinessesScreen({ className }: V0BusinessesScreenProps) {
       {/* Floating Create Button */}
       <div className="fixed bottom-20 right-4 z-50">
         <CreateBusinessDialog>
-          <Button 
+          <Button
             size="lg" 
-            className="rounded-full w-14 h-14 bg-primary text-primary-foreground hover:bg-primary/90 yrdly-shadow-lg"
+            className="rounded-full h-14 w-14 shadow-lg yrdly-gradient p-0"
           >
-            <Plus className="w-6 h-6" />
+            <Plus className="h-6 w-6" />
           </Button>
         </CreateBusinessDialog>
       </div>
