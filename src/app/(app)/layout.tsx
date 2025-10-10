@@ -14,6 +14,8 @@ import { ServiceWorkerRegistration } from '@/components/ServiceWorkerRegistratio
 import { OfflineStatus } from '@/components/OfflineStatus';
 import { OnboardingGuard } from '@/components/OnboardingGuard';
 import { V0MainLayout } from '@/components/layout/V0MainLayout';
+import { onlineStatusService } from '@/lib/online-status';
+import { UserActivityService } from '@/lib/user-activity-service';
 
 function ProtectedLayout({ children }: { children: React.ReactNode }) {
   const { user, profile, loading } = useAuth(); // Using Supabase auth
@@ -22,6 +24,22 @@ function ProtectedLayout({ children }: { children: React.ReactNode }) {
   
   // Initialize deep linking
   useDeepLinking();
+
+  // Initialize online status service and update user activity
+  useEffect(() => {
+    if (user) {
+      console.log('Initializing online status service for user:', user.id);
+      onlineStatusService.initialize(user.id);
+      
+      // Update user activity when they visit the app
+      UserActivityService.updateUserActivity(user.id);
+      
+      return () => {
+        console.log('Cleaning up online status service');
+        onlineStatusService.cleanup();
+      };
+    }
+  }, [user]);
 
   useEffect(() => {
     if (!loading && !user) {

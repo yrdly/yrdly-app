@@ -142,10 +142,19 @@ export class AuthService {
   static async getCurrentUser(): Promise<User | null> {
     try {
       const { data: { user }, error } = await supabase.auth.getUser();
-      if (error) throw error;
+      if (error) {
+        // Don't log AuthSessionMissingError as it's expected when user is logged out
+        if (error.message !== 'Auth session missing!') {
+          console.error('Get current user error:', error);
+        }
+        return null;
+      }
       return user;
-    } catch (error) {
-      console.error('Get current user error:', error);
+    } catch (error: any) {
+      // Don't log AuthSessionMissingError as it's expected when user is logged out
+      if (error.message !== 'Auth session missing!') {
+        console.error('Get current user error:', error);
+      }
       return null;
     }
   }
@@ -157,11 +166,11 @@ export class AuthService {
         .from('users')
         .select('*')
         .eq('id', userId)
-        .single();
+        .maybeSingle(); // Use maybeSingle() instead of single() to handle 0 rows gracefully
 
       if (error) {
         console.error('Database error fetching user profile:', error);
-        throw error;
+        return null;
       }
       
       return data;
@@ -174,7 +183,18 @@ export class AuthService {
   // Create user profile in public.users table
   static async createUserProfile(user: User, name: string) {
     try {
+      // First check if profile already exists
+      const existingProfile = await this.getUserProfile(user.id);
+      if (existingProfile) {
+        console.log('User profile already exists, skipping creation');
+        return;
+      }
+
       const finalName = name || user.user_metadata?.name || user.email?.split('@')[0];
+      
+      // For OAuth users, mark profile as completed since they already have basic info
+      const isOAuthUser = user.app_metadata?.provider && user.app_metadata?.providers?.includes(user.app_metadata.provider);
+      const profileCompleted = isOAuthUser;
 
       const { error } = await supabase
         .from('users')
@@ -183,6 +203,8 @@ export class AuthService {
           name: finalName,
           email: user.email,
           avatar_url: user.user_metadata?.avatar_url,
+          profile_completed: profileCompleted,
+          onboarding_status: profileCompleted ? 'welcome' : 'profile_setup',
           notification_settings: {
             friendRequests: true,
             messages: true,
@@ -194,6 +216,11 @@ export class AuthService {
         });
 
       if (error) {
+        // If it's a duplicate key error, the profile already exists, which is fine
+        if (error.code === '23505') {
+          console.log('User profile already exists (duplicate key), continuing...');
+          return;
+        }
         console.error('Database error creating user profile:', error);
         throw error;
       }

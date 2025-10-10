@@ -11,8 +11,12 @@ export function useOnboarding() {
   const getCurrentStep = (): OnboardingStep => {
     if (!user || !profile) return 'signup';
     
+    // For OAuth users, consider email as verified if they have a provider
+    const isEmailVerified = user.email_confirmed_at || 
+      (user.app_metadata?.provider && user.app_metadata?.providers?.includes(user.app_metadata.provider));
+    
     // Check if email is verified
-    if (!user.email_confirmed_at) return 'email_verification';
+    if (!isEmailVerified) return 'email_verification';
     
     // Check if profile is completed
     if (!profile.profile_completed) return 'profile_setup';
@@ -144,7 +148,8 @@ export function useOnboarding() {
     handleSkipTour,
     resetOnboarding,
     // Helper functions
-    isEmailVerified: !!user?.email_confirmed_at,
+    isEmailVerified: !!user?.email_confirmed_at || 
+      (user?.app_metadata?.provider && user?.app_metadata?.providers?.includes(user.app_metadata.provider)),
     isProfileCompleted: !!profile?.profile_completed,
     isWelcomeSent: !!profile?.welcome_message_sent,
     isTourCompleted: !!profile?.tour_completed,

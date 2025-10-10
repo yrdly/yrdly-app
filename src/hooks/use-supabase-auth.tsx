@@ -25,6 +25,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [profileCreationInProgress, setProfileCreationInProgress] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -43,8 +44,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               let userProfile = await AuthService.getUserProfile(currentUser.id);
               
               // If no profile exists, create one
-              if (!userProfile) {
+              if (!userProfile && !profileCreationInProgress) {
                 console.log('No user profile found on initial load, creating one for user:', currentUser.id);
+                setProfileCreationInProgress(true);
                 try {
                   await AuthService.createUserProfile(currentUser, 
                     currentUser.user_metadata?.name || 
@@ -59,6 +61,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                   console.log('User profile created successfully on initial load:', userProfile?.name);
                 } catch (createError) {
                   console.error('Error creating user profile on initial load:', createError);
+                } finally {
+                  setProfileCreationInProgress(false);
                 }
               }
               
@@ -71,10 +75,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 setProfile(null);
               }
             }
+          } else {
+            // No user, ensure profile is also null
+            if (isMounted) {
+              setProfile(null);
+            }
           }
         }
       } catch (error) {
-        console.error('Error getting initial session:', error);
+        // Don't log AuthSessionMissingError as it's expected when user is logged out
+        if (error instanceof Error && error.message !== 'Auth session missing!') {
+          console.error('Error getting initial session:', error);
+        }
+        if (isMounted) {
+          setUser(null);
+          setProfile(null);
+        }
       } finally {
         if (isMounted) {
           setLoading(false);
@@ -125,8 +141,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             let userProfile = await AuthService.getUserProfile(user.id);
             
             // If no profile exists, create one
-            if (!userProfile) {
+            if (!userProfile && !profileCreationInProgress) {
               console.log('No user profile found, creating one for user:', user.id);
+              setProfileCreationInProgress(true);
               try {
                 await AuthService.createUserProfile(user, 
                   user.user_metadata?.name || 
@@ -141,6 +158,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 console.log('User profile created successfully:', userProfile?.name);
               } catch (createError) {
                 console.error('Error creating user profile:', createError);
+              } finally {
+                setProfileCreationInProgress(false);
               }
             }
             

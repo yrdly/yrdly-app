@@ -359,10 +359,10 @@ export default function OnboardingProfilePage() {
                   </p>
                 )}
                 {checkingUsername && (
-                  <p className="text-sm text-muted-foreground flex items-center gap-2">
+                  <div className="text-sm text-muted-foreground flex items-center gap-2">
                     <div className="w-3 h-3 border-2 border-muted-foreground border-t-transparent rounded-full animate-spin"></div>
                     Checking availability...
-                  </p>
+                  </div>
                 )}
                 {usernameError && (
                   <p className="text-sm text-destructive">{usernameError}</p>

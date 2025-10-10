@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/use-supabase-auth';
 import { supabase } from '@/lib/supabase';
 import { StorageService } from '@/lib/storage-service';
+import { UserActivityService } from '@/lib/user-activity-service';
 import { Post, Business } from '@/types';
 import { useToast } from './use-toast';
 
@@ -249,6 +250,11 @@ export const usePosts = () => {
             if (error) throw error;
             toast({ title: 'Success', description: 'Post created successfully.' });
         }
+        
+        // Update user activity after successful post creation/update
+        if (user) {
+          await UserActivityService.updateUserActivity(user.id);
+        }
       } catch (error) {
         console.error('Error creating/updating post:', error);
         toast({ variant: 'destructive', title: 'Error', description: 'Failed to save post.' });
@@ -299,6 +305,11 @@ export const usePosts = () => {
             
             if (error) throw error;
             toast({ title: 'Success', description: 'Business added successfully.' });
+        }
+        
+        // Update user activity after successful business creation/update
+        if (user) {
+          await UserActivityService.updateUserActivity(user.id);
         }
       } catch (error) {
         console.error('Error adding/updating business:', error);

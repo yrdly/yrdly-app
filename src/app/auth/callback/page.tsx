@@ -41,8 +41,15 @@ export default function AuthCallback() {
           
           if (data.session) {
             console.log('Session established:', data.session.user);
-            // Redirect to home immediately with cache busting
-            window.location.href = '/home';
+            console.log('User email confirmed at:', data.session.user.email_confirmed_at);
+            console.log('User metadata:', data.session.user.user_metadata);
+            
+            // For OAuth users, we need to ensure they have a proper profile
+            // The AuthProvider will handle creating the profile if it doesn't exist
+            // Wait a moment for the auth state to update, then redirect
+            setTimeout(() => {
+              window.location.href = '/home';
+            }, 100);
             return;
           }
         }

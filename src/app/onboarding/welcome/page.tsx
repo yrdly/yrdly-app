@@ -15,6 +15,7 @@ import { onboardingAnalytics } from '@/lib/onboarding-analytics';
 import { OnboardingProgress } from '@/components/onboarding/OnboardingProgress';
 import { LoadingState } from '@/components/onboarding/LoadingState';
 import { supabase } from '@/lib/supabase';
+import { UserActivityService } from '@/lib/user-activity-service';
 
 export default function OnboardingWelcomePage() {
   const { user, profile } = useAuth();
@@ -38,28 +39,87 @@ export default function OnboardingWelcomePage() {
   const loadCommunityStats = useCallback(async () => {
     setStatsLoading(true);
     try {
+      console.log('Loading community stats...');
+      console.log('User profile location:', profile?.location);
+      
       // Get total users
-      const { count: totalUsers } = await supabase
+      const { count: totalUsers, error: totalUsersError } = await supabase
         .from('users')
         .select('*', { count: 'exact', head: true });
+      
+      if (totalUsersError) {
+        console.error('Error fetching total users:', totalUsersError);
+      }
+      console.log('Total users:', totalUsers);
 
-      // Get local users (same state)
-      const { count: localUsers } = await supabase
-        .from('users')
-        .select('*', { count: 'exact', head: true })
-        .eq('location->state', profile?.location?.state);
+      // Get local users (same state) - only if user has location set
+      let localUsers = 0;
+      if (profile?.location?.state) {
+        console.log('Querying for users in state:', profile.location.state);
+        
+        // First, let's see what location data exists
+        const { data: allUsers, error: allUsersError } = await supabase
+          .from('users')
+          .select('id, location')
+          .limit(10);
+        
+        if (allUsersError) {
+          console.error('Error fetching sample users:', allUsersError);
+        } else {
+          console.log('Sample users with location data:', allUsers);
+        }
+        
+        // Try a different approach - get all users and filter in JavaScript
+        const { data: allUsersData, error: localUsersError } = await supabase
+          .from('users')
+          .select('id, location');
+        
+        if (localUsersError) {
+          console.error('Error fetching users for local count:', localUsersError);
+        } else {
+          // Filter users by state in JavaScript
+          localUsers = allUsersData?.filter(user => 
+            user.location?.state === profile.location.state
+          ).length || 0;
+          console.log('Filtered local users in JavaScript:', localUsers);
+        }
+        console.log('Local users:', localUsers);
+      } else {
+        console.log('No location state set, skipping local users query');
+      }
 
-      // Get active today (users who logged in today)
-      const today = new Date().toISOString().split('T')[0];
-      const { count: activeToday } = await supabase
+      // Get active today (users who used the app today)
+      console.log('Querying for users active today...');
+      
+      // First, let's see what last_seen data exists
+      const { data: sampleUsers, error: sampleUsersError } = await supabase
         .from('users')
-        .select('*', { count: 'exact', head: true })
-        .gte('last_seen', today);
+        .select('id, last_seen, is_online')
+        .limit(5);
+      
+      if (sampleUsersError) {
+        console.error('Error fetching sample users for last_seen:', sampleUsersError);
+      } else {
+        console.log('Sample users with last_seen data:', sampleUsers);
+      }
+      
+      // Use the UserActivityService to get active users today
+      const activeToday = await UserActivityService.getActiveTodayCount();
+      console.log('Active today (since midnight):', activeToday);
+      
+      // Also get users active in the last 24 hours for comparison
+      const activeLast24Hours = await UserActivityService.getActiveUsersCount(24);
+      console.log('Active in last 24 hours:', activeLast24Hours);
 
       // Get total posts
-      const { count: totalPosts } = await supabase
+      const { count: totalPosts, error: totalPostsError } = await supabase
         .from('posts')
         .select('*', { count: 'exact', head: true });
+      
+      if (totalPostsError) {
+        console.error('Error fetching total posts:', totalPostsError);
+      }
+      console.log('Total posts:', totalPosts);
 
       setCommunityStats({
         totalUsers: totalUsers || 0,
@@ -95,12 +155,12 @@ export default function OnboardingWelcomePage() {
         // Check if welcome email was already sent by checking database
         const { data: userData, error: userError } = await supabase
           .from('users')
-          .select('welcome_email_sent')
+          .select('welcome_message_sent')
           .eq('id', user.id)
           .single();
 
         // If already sent, skip email sending
-        if (userData?.welcome_email_sent) {
+        if (userData?.welcome_message_sent) {
           setWelcomeSent(true);
           await loadCommunityStats();
           triggerConfetti();
@@ -111,21 +171,29 @@ export default function OnboardingWelcomePage() {
 
         // Send welcome email only if not sent before
         if (profile.email) {
-          await BrevoEmailService.sendWelcomeEmail(
-            profile.email,
-            profile.name || 'User',
-            {
-              username: profile.name || 'User',
-              location: profile.location?.state || 'your area'
+          try {
+            await BrevoEmailService.sendWelcomeEmail(
+              profile.email,
+              profile.name || 'User',
+              {
+                username: profile.name || 'User',
+                location: profile.location?.state || 'your area'
+              }
+            );
+            onboardingAnalytics.trackWelcomeMessageSent(profile.email);
+          } catch (emailError: any) {
+            // Only log if it's not a configuration error
+            if (emailError.message !== 'BREVO_NOT_CONFIGURED') {
+              console.error('Error sending welcome email:', emailError);
             }
-          );
-          onboardingAnalytics.trackWelcomeMessageSent(profile.email);
+            // Continue without showing error to user
+          }
         }
 
         // Mark welcome as sent in database
         await supabase
           .from('users')
-          .update({ welcome_email_sent: true })
+          .update({ welcome_message_sent: true })
           .eq('id', user.id);
 
         // Mark welcome as sent in onboarding state
