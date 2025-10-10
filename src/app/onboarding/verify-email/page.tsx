@@ -160,6 +160,61 @@ function VerifyEmailContent() {
     return () => clearInterval(interval);
   }, [tips.length]);
 
+  const handleCheckVerification = useCallback(async () => {
+    if (!user || loading) return;
+    
+    // Check retry limits
+    const now = Date.now();
+    const oneHour = 60 * 60 * 1000; // 1 hour in milliseconds
+    
+    if (lastCheckTime && (now - lastCheckTime) < oneHour) {
+      if (checkRetryCount >= 5) {
+        setError('Too many verification checks. Please wait an hour before trying again.');
+        return;
+      }
+    } else {
+      // Reset counter if more than an hour has passed
+      setCheckRetryCount(0);
+    }
+    
+    triggerHaptic('light');
+    setIsChecking(true);
+    setLastCheckTime(now);
+    setCheckRetryCount(prev => prev + 1);
+    
+    try {
+      // Check verification status - refresh user data first
+      const { data: { user: refreshedUser }, error } = await supabase.auth.getUser();
+      
+      if (error) {
+        throw error;
+      }
+      
+      if (refreshedUser?.email_confirmed_at) {
+        await updateOnboardingStatus('profile_setup');
+        toast({
+          title: "Email Verified!",
+          description: "Your email has been successfully verified.",
+        });
+        router.push('/onboarding/profile');
+      } else {
+        toast({
+          title: "Not Verified Yet",
+          description: "Your email is not verified yet. Please check your inbox and click the verification link.",
+        });
+      }
+    } catch (error) {
+      console.error('Error checking verification:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to check verification status. Please try again.",
+      });
+    } finally {
+      setIsChecking(false);
+    }
+  }, [user, loading, triggerHaptic, updateOnboardingStatus, toast, router, checkRetryCount, lastCheckTime]);
+
   // Visibility detection for auto-check (with debounce)
   useEffect(() => {
     let timeoutId: NodeJS.Timeout;
@@ -185,7 +240,7 @@ function VerifyEmailContent() {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       clearTimeout(timeoutId);
     };
-  }, [user, isEmailVerified, isChecking, checkRetryCount, lastCheckTime]);
+  }, [user, isEmailVerified, isChecking, checkRetryCount, lastCheckTime, handleCheckVerification]);
 
   // Page load animation
   useEffect(() => {
@@ -282,60 +337,6 @@ function VerifyEmailContent() {
     return `${minutes}m ago`;
   };
 
-  const handleCheckVerification = useCallback(async () => {
-    if (!user || loading) return;
-    
-    // Check retry limits
-    const now = Date.now();
-    const oneHour = 60 * 60 * 1000; // 1 hour in milliseconds
-    
-    if (lastCheckTime && (now - lastCheckTime) < oneHour) {
-      if (checkRetryCount >= 5) {
-        setError('Too many verification checks. Please wait an hour before trying again.');
-        return;
-      }
-    } else {
-      // Reset counter if more than an hour has passed
-      setCheckRetryCount(0);
-    }
-    
-    triggerHaptic('light');
-    setIsChecking(true);
-    setLastCheckTime(now);
-    setCheckRetryCount(prev => prev + 1);
-    
-    try {
-      // Check verification status - refresh user data first
-      const { data: { user: refreshedUser }, error } = await supabase.auth.getUser();
-      
-      if (error) {
-        throw error;
-      }
-      
-      if (refreshedUser?.email_confirmed_at) {
-        await updateOnboardingStatus('profile_setup');
-        toast({
-          title: "Email Verified!",
-          description: "Your email has been successfully verified.",
-        });
-        router.push('/onboarding/profile');
-      } else {
-        toast({
-          title: "Not Verified Yet",
-          description: "Your email is not verified yet. Please check your inbox and click the verification link.",
-        });
-      }
-    } catch (error) {
-      console.error('Error checking verification:', error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to check verification status. Please try again.",
-      });
-    } finally {
-      setIsChecking(false);
-    }
-  }, [user, loading, triggerHaptic, updateOnboardingStatus, toast, router]);
 
   const handleBackToSignup = () => {
     router.push('/signup');

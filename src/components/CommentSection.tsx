@@ -287,7 +287,7 @@ export function CommentSection({ postId, onCommentCountChange }: CommentSectionP
             console.error('Error posting comment:', error);
             toast({ variant: 'destructive', title: 'Error', description: 'Could not post comment.' });
         }
-    }, [currentUser, userDetails, newComment, postId, replyingTo, toast, onCommentCountChange]);
+    }, [currentUser, userDetails, newComment, postId, replyingTo, toast, onCommentCountChange, authTimeout, loading]);
 
     const handleEditComment = useCallback(async (commentId: string) => {
         if (!currentUser || !editText.trim()) return;
@@ -337,7 +337,7 @@ export function CommentSection({ postId, onCommentCountChange }: CommentSectionP
             console.error('Error editing comment:', error);
             toast({ variant: 'destructive', title: 'Error', description: 'Could not edit comment.' });
         }
-    }, [currentUser, editText, toast]);
+    }, [currentUser, editText, toast, postId]);
 
     const handleDeleteComment = useCallback(async (commentId: string) => {
         if (!currentUser) return;
