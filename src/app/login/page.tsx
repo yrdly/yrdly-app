@@ -9,8 +9,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
+import { Loader2, Mail, Lock, User, Eye, EyeOff, AlertTriangle } from 'lucide-react';
 import { YrdlyLogo } from '@/components/ui/yrdly-logo';
+import { AUTH_CONSTANTS, ERROR_MESSAGES } from '@/lib/constants';
+import { ErrorMessageFormatter } from '@/lib/error-messages';
 
 // Force dynamic rendering to avoid prerender issues
 export const dynamic = 'force-dynamic';
@@ -24,6 +26,9 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [loginAttempts, setLoginAttempts] = useState(0);
+  const [lockoutUntil, setLockoutUntil] = useState<number | null>(null);
+  const [remainingTime, setRemainingTime] = useState(0);
   
   const { user, signIn, signUp, signInWithGoogle, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -34,6 +39,25 @@ export default function LoginPage() {
       router.replace('/home');
     }
   }, [user, authLoading, router]);
+
+  // Handle rate limiting timer
+  useEffect(() => {
+    if (lockoutUntil) {
+      const interval = setInterval(() => {
+        const now = Date.now();
+        const timeLeft = Math.max(0, lockoutUntil - now);
+        setRemainingTime(Math.ceil(timeLeft / 1000));
+        
+        if (timeLeft === 0) {
+          setLockoutUntil(null);
+          setLoginAttempts(0);
+          clearInterval(interval);
+        }
+      }, 1000);
+
+      return () => clearInterval(interval);
+    }
+  }, [lockoutUntil]);
 
   // Show loading while checking authentication
   if (authLoading) {
@@ -51,6 +75,12 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Check if user is locked out
+    if (lockoutUntil && Date.now() < lockoutUntil) {
+      return; // Don't proceed if locked out
+    }
+    
     setError('');
     setLoading(true);
 
@@ -60,6 +90,10 @@ export default function LoginPage() {
         if (error) {
           setError(error.message);
         } else if (user) {
+          // Reset login attempts on successful signup
+          setLoginAttempts(0);
+          setLockoutUntil(null);
+          
           // Check if user needs email confirmation
           if (user.email_confirmed_at) {
             router.push('/home');
@@ -71,13 +105,29 @@ export default function LoginPage() {
       } else {
         const { user, error } = await signIn(email, password);
         if (error) {
-          setError(error.message);
+          // Increment login attempts on failed login
+          const newAttempts = loginAttempts + 1;
+          setLoginAttempts(newAttempts);
+          
+          // Lock out user after max attempts
+          if (newAttempts >= AUTH_CONSTANTS.MAX_LOGIN_ATTEMPTS) {
+            const lockoutTime = Date.now() + AUTH_CONSTANTS.LOGIN_LOCKOUT_DURATION;
+            setLockoutUntil(lockoutTime);
+            setError(`${ERROR_MESSAGES.TOO_MANY_ATTEMPTS} Please wait ${Math.ceil(AUTH_CONSTANTS.LOGIN_LOCKOUT_DURATION / 60000)} minutes.`);
+          } else {
+            const friendlyError = ErrorMessageFormatter.formatAuthError(error.message);
+            const suggestion = ErrorMessageFormatter.getSuggestion(error.message);
+            setError(suggestion ? `${friendlyError} ${suggestion}` : friendlyError);
+          }
         } else if (user) {
+          // Reset login attempts on successful login
+          setLoginAttempts(0);
+          setLockoutUntil(null);
           router.push('/home');
         }
       }
     } catch (err) {
-      setError('An unexpected error occurred');
+      setError(ERROR_MESSAGES.GENERIC);
     } finally {
       setLoading(false);
     }
@@ -122,7 +172,16 @@ export default function LoginPage() {
         </CardHeader>
         
         <CardContent className="space-y-4">
-          {error && (
+          {lockoutUntil && Date.now() < lockoutUntil && (
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                Too many login attempts. Please wait {remainingTime} seconds before trying again.
+              </AlertDescription>
+            </Alert>
+          )}
+          
+          {error && !lockoutUntil && (
             <Alert variant="destructive">
               <AlertDescription>{error}</AlertDescription>
             </Alert>
@@ -159,6 +218,8 @@ export default function LoginPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   className="pl-10"
                   required
+                  aria-label="Email address"
+                  aria-describedby="email-error"
                 />
               </div>
             </div>
@@ -175,20 +236,27 @@ export default function LoginPage() {
                          onChange={(e) => setPassword(e.target.value)}
                          className="pl-10 pr-10"
                          required
+                         aria-label="Password"
+                         aria-describedby="password-error"
                        />
                        <button
                          type="button"
                          onClick={() => setShowPassword(!showPassword)}
                          className="absolute right-3 top-3 h-4 w-4 text-gray-400 hover:text-gray-600"
+                         aria-label={showPassword ? "Hide password" : "Show password"}
+                         aria-pressed={showPassword}
                        >
                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                        </button>
                      </div>
                    </div>
 
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button type="submit" className="w-full" disabled={loading || (!!lockoutUntil && Date.now() < lockoutUntil)}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isSignUp ? 'Create Account' : 'Sign In'}
+              {lockoutUntil && Date.now() < lockoutUntil 
+                ? `Locked (${remainingTime}s)` 
+                : isSignUp ? 'Create Account' : 'Sign In'
+              }
             </Button>
           </form>
 
