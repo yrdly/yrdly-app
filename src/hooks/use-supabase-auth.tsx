@@ -194,7 +194,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         supabase.removeChannel(profileChannel);
       }
     };
-  }, []);
+  }, [profileCreationInProgress]);
 
   const signUp = async (email: string, password: string, name: string) => {
     setLoading(true);

@@ -79,7 +79,7 @@ export default function OnboardingWelcomePage() {
         } else {
           // Filter users by state in JavaScript
           localUsers = allUsersData?.filter(user => 
-            user.location?.state === profile.location.state
+            user.location?.state === profile.location?.state
           ).length || 0;
           console.log('Filtered local users in JavaScript:', localUsers);
         }
@@ -139,7 +139,7 @@ export default function OnboardingWelcomePage() {
     } finally {
       setStatsLoading(false);
     }
-  }, [profile?.location?.state]);
+  }, [profile?.location]);
 
   // Trigger confetti animation
   const triggerConfetti = () => {
