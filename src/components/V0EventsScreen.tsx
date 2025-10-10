@@ -21,10 +21,10 @@ import {
 import { useAuth } from "@/hooks/use-supabase-auth";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import Image from "next/image";
 import type { Post as PostType } from "@/types";
 import { CreateEventDialog } from "@/components/CreateEventDialog";
 import { formatDistanceToNowStrict } from 'date-fns';
-import Image from "next/image";
 import { useToast } from "@/hooks/use-toast";
 import { useHaptics } from "@/hooks/use-haptics";
 
@@ -78,9 +78,11 @@ function EventCard({ event, onLike, onComment, onShare, onClick, onRSVP, isRSVPL
       {/* Event Image */}
       {(event.image_url || (event.image_urls && event.image_urls.length > 0)) && (
         <div className="mb-4">
-          <img
+          <Image
             src={event.image_url || event.image_urls?.[0] || "/placeholder.svg"}
             alt={event.title || "Event image"}
+            width={400}
+            height={192}
             className="w-full h-48 object-cover rounded-lg"
           />
         </div>

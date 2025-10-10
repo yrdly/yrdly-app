@@ -15,6 +15,7 @@ import { useAuth } from "@/hooks/use-supabase-auth";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import type { Post as PostType } from "@/types";
+import Image from "next/image";
 
 interface V0MarketplaceScreenProps {
   onItemClick?: (item: PostType) => void;
@@ -214,9 +215,11 @@ export function V0MarketplaceScreen({ onItemClick, onMessageSeller }: V0Marketpl
           {filteredItems.map((item) => (
             <Card key={item.id} className="p-0 overflow-hidden yrdly-shadow">
               <div className="relative cursor-pointer" onClick={() => onItemClick?.(item)}>
-                <img
+                <Image
                   src={item.image_urls?.[0] || "/placeholder.svg"}
                   alt={item.title || item.text || "Item"}
+                  width={200}
+                  height={200}
                   className="w-full aspect-square object-cover"
                 />
                 <Badge className={`absolute top-1 left-1 sm:top-2 sm:left-2 text-xs ${getPriceColor(item.price || 0)}`}>

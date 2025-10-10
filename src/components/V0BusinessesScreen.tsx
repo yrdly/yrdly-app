@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-supabase-auth";
 import { supabase } from "@/lib/supabase";
+import Image from "next/image";
 import type { Business } from "@/types";
 import { CreateBusinessDialog } from "@/components/CreateBusinessDialog";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
@@ -50,7 +51,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { usePosts } from "@/hooks/use-posts";
 import { useToast } from "@/hooks/use-toast";
-import Image from "next/image";
 
 interface V0BusinessesScreenProps {
   className?: string;
@@ -413,9 +413,11 @@ export function V0BusinessesScreen({ className }: V0BusinessesScreenProps) {
         >
           <div className="relative h-32">
             {(filteredBusinesses[0].image_urls && filteredBusinesses[0].image_urls.length > 0) ? (
-              <img
+              <Image
                 src={filteredBusinesses[0].image_urls[0]}
                 alt={filteredBusinesses[0].name}
+                width={400}
+                height={128}
                 className="w-full h-full object-cover"
               />
             ) : (
