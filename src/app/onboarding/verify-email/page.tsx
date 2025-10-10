@@ -284,7 +284,7 @@ function VerifyEmailContent() {
     return `${minutes}m ago`;
   };
 
-  const handleCheckVerification = async () => {
+  const handleCheckVerification = useCallback(async () => {
     console.log('Check verification clicked', { user: !!user, emailConfirmed: user?.email_confirmed_at, loading });
     if (!user || loading) return;
     
@@ -322,7 +322,7 @@ function VerifyEmailContent() {
     } finally {
       setIsChecking(false);
     }
-  };
+  }, [user, loading, triggerHaptic, updateOnboardingStatus, toast, router]);
 
   const handleBackToSignup = () => {
     router.push('/signup');
@@ -392,7 +392,7 @@ function VerifyEmailContent() {
             {/* Screen reader instructions */}
             <div id="verification-instructions" className="sr-only">
               To verify your email, check your inbox for a message from Yrdly and click the verification link. 
-              If you don't see the email, check your spam folder. You can also use the buttons below to open your email app or resend the verification email.
+              If you don&apos;t see the email, check your spam folder. You can also use the buttons below to open your email app or resend the verification email.
             </div>
           </CardHeader>
           

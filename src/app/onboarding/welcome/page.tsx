@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-supabase-auth';
 import { useOnboarding } from '@/hooks/use-onboarding';
@@ -34,7 +34,7 @@ export default function OnboardingWelcomePage() {
   const [isVisible, setIsVisible] = useState(false);
 
   // Load community stats
-  const loadCommunityStats = async () => {
+  const loadCommunityStats = useCallback(async () => {
     try {
       // Get total users
       const { count: totalUsers } = await supabase
@@ -75,7 +75,7 @@ export default function OnboardingWelcomePage() {
         totalPosts: 567
       });
     }
-  };
+  }, [profile?.location?.state]);
 
   // Trigger confetti animation
   const triggerConfetti = () => {
@@ -132,7 +132,7 @@ export default function OnboardingWelcomePage() {
     };
 
     sendWelcomeMessage();
-  }, [user, profile, completeWelcome, welcomeSent, toast]);
+  }, [user, profile, completeWelcome, welcomeSent, toast, loadCommunityStats]);
 
   const handleTakeTour = () => {
     onboardingAnalytics.trackTourStarted();
@@ -203,7 +203,7 @@ export default function OnboardingWelcomePage() {
               </CardDescription>
             </CardHeader>
           
-          <CardContent className="space-y-6">
+            <CardContent className="space-y-6">
             {/* Personalized greeting */}
             <div className="text-center space-y-2">
               <h3 className="font-semibold text-lg">
@@ -265,8 +265,9 @@ export default function OnboardingWelcomePage() {
             <div className="text-center text-sm text-muted-foreground">
               <p>You can always take the tour later from your profile settings.</p>
             </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );
