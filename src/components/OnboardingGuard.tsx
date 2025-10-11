@@ -52,7 +52,6 @@ export function OnboardingGuard({ children }: OnboardingGuardProps) {
     // Only redirect if we're not already on the target path
     if (window.location.pathname !== redirectPath) {
       redirectInitiated.current = true;
-      console.log(`OnboardingGuard: Redirecting to ${redirectPath} for step ${currentStep}`);
       router.push(redirectPath);
     }
   }, [currentStep, isOnboardingComplete, user, profile, loading, router]);

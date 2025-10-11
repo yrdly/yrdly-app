@@ -39,8 +39,6 @@ export default function OnboardingWelcomePage() {
   const loadCommunityStats = useCallback(async () => {
     setStatsLoading(true);
     try {
-      console.log('Loading community stats...');
-      console.log('User profile location:', profile?.location);
       
       // Get total users
       const { count: totalUsers, error: totalUsersError } = await supabase
@@ -50,12 +48,10 @@ export default function OnboardingWelcomePage() {
       if (totalUsersError) {
         console.error('Error fetching total users:', totalUsersError);
       }
-      console.log('Total users:', totalUsers);
 
       // Get local users (same state) - only if user has location set
       let localUsers = 0;
       if (profile?.location?.state) {
-        console.log('Querying for users in state:', profile.location.state);
         
         // First, let's see what location data exists
         const { data: allUsers, error: allUsersError } = await supabase
@@ -66,7 +62,6 @@ export default function OnboardingWelcomePage() {
         if (allUsersError) {
           console.error('Error fetching sample users:', allUsersError);
         } else {
-          console.log('Sample users with location data:', allUsers);
         }
         
         // Try a different approach - get all users and filter in JavaScript
@@ -81,15 +76,11 @@ export default function OnboardingWelcomePage() {
           localUsers = allUsersData?.filter(user => 
             user.location?.state === profile.location?.state
           ).length || 0;
-          console.log('Filtered local users in JavaScript:', localUsers);
         }
-        console.log('Local users:', localUsers);
       } else {
-        console.log('No location state set, skipping local users query');
       }
 
       // Get active today (users who used the app today)
-      console.log('Querying for users active today...');
       
       // First, let's see what last_seen data exists
       const { data: sampleUsers, error: sampleUsersError } = await supabase
@@ -100,16 +91,13 @@ export default function OnboardingWelcomePage() {
       if (sampleUsersError) {
         console.error('Error fetching sample users for last_seen:', sampleUsersError);
       } else {
-        console.log('Sample users with last_seen data:', sampleUsers);
       }
       
       // Use the UserActivityService to get active users today
       const activeToday = await UserActivityService.getActiveTodayCount();
-      console.log('Active today (since midnight):', activeToday);
       
       // Also get users active in the last 24 hours for comparison
       const activeLast24Hours = await UserActivityService.getActiveUsersCount(24);
-      console.log('Active in last 24 hours:', activeLast24Hours);
 
       // Get total posts
       const { count: totalPosts, error: totalPostsError } = await supabase
@@ -119,7 +107,6 @@ export default function OnboardingWelcomePage() {
       if (totalPostsError) {
         console.error('Error fetching total posts:', totalPostsError);
       }
-      console.log('Total posts:', totalPosts);
 
       setCommunityStats({
         totalUsers: totalUsers || 0,

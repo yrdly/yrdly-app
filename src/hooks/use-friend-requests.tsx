@@ -48,7 +48,6 @@ export function useFriendRequests() {
         table: 'friend_requests',
         filter: `to_user_id=eq.${user.id}`
       }, (payload) => {
-        console.log('Friend request change received:', payload);
         // Refresh the count when changes occur
         fetchPendingRequests();
       })

@@ -188,7 +188,6 @@ export class AuthService {
       // First check if profile already exists
       const existingProfile = await this.getUserProfile(user.id);
       if (existingProfile) {
-        console.log('User profile already exists, skipping creation');
         return;
       }
 
@@ -220,7 +219,6 @@ export class AuthService {
       if (error) {
         // If it's a duplicate key error, the profile already exists, which is fine
         if (error.code === '23505') {
-          console.log('User profile already exists (duplicate key), continuing...');
           return;
         }
         console.error('Database error creating user profile:', error);

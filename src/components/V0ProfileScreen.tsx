@@ -464,22 +464,24 @@ export function V0ProfileScreen({ onBack, user, isOwnProfile = true, targetUserI
 
             {/* Action Buttons for Other Users */}
             {!actualIsOwnProfile && (
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-4 px-4 py-2">
                 <Button 
-                  className={isFriend ? "bg-red-500 hover:bg-red-600 text-white px-6 py-2" : "bg-blue-600 hover:bg-blue-700 text-white px-6 py-2"}
+                  className={`flex-1 ${isFriend ? "bg-red-500 hover:bg-red-600 text-white" : "bg-blue-600 hover:bg-blue-700 text-white"} px-6 py-2`}
                   onClick={handleAddFriend}
                 >
                   <Users className="w-4 h-4 mr-2" />
                   {isFriend ? "Remove Friend" : isFriendRequestSent ? "Request Sent" : "Add Friend"}
                 </Button>
-                <Button 
-                  variant="outline" 
-                  className="border-white/30 bg-white/10 text-white hover:bg-white/20 px-6 py-2"
-                  onClick={handleMessageUser}
-                >
-                  <MessageCircle className="w-4 h-4 mr-2" />
-                  Message
-                </Button>
+                {isFriend && (
+                  <Button 
+                    variant="outline" 
+                    className="flex-1 border-white/30 bg-white/10 text-white hover:bg-white/20 px-6 py-2"
+                    onClick={handleMessageUser}
+                  >
+                    <MessageCircle className="w-4 h-4 mr-2" />
+                    Message
+                  </Button>
+                )}
               </div>
             )}
           </div>

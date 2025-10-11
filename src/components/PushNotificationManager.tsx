@@ -26,7 +26,6 @@ export function PushNotificationManager() {
             try {
                 // Check if VAPID key is available
                 if (!process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY) {
-                    console.warn('VAPID public key not found. Push notifications will not work.');
                     toast({
                         variant: "destructive",
                         title: "Push Notifications",
@@ -41,7 +40,6 @@ export function PushNotificationManager() {
                     setPermission(newPermission);
 
                     if (newPermission !== 'granted') {
-                        console.log('Notification permission denied');
                         toast({
                             title: "Permission Required",
                             description: "Please enable notifications to receive updates.",
@@ -51,7 +49,6 @@ export function PushNotificationManager() {
                 }
 
                 if (permission !== 'granted') {
-                    console.log('Notification permission not granted');
                     return;
                 }
 
@@ -93,12 +90,11 @@ export function PushNotificationManager() {
                     });
 
                 if (error) {
-                    console.error('Error saving push subscription:', error);
+                    // Error saving push subscription
                 } else {
                 }
 
             } catch (error) {
-                console.error('Error setting up push notifications:', error);
                 toast({
                     variant: "destructive",
                     title: "Push Notifications",

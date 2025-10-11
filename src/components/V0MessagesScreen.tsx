@@ -215,15 +215,6 @@ export function V0MessagesScreen({ onOpenChat, selectedConversationId }: V0Messa
         transformedConversations.forEach(conv => {
           const conversationData = conversationsData.find(c => c.id === conv.id);
           const lastMessage = conversationData?.messages?.[conversationData.messages.length - 1]; // Last message in the array
-          console.log(`Chat ${conv.participantName} (${conv.type}):`, {
-            unreadCount: conv.unreadCount,
-            lastMessageSender: lastMessage?.sender_id,
-            isLastMessageFromUser: lastMessage?.sender_id === user.id,
-            totalMessages: conversationData?.messages?.length || 0,
-            lastMessageText: lastMessage?.text || lastMessage?.content,
-            conversationId: conv.id,
-            lastMessageFromDB: conversationData?.last_message_text || conversationData?.last_message
-          });
         });
         
         setConversations(transformedConversations);
@@ -282,7 +273,6 @@ export function V0MessagesScreen({ onOpenChat, selectedConversationId }: V0Messa
         table: 'conversations',
         filter: `participant_ids.cs.{${user.id}}`
       }, (payload) => {
-        console.log('Conversations realtime change received!', payload);
         fetchConversations(); // Refresh conversations
       })
       .subscribe();

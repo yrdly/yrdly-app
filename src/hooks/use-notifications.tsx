@@ -75,7 +75,6 @@ export const useNotifications = () => {
                 table: 'notifications',
                 filter: `user_id=eq.${user.id}`
             }, (payload) => {
-                console.log('Notification real-time update:', payload);
                 
                 if (payload.eventType === 'INSERT' && payload.new) {
                     const newNotification = payload.new as Notification;

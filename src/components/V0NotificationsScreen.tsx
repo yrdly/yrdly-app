@@ -191,7 +191,6 @@ export function V0NotificationsScreen({ className }: V0NotificationsScreenProps)
   const { toast } = useToast();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filterType, setFilterType] = useState<'all' | 'unread' | 'read'>('all');
 
   useEffect(() => {
     if (!user) return;
@@ -277,15 +276,6 @@ export function V0NotificationsScreen({ className }: V0NotificationsScreenProps)
     };
   }, [user]);
 
-  const filteredNotifications = useMemo(() => {
-    return notifications.filter(notif => {
-      const matchesFilter = filterType === 'all' || 
-        (filterType === 'unread' && !notif.is_read) ||
-        (filterType === 'read' && notif.is_read);
-      
-      return matchesFilter;
-    });
-  }, [notifications, filterType]);
 
   const handleMarkAsRead = async (id: string) => {
     try {
@@ -332,6 +322,30 @@ export function V0NotificationsScreen({ className }: V0NotificationsScreenProps)
     }
   };
 
+  const handleClearAllNotifications = async () => {
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('user_id', user?.id);
+
+      if (error) throw error;
+
+      setNotifications([]);
+      toast({ 
+        title: "Success", 
+        description: "All notifications cleared" 
+      });
+    } catch (error) {
+      console.error('Error clearing all notifications:', error);
+      toast({
+        title: "Error",
+        description: "Failed to clear all notifications.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const unreadCount = notifications.filter(n => !n.is_read).length;
 
   return (
@@ -364,23 +378,19 @@ export function V0NotificationsScreen({ className }: V0NotificationsScreenProps)
           )}
         </div>
 
-        {/* Filter */}
-        <div className="flex gap-3">
-          <Button
-            variant={filterType === 'all' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setFilterType('all')}
-          >
-            All
-          </Button>
-          <Button
-            variant={filterType === 'unread' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setFilterType('unread')}
-          >
-            Unread
-          </Button>
-        </div>
+        {/* Clear All Notifications */}
+        {notifications.length > 0 && (
+          <div className="flex justify-end">
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleClearAllNotifications}
+            >
+              <X className="w-4 h-4 mr-2" />
+              Clear All Notifications
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Notifications List */}
@@ -390,9 +400,9 @@ export function V0NotificationsScreen({ className }: V0NotificationsScreenProps)
           <Skeleton className="h-24 w-full rounded-lg" />
           <Skeleton className="h-24 w-full rounded-lg" />
         </div>
-      ) : filteredNotifications.length > 0 ? (
+      ) : notifications.length > 0 ? (
         <div className="space-y-4">
-          {filteredNotifications.map((notification) => (
+          {notifications.map((notification) => (
             <NotificationCard
               key={notification.id}
               notification={notification}

@@ -45,7 +45,6 @@ export class DeleteService {
 
       if (options.showToast) {
         // Note: This would need to be called from a component with toast access
-        console.log('Post deleted successfully');
       }
 
       options.onSuccess?.();
@@ -93,7 +92,6 @@ export class DeleteService {
       }
 
       if (options.showToast) {
-        console.log('Business deleted successfully');
       }
 
       options.onSuccess?.();
@@ -153,7 +151,6 @@ export class DeleteService {
       }
 
       if (options.showToast) {
-        console.log('Conversation deleted successfully');
       }
 
       options.onSuccess?.();

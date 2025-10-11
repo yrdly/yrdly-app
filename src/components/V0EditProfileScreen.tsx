@@ -120,6 +120,7 @@ export function V0EditProfileScreen({ onBack }: V0EditProfileScreenProps) {
   const onSubmit = async (values: ProfileFormValues) => {
     if (!user) return;
 
+    
     setFormLoading(true);
     try {
       let avatarUrl = profile?.avatar_url;
@@ -145,11 +146,22 @@ export function V0EditProfileScreen({ onBack }: V0EditProfileScreenProps) {
         bio: values.bio,
         avatar_url: avatarUrl,
         interests: selectedInterests,
-        location: values.locationState && values.locationLga ? {
-          state: values.locationState,
-          lga: values.locationLga,
-          ward: values.locationWard || undefined,
-        } : undefined,
+        location: (() => {
+          // If user has entered new location data, use it
+          if (values.locationState && values.locationLga) {
+            return {
+              state: values.locationState,
+              lga: values.locationLga,
+              ward: values.locationWard || undefined,
+            };
+          }
+          // If form fields are empty but user had existing location, preserve it
+          if (profile?.location) {
+            return profile.location;
+          }
+          // If no existing location and no new data, set to undefined
+          return undefined;
+        })(),
         updated_at: new Date().toISOString(),
       });
 

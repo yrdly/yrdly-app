@@ -16,7 +16,6 @@ export class PushNotificationService {
   static async sendToUser(userId: string, payload: PushNotificationPayload): Promise<boolean> {
     try {
       // Get user's push subscription
-      console.log('PushNotificationService: Looking for subscription for user:', userId);
       const { data: subscriptions, error: fetchError } = await supabase
         .from('push_subscriptions')
         .select('subscription')
@@ -31,7 +30,6 @@ export class PushNotificationService {
       }
 
       if (!subscription) {
-        console.log('PushNotificationService: No push subscription found for user:', userId);
         return false;
       }
 

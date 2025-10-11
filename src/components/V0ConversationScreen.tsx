@@ -139,7 +139,6 @@ export function V0ConversationScreen({ conversationId }: V0ConversationScreenPro
 
     const fetchMessages = async () => {
       try {
-        console.log('Fetching messages for conversation:', selectedConversation.id);
         const { data: messagesData, error: messagesError } = await supabase
           .from('messages')
           .select('*')
@@ -151,7 +150,6 @@ export function V0ConversationScreen({ conversationId }: V0ConversationScreenPro
           return;
         }
 
-        console.log('Fetched messages:', messagesData);
         setMessages(messagesData || []);
         setLoading(false);
       } catch (error) {
@@ -203,7 +201,6 @@ export function V0ConversationScreen({ conversationId }: V0ConversationScreenPro
           }
         }
 
-        console.log('Marked all messages as read for conversation:', selectedConversation.id);
       } catch (error) {
         console.error('Error in markMessagesAsRead:', error);
       }

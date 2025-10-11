@@ -41,7 +41,6 @@ export function V0CatalogItemScreen({
           url: window.location.href,
         });
       } catch (error) {
-        console.log('Error sharing:', error);
       }
     } else {
       // Fallback to clipboard

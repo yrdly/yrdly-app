@@ -58,7 +58,6 @@ export function useOffline() {
 
     saveOfflineActions(updatedActions);
     
-    console.log('Added offline action:', newAction);
     return newAction.id;
   }, [saveOfflineActions]);
 
@@ -107,7 +106,6 @@ export function useOffline() {
       
       if (error) throw error;
       
-      console.log('Successfully created offline post:', newPost.id);
       return newPost.id;
     } catch (error) {
       console.error('Failed to create offline post:', error);
@@ -133,7 +131,6 @@ export function useOffline() {
       
       if (error) throw error;
       
-      console.log('Successfully created offline message:', newMessage.id);
       return newMessage.id;
     } catch (error) {
       console.error('Failed to create offline message:', error);
@@ -158,7 +155,6 @@ export function useOffline() {
       
       if (error) throw error;
       
-      console.log('Successfully created offline event:', newEvent.id);
       return newEvent.id;
     } catch (error) {
       console.error('Failed to create offline event:', error);
@@ -183,7 +179,6 @@ export function useOffline() {
       
       if (error) throw error;
       
-      console.log('Successfully created offline business:', newBusiness.id);
       return newBusiness.id;
     } catch (error) {
       console.error('Failed to create offline business:', error);
@@ -206,7 +201,6 @@ export function useOffline() {
         })
         .eq('id', userId);
       
-      console.log('Successfully updated offline profile for user:', userId);
       return userId;
     } catch (error) {
       console.error('Failed to update offline profile:', error);
@@ -256,13 +250,11 @@ export function useOffline() {
 
     try {
       const actions = [...offlineActionsRef.current];
-      console.log('Starting sync for', actions.length, 'offline actions');
 
       for (const action of actions) {
         try {
           await performOfflineAction(action);
           removeOfflineAction(action.id);
-          console.log('Successfully synced action:', action.id);
         } catch (error) {
           console.error('Failed to sync action:', action.id, error);
           
@@ -278,7 +270,6 @@ export function useOffline() {
         }
       }
 
-      console.log('Offline sync completed');
     } catch (error) {
       console.error('Offline sync failed:', error);
     } finally {

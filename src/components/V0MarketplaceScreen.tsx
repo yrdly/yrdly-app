@@ -98,7 +98,6 @@ export function V0MarketplaceScreen({ onItemClick, onMessageSeller }: V0Marketpl
           return;
         }
 
-        console.log('Marketplace items fetched:', data);
         setItems(data as PostType[]);
         setLoading(false);
       } catch (error) {

@@ -5,11 +5,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
   Bell, 
-  Search, 
   UserPlus, 
   MessageCircle, 
   Heart, 
@@ -31,6 +29,7 @@ interface NotificationsDropdownProps {
 
 interface Notification {
   id: string;
+  user_id: string;
   type: 'friend_request' | 'message' | 'post_like' | 'post_comment' | 'event_invite' | 'system';
   title: string;
   message: string;
@@ -70,11 +69,91 @@ function NotificationItem({ notification, onMarkAsRead, onDelete }: {
 
   const handleAction = async (action: string) => {
     if (action === 'accept_friend') {
-      // TODO: Implement accept friend request
-      toast({ title: "Friend request accepted!" });
+      try {
+        // Get the friend request data from the notification
+        const { data: requestData, error: requestError } = await supabase
+          .from('friend_requests')
+          .select('*')
+          .eq('from_user_id', notification.from_user_id)
+          .eq('to_user_id', notification.user_id)
+          .eq('status', 'pending')
+          .single();
+
+        if (requestError || !requestData) {
+          toast({ variant: "destructive", title: "Error", description: "Friend request not found." });
+          return;
+        }
+
+        // Update friend request status to accepted
+        const { error: updateError } = await supabase
+          .from('friend_requests')
+          .update({ status: 'accepted', updated_at: new Date().toISOString() })
+          .eq('id', requestData.id);
+
+        if (updateError) throw updateError;
+
+        // Add to both users' friends lists
+        const { data: currentUserData } = await supabase
+          .from('users')
+          .select('friends')
+          .eq('id', notification.user_id)
+          .single();
+
+        const { data: senderUserData } = await supabase
+          .from('users')
+          .select('friends')
+          .eq('id', notification.from_user_id)
+          .single();
+
+        const currentUserFriends = currentUserData?.friends || [];
+        const senderUserFriends = senderUserData?.friends || [];
+
+        // Add sender to current user's friends list
+        const updatedCurrentUserFriends = [...currentUserFriends, notification.from_user_id];
+        await supabase
+          .from('users')
+          .update({ friends: updatedCurrentUserFriends })
+          .eq('id', notification.user_id);
+
+        // Add current user to sender's friends list
+        const updatedSenderFriends = [...senderUserFriends, notification.user_id];
+        await supabase
+          .from('users')
+          .update({ friends: updatedSenderFriends })
+          .eq('id', notification.from_user_id);
+
+        // Create notification for the sender
+        try {
+          const { NotificationTriggers } = await import('@/lib/notification-triggers');
+          if (notification.from_user_id) {
+            await NotificationTriggers.onFriendRequestAccepted(notification.from_user_id, notification.user_id);
+          }
+        } catch (error) {
+          console.error('Error creating friend request accepted notification:', error);
+        }
+
+        toast({ title: "Friend request accepted!" });
+      } catch (error) {
+        console.error('Error accepting friend request:', error);
+        toast({ variant: "destructive", title: "Error", description: "Failed to accept friend request." });
+      }
     } else if (action === 'decline_friend') {
-      // TODO: Implement decline friend request
-      toast({ title: "Friend request declined." });
+      try {
+        // Delete the friend request
+        const { error } = await supabase
+          .from('friend_requests')
+          .delete()
+          .eq('from_user_id', notification.from_user_id)
+          .eq('to_user_id', notification.user_id)
+          .eq('status', 'pending');
+
+        if (error) throw error;
+
+        toast({ title: "Friend request declined." });
+      } catch (error) {
+        console.error('Error declining friend request:', error);
+        toast({ variant: "destructive", title: "Error", description: "Failed to decline friend request." });
+      }
     } else if (action === 'reply_message') {
       // TODO: Navigate to messages
       toast({ title: "Opening conversation..." });
@@ -190,7 +269,6 @@ export function NotificationsDropdown({ isOpen, onClose }: NotificationsDropdown
   const { toast } = useToast();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     if (!user || !isOpen) return;
@@ -245,6 +323,7 @@ export function NotificationsDropdown({ isOpen, onClose }: NotificationsDropdown
           const newNotification = payload.new as any;
           setNotifications(prev => [{
             id: newNotification.id,
+            user_id: newNotification.user_id,
             type: newNotification.type,
             title: newNotification.title,
             message: newNotification.message,
@@ -277,14 +356,6 @@ export function NotificationsDropdown({ isOpen, onClose }: NotificationsDropdown
     };
   }, [user, isOpen]);
 
-  const filteredNotifications = useMemo(() => {
-    return notifications.filter(notif => {
-      const matchesSearch = searchQuery === '' || 
-        notif.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        notif.message.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesSearch;
-    });
-  }, [notifications, searchQuery]);
 
   const handleMarkAsRead = async (id: string) => {
     try {
@@ -331,6 +402,30 @@ export function NotificationsDropdown({ isOpen, onClose }: NotificationsDropdown
     }
   };
 
+  const handleClearAllNotifications = async () => {
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('user_id', user?.id);
+
+      if (error) throw error;
+
+      setNotifications([]);
+      toast({ 
+        title: "Success", 
+        description: "All notifications cleared" 
+      });
+    } catch (error) {
+      console.error('Error clearing all notifications:', error);
+      toast({
+        title: "Error",
+        description: "Failed to clear all notifications.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const unreadCount = notifications.filter(n => !n.is_read).length;
 
   if (!isOpen) return null;
@@ -340,40 +435,42 @@ export function NotificationsDropdown({ isOpen, onClose }: NotificationsDropdown
       <div className="absolute top-16 right-4 w-80 max-h-96 bg-background border border-border rounded-lg shadow-lg yrdly-shadow" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="p-4 border-b border-border">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between">
             <div>
               <h3 className="font-semibold text-foreground">Notifications</h3>
               <p className="text-xs text-muted-foreground">
                 {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up!'}
               </p>
             </div>
-            {unreadCount > 0 && (
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => {
-                  notifications.forEach(notif => {
-                    if (!notif.is_read) {
-                      handleMarkAsRead(notif.id);
-                    }
-                  });
-                }}
-              >
-                <Check className="w-3 h-3 mr-1" />
-                Mark All Read
-              </Button>
-            )}
-          </div>
-
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-3 h-3 text-muted-foreground" />
-            <Input
-              placeholder="Search notifications..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-7 h-8 text-xs"
-            />
+            <div className="flex items-center gap-2">
+              {unreadCount > 0 && (
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => {
+                    notifications.forEach(notif => {
+                      if (!notif.is_read) {
+                        handleMarkAsRead(notif.id);
+                      }
+                    });
+                  }}
+                >
+                  <Check className="w-3 h-3 mr-1" />
+                  Mark All Read
+                </Button>
+              )}
+              {notifications.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleClearAllNotifications}
+                  className="h-6 text-xs px-2 text-muted-foreground hover:text-destructive"
+                >
+                  <X className="w-3 h-3 mr-1" />
+                  Clear All
+                </Button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -385,8 +482,8 @@ export function NotificationsDropdown({ isOpen, onClose }: NotificationsDropdown
               <Skeleton className="h-16 w-full" />
               <Skeleton className="h-16 w-full" />
             </div>
-          ) : filteredNotifications.length > 0 ? (
-            filteredNotifications.map((notification) => (
+          ) : notifications.length > 0 ? (
+            notifications.map((notification) => (
               <NotificationItem
                 key={notification.id}
                 notification={notification}
@@ -400,7 +497,7 @@ export function NotificationsDropdown({ isOpen, onClose }: NotificationsDropdown
         </div>
 
         {/* Footer */}
-        {filteredNotifications.length > 0 && (
+        {notifications.length > 0 && (
           <div className="p-3 border-t border-border">
             <Button variant="ghost" size="sm" className="w-full text-xs">
               View All Notifications

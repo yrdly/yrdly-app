@@ -11,7 +11,6 @@ export default function ConversationPage() {
     const params = useParams();
     const conversationId = params?.convId as string;
     
-    console.log("ConversationPage rendered. Conversation ID:", conversationId);
     
     return <V0ConversationScreen conversationId={conversationId} />;
 }

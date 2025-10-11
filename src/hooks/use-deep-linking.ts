@@ -74,7 +74,6 @@ export function useDeepLinking() {
           }
         }
       } catch (error) {
-        console.log('Deep linking not available:', error);
       }
     };
 

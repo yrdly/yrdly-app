@@ -64,13 +64,12 @@ export function V0MainLayout({ children }: V0MainLayoutProps) {
           .eq('is_read', false);
 
         if (error) {
-          console.error('Error fetching unread count:', error);
           return;
         }
 
         setUnreadCount(count || 0);
       } catch (error) {
-        console.error('Error fetching unread count:', error);
+        // Error fetching unread count
       }
     };
 
@@ -118,7 +117,6 @@ export function V0MainLayout({ children }: V0MainLayoutProps) {
           .contains('participant_ids', [user.id]);
 
         if (conversationsError) {
-          console.error('Error fetching conversations for unread count:', conversationsError);
           return;
         }
 
@@ -138,7 +136,6 @@ export function V0MainLayout({ children }: V0MainLayoutProps) {
               .order('created_at', { ascending: true });
 
             if (chatMessagesError) {
-              console.error('Error fetching chat messages for global count:', chatMessagesError);
               continue;
             }
 
@@ -161,7 +158,6 @@ export function V0MainLayout({ children }: V0MainLayoutProps) {
               msg.sender_id !== user.id
             ) || false;
             
-            console.log(`Marketplace conversation ${conv.id} has unread messages: ${hasUnreadMessages}`);
           } else {
             // For other conversation types, use the existing logic
             const lastMessage = conv.messages?.[conv.messages.length - 1];
@@ -189,7 +185,7 @@ export function V0MainLayout({ children }: V0MainLayoutProps) {
         
         setUnreadMessagesCount(unreadChatsCount);
       } catch (error) {
-        console.error('Error fetching unread messages count:', error);
+        // Error fetching unread messages count
       }
     };
 

@@ -233,7 +233,6 @@ export default function NotificationSettingsPage() {
                                 
                                 try {
                                     // First check if user has a push subscription
-                                    console.log('Checking subscription for user.id:', user.id);
                                     const { data: existingSubscriptions, error: checkError } = await supabase
                                         .from('push_subscriptions')
                                         .select('id')

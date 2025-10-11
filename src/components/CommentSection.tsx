@@ -51,11 +51,12 @@ interface Comment {
 interface CommentSectionProps {
     postId: string;
     onCommentCountChange?: (count: number) => void;
+    onClose?: () => void;
 }
 
 const EMOJI_REACTIONS = ['👍', '❤️', '😂', '😡'];
 
-export function CommentSection({ postId, onCommentCountChange }: CommentSectionProps) {
+export function CommentSection({ postId, onCommentCountChange, onClose }: CommentSectionProps) {
     const { user: currentUser, profile: userDetails, loading } = useAuth();
     const { toast } = useToast();
     
@@ -80,72 +81,62 @@ export function CommentSection({ postId, onCommentCountChange }: CommentSectionP
     const isAuthLoading = loading && !authTimeout;
 
     useMemo(() => {
-        if (!postId) return;
+        if (!postId || !currentUser) return;
         
-        
-        // Set up real-time subscription for comments
-        const channel = supabase
-            .channel(`comments_${postId}_${Date.now()}`) // Add timestamp to make channel unique
-            .on('postgres_changes', {
-                event: '*',
-                schema: 'public',
-                table: 'comments',
-                filter: `post_id=eq.${postId}`
-            }, (payload) => {
-                if (payload.eventType === 'INSERT' && payload.new) {
-                    const dbComment = payload.new as any;
-                    
-                    const newComment: Comment = {
-                        id: dbComment.id,
-                        userId: dbComment.user_id,
-                        authorName: dbComment.author_name,
-                        authorImage: dbComment.author_image,
-                        text: dbComment.text,
-                        timestamp: dbComment.timestamp,
-                        parentId: dbComment.parent_id,
-                        reactions: dbComment.reactions || {}
-                    };
-                    
-                    setComments(prev => {
-                        const existing = prev.filter(c => c.id !== newComment.id);
-                        return [...existing, newComment].sort((a, b) => 
-                            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-                        );
-                    });
-                } else if (payload.eventType === 'UPDATE' && payload.new) {
-                    const dbComment = payload.new as any;
-                    
-                    const updatedComment: Comment = {
-                        id: dbComment.id,
-                        userId: dbComment.user_id,
-                        authorName: dbComment.author_name,
-                        authorImage: dbComment.author_image,
-                        text: dbComment.text,
-                        timestamp: dbComment.timestamp,
-                        parentId: dbComment.parent_id,
-                        reactions: dbComment.reactions || {}
-                    };
-                    
-                    setComments(prev => {
-                        return prev.map(c => c.id === updatedComment.id ? updatedComment : c);
-                    });
-                } else if (payload.eventType === 'DELETE' && payload.old) {
-                    const oldComment = payload.old as any;
-                    setComments(prev => {
-                        const filtered = prev.filter(c => c.id !== oldComment.id);
-                        return filtered;
-                    });
-                }
+        // Add a small delay to ensure authentication is complete
+        const setupSubscription = () => {
+            // Set up real-time subscription for comments with more specific event types
+            const channel = supabase
+                .channel(`comments_${postId}`)
+                .on('postgres_changes', {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'comments',
+                    filter: `post_id=eq.${postId}`
+                }, (payload) => {
+                    if (payload.new) {
+                        const dbComment = payload.new as any;
+                        
+                        const newComment: Comment = {
+                            id: dbComment.id,
+                            userId: dbComment.user_id,
+                            authorName: dbComment.author_name,
+                            authorImage: dbComment.author_image,
+                            text: dbComment.text,
+                            timestamp: dbComment.timestamp,
+                            parentId: dbComment.parent_id,
+                            reactions: dbComment.reactions || {}
+                        };
+                        
+                        setComments(prev => {
+                            const existing = prev.filter(c => c.id !== newComment.id);
+                            return [...existing, newComment].sort((a, b) => 
+                                new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+                            );
+                        });
+                    }
             })
-            .subscribe((status) => {
+            .subscribe((status, err) => {
                 if (status === 'CHANNEL_ERROR') {
-                    console.error('❌ Error subscribing to comments real-time updates');
+                    console.error('❌ Error subscribing to comments real-time updates:', err);
+                    // Set up polling as fallback
+                    const pollInterval = setInterval(() => {
+                        fetchComments();
+                    }, 3000); // Poll every 3 seconds
+                    
+                    // Store interval ID for cleanup
+                    (channel as any).pollInterval = pollInterval;
                 } else if (status === 'CLOSED') {
+                    // Clear polling if it was set up
+                    if ((channel as any).pollInterval) {
+                        clearInterval((channel as any).pollInterval);
+                    }
+                } else if (status === 'SUBSCRIBED') {
                 }
             });
 
-        // Also fetch comments initially
-        const fetchComments = async () => {
+            // Also fetch comments initially
+            const fetchComments = async () => {
             const { data, error } = await supabase
                 .from('comments')
                 .select('*')
@@ -166,14 +157,26 @@ export function CommentSection({ postId, onCommentCountChange }: CommentSectionP
                 }));
                 setComments(mappedComments);
             }
-        };
-        
-        fetchComments();
+            };
+            
+            fetchComments();
 
-        return () => {
-            supabase.removeChannel(channel);
+            return () => {
+                // Clear polling interval if it exists
+                if ((channel as any).pollInterval) {
+                    clearInterval((channel as any).pollInterval);
+                }
+                supabase.removeChannel(channel);
+            };
         };
-    }, [postId]);
+
+        // Call setupSubscription with a small delay to ensure auth is ready
+        const timeoutId = setTimeout(setupSubscription, 100);
+        
+        return () => {
+            clearTimeout(timeoutId);
+        };
+    }, [postId, currentUser]);
 
     const handlePostComment = useCallback(async (e: FormEvent) => {
         e.preventDefault();
@@ -600,7 +603,10 @@ export function CommentSection({ postId, onCommentCountChange }: CommentSectionP
                         type="button"
                         variant="outline"
                         size="sm"
-                        onClick={() => setNewComment('')}
+                        onClick={() => {
+                            setNewComment('');
+                            onClose?.();
+                        }}
                     >
                         Cancel
                     </Button>

@@ -41,7 +41,6 @@ class OnboardingAnalytics {
     
     // Log to console in development
     if (process.env.NODE_ENV === 'development') {
-      console.log('Onboarding Analytics:', trackingEvent);
     }
 
     // Send to analytics service (implement based on your analytics provider)

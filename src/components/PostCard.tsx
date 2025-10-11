@@ -101,7 +101,6 @@ export function PostCard({ post, onDelete, onCreatePost }: PostCardProps) {
             .single();
 
           if (error) {
-            console.error('Error fetching author data:', error);
             // Use cached data as fallback
             setAuthor({ 
               id: post.user_id,
@@ -122,7 +121,6 @@ export function PostCard({ post, onDelete, onCreatePost }: PostCardProps) {
           setLoadingAuthor(false);
         }
       } catch (error) {
-        console.error('Error fetching author data:', error);
         // Use cached data as fallback
         setAuthor({ 
           id: post.user_id,
@@ -179,7 +177,6 @@ export function PostCard({ post, onDelete, onCreatePost }: PostCardProps) {
 
 
   const handleLike = async () => {
-    console.log('Like button clicked!', { currentUser: !!currentUser, postId: post.id });
     if (!currentUser || !post.id) return;
     
     // Trigger haptic feedback
@@ -194,7 +191,6 @@ export function PostCard({ post, onDelete, onCreatePost }: PostCardProps) {
         .single();
 
       if (fetchError) {
-        console.error('Error fetching post:', fetchError);
         toast({
           variant: "destructive",
           title: "Error",
@@ -222,7 +218,6 @@ export function PostCard({ post, onDelete, onCreatePost }: PostCardProps) {
         .eq('id', post.id);
 
       if (updateError) {
-        console.error('Error updating post:', updateError);
         toast({
           variant: "destructive",
           title: "Error",
@@ -239,12 +234,11 @@ export function PostCard({ post, onDelete, onCreatePost }: PostCardProps) {
             const { NotificationTriggers } = await import('@/lib/notification-triggers');
             await NotificationTriggers.onPostLiked(post.id, currentUser.id);
           } catch (error) {
-            console.error('Error creating post like notification:', error);
+            // Error creating post like notification
           }
         }
       }
     } catch (error) {
-      console.error('Error handling like:', error);
       toast({
         variant: "destructive",
         title: "Error",
@@ -327,7 +321,6 @@ export function PostCard({ post, onDelete, onCreatePost }: PostCardProps) {
                     .eq('item_id', post.id);
 
                 if (fetchError) {
-                    console.error("Error fetching conversations:", fetchError);
                     toast({ variant: "destructive", title: "Error", description: "Could not open conversation." });
                     return;
                 }
@@ -354,7 +347,6 @@ export function PostCard({ post, onDelete, onCreatePost }: PostCardProps) {
                         .single();
 
                     if (createError) {
-                        console.error("Error creating conversation:", createError);
                         toast({ variant: "destructive", title: "Error", description: "Could not create conversation." });
                         return;
                     }
@@ -371,7 +363,6 @@ export function PostCard({ post, onDelete, onCreatePost }: PostCardProps) {
                     .contains('participant_ids', [currentUser.id]);
 
                 if (fetchError) {
-                    console.error("Error fetching conversations:", fetchError);
                     toast({ variant: "destructive", title: "Error", description: "Could not open conversation." });
                     return;
                 }
@@ -399,7 +390,6 @@ export function PostCard({ post, onDelete, onCreatePost }: PostCardProps) {
                         .single();
 
                     if (createError) {
-                        console.error("Error creating conversation:", createError);
                         toast({ variant: "destructive", title: "Error", description: "Could not create conversation." });
                         return;
                     }
@@ -410,7 +400,6 @@ export function PostCard({ post, onDelete, onCreatePost }: PostCardProps) {
                 router.push(`/messages/${conversationId}`);
             }
         } catch (error) {
-            console.error("Error handling message action:", error);
             toast({ variant: "destructive", title: "Error", description: "Could not open conversation." });
         }
     };
@@ -635,6 +624,7 @@ export function PostCard({ post, onDelete, onCreatePost }: PostCardProps) {
                 <CommentSection 
                     postId={post.id} 
                     onCommentCountChange={setCommentCount}
+                    onClose={() => setIsCommentsOpen(false)}
                 />
             </div>
         </CollapsibleContent>

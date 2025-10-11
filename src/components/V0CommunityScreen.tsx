@@ -17,7 +17,9 @@ import {
   Calendar,
   Bell,
   TrendingUp,
-  UserPlus
+  UserPlus,
+  Check,
+  X
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-supabase-auth";
 import { useRouter } from "next/navigation";
@@ -169,7 +171,6 @@ export function V0CommunityScreen({ className }: V0CommunityScreenProps) {
         schema: 'public', 
         table: 'posts'
       }, (payload) => {
-        console.log('Community posts realtime change received!', payload);
         fetchPosts(); // Refresh posts
         fetchStats(); // Refresh stats
       })
@@ -295,7 +296,7 @@ export function V0CommunityScreen({ className }: V0CommunityScreenProps) {
     }
   };
 
-  const handleFriendAction = async (userId: string, action: 'add' | 'remove') => {
+  const handleFriendAction = async (userId: string, action: 'add' | 'remove' | 'accept' | 'decline') => {
     if (!currentUser) return;
     
     try {
@@ -314,6 +315,14 @@ export function V0CommunityScreen({ className }: V0CommunityScreenProps) {
         
         // Update friendship status
         setFriendshipStatus(prev => ({ ...prev, [userId]: 'request_sent' }));
+        
+        // Trigger notification for friend request
+        try {
+          const { NotificationTriggers } = await import('@/lib/notification-triggers');
+          await NotificationTriggers.onFriendRequestSent(currentUser.id, userId);
+        } catch (error) {
+          console.error('Error creating friend request notification:', error);
+        }
         
         toast({
           title: "Friend Request Sent",
@@ -354,6 +363,92 @@ export function V0CommunityScreen({ className }: V0CommunityScreenProps) {
         toast({
           title: "Friend Removed",
           description: "You are no longer friends with this user.",
+        });
+      } else if (action === 'accept') {
+        // Accept friend request
+        const { data: requestData, error: requestError } = await supabase
+          .from('friend_requests')
+          .select('*')
+          .eq('from_user_id', userId)
+          .eq('to_user_id', currentUser.id)
+          .eq('status', 'pending')
+          .single();
+
+        if (requestError || !requestData) {
+          toast({ variant: "destructive", title: "Error", description: "Friend request not found." });
+          return;
+        }
+
+        // Update friend request status to accepted
+        const { error: updateError } = await supabase
+          .from('friend_requests')
+          .update({ status: 'accepted', updated_at: new Date().toISOString() })
+          .eq('id', requestData.id);
+
+        if (updateError) throw updateError;
+
+        // Add to both users' friends lists
+        const { data: currentUserData } = await supabase
+          .from('users')
+          .select('friends')
+          .eq('id', currentUser.id)
+          .single();
+
+        const { data: senderUserData } = await supabase
+          .from('users')
+          .select('friends')
+          .eq('id', userId)
+          .single();
+
+        const currentUserFriends = currentUserData?.friends || [];
+        const senderUserFriends = senderUserData?.friends || [];
+
+        // Add sender to current user's friends list
+        const updatedCurrentUserFriends = [...currentUserFriends, userId];
+        await supabase
+          .from('users')
+          .update({ friends: updatedCurrentUserFriends })
+          .eq('id', currentUser.id);
+
+        // Add current user to sender's friends list
+        const updatedSenderFriends = [...senderUserFriends, currentUser.id];
+        await supabase
+          .from('users')
+          .update({ friends: updatedSenderFriends })
+          .eq('id', userId);
+
+        // Create notification for the sender
+        try {
+          const { NotificationTriggers } = await import('@/lib/notification-triggers');
+          await NotificationTriggers.onFriendRequestAccepted(userId, currentUser.id);
+        } catch (error) {
+          console.error('Error creating friend request accepted notification:', error);
+        }
+
+        // Update friendship status
+        setFriendshipStatus(prev => ({ ...prev, [userId]: 'friends' }));
+
+        toast({
+          title: "Friend Request Accepted",
+          description: "You are now friends with this user.",
+        });
+      } else if (action === 'decline') {
+        // Decline friend request
+        const { error } = await supabase
+          .from('friend_requests')
+          .delete()
+          .eq('from_user_id', userId)
+          .eq('to_user_id', currentUser.id)
+          .eq('status', 'pending');
+
+        if (error) throw error;
+
+        // Update friendship status
+        setFriendshipStatus(prev => ({ ...prev, [userId]: 'none' }));
+
+        toast({
+          title: "Friend Request Declined",
+          description: "Friend request has been declined.",
         });
       }
     } catch (error) {
@@ -522,7 +617,7 @@ export function V0CommunityScreen({ className }: V0CommunityScreenProps) {
           <p className="text-muted-foreground">What&apos;s happening in your neighborhood</p>
         </div>
 
-        <div className="relative" ref={searchRef}>
+        <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             placeholder="Search for neighbors..."
@@ -560,7 +655,7 @@ export function V0CommunityScreen({ className }: V0CommunityScreenProps) {
 
       {/* User Search Results */}
       {showUserSearch && (
-        <div className="space-y-4 mb-6">
+        <div ref={searchRef} className="space-y-4 mb-6">
           <h3 className="font-semibold text-foreground">Users</h3>
           {userSearchLoading ? (
             <div className="space-y-3">
@@ -584,6 +679,7 @@ export function V0CommunityScreen({ className }: V0CommunityScreenProps) {
                   <Card 
                     key={user.id} 
                     className="p-3 hover:bg-muted/50 transition-colors"
+                    onClick={() => router.push(`/profile/${user.id}`)}
                   >
                     <div className="flex items-center gap-3">
                       <div 
@@ -605,32 +701,61 @@ export function V0CommunityScreen({ className }: V0CommunityScreenProps) {
                           </p>
                         </div>
                       </div>
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (status === 'friends') {
-                            handleMessageUser(user.id);
-                          } else if (status === 'none') {
-                            handleFriendAction(user.id, 'add');
-                          } else if (status === 'request_sent') {
-                            // Could add cancel request functionality here
-                            toast({
-                              title: "Friend Request Pending",
-                              description: "You have already sent a friend request to this user.",
-                            });
-                          }
-                        }}
-                      >
-                        {status === 'friends' ? (
-                          <MessageCircle className="w-4 h-4" />
-                        ) : status === 'request_sent' ? (
-                          <UserPlus className="w-4 h-4 opacity-50" />
+                      <div className="flex items-center gap-2">
+                        {status === 'request_received' ? (
+                          <>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleFriendAction(user.id, 'accept');
+                              }}
+                              className="text-green-600 hover:text-green-700"
+                            >
+                              <Check className="w-4 h-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleFriendAction(user.id, 'decline');
+                              }}
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              <X className="w-4 h-4" />
+                            </Button>
+                          </>
                         ) : (
-                          <UserPlus className="w-4 h-4" />
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (status === 'friends') {
+                                handleMessageUser(user.id);
+                              } else if (status === 'none') {
+                                handleFriendAction(user.id, 'add');
+                              } else if (status === 'request_sent') {
+                                // Could add cancel request functionality here
+                                toast({
+                                  title: "Friend Request Pending",
+                                  description: "You have already sent a friend request to this user.",
+                                });
+                              }
+                            }}
+                          >
+                            {status === 'friends' ? (
+                              <MessageCircle className="w-4 h-4" />
+                            ) : status === 'request_sent' ? (
+                              <UserPlus className="w-4 h-4 opacity-50" />
+                            ) : (
+                              <UserPlus className="w-4 h-4" />
+                            )}
+                          </Button>
                         )}
-                      </Button>
+                      </div>
                     </div>
                   </Card>
                 );
@@ -779,7 +904,14 @@ export function V0CommunityScreen({ className }: V0CommunityScreenProps) {
               >
                 <CollapsibleContent>
                   <div className="pt-3 border-t border-border">
-                    <CommentSection postId={post.id} />
+                    <CommentSection 
+                        postId={post.id} 
+                        onClose={() => setExpandedComments(prev => {
+                            const newSet = new Set(prev);
+                            newSet.delete(post.id);
+                            return newSet;
+                        })}
+                    />
                   </div>
                 </CollapsibleContent>
               </Collapsible>

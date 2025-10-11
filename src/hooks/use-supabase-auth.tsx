@@ -45,7 +45,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               
               // If no profile exists, create one
               if (!userProfile && !profileCreationInProgress) {
-                console.log('No user profile found on initial load, creating one for user:', currentUser.id);
                 setProfileCreationInProgress(true);
                 try {
                   await AuthService.createUserProfile(currentUser, 
@@ -58,7 +57,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                   );
                   // Fetch the newly created profile
                   userProfile = await AuthService.getUserProfile(currentUser.id);
-                  console.log('User profile created successfully on initial load:', userProfile?.name);
                 } catch (createError) {
                   console.error('Error creating user profile on initial load:', createError);
                 } finally {
@@ -111,7 +109,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             filter: `id=eq.${userId}`,
           },
           async (payload) => {
-            console.log('Profile update received:', payload);
             if (isMounted && payload.new) {
               // Refresh the profile data
               try {
@@ -142,7 +139,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             
             // If no profile exists, create one
             if (!userProfile && !profileCreationInProgress) {
-              console.log('No user profile found, creating one for user:', user.id);
               setProfileCreationInProgress(true);
               try {
                 await AuthService.createUserProfile(user, 
@@ -155,7 +151,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 );
                 // Fetch the newly created profile
                 userProfile = await AuthService.getUserProfile(user.id);
-                console.log('User profile created successfully:', userProfile?.name);
               } catch (createError) {
                 console.error('Error creating user profile:', createError);
               } finally {

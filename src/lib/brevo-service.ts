@@ -72,7 +72,6 @@ export class BrevoEmailService {
     
     try {
       const result = await apiInstance.sendTransacEmail(sendSmtpEmail);
-      console.log('Verification email sent successfully via Brevo:', result);
       return result;
     } catch (error: any) {
       console.error('Error sending verification email via Brevo:', error);
@@ -128,7 +127,6 @@ export class BrevoEmailService {
     
     try {
       const result = await apiInstance.sendTransacEmail(sendSmtpEmail);
-      console.log('Welcome email sent successfully via Brevo:', result);
       return result;
     } catch (error) {
       console.error('Error sending welcome email via Brevo:', error);
@@ -178,7 +176,6 @@ export class BrevoEmailService {
     
     try {
       const result = await apiInstance.sendTransacEmail(sendSmtpEmail);
-      console.log('Event confirmation email sent successfully via Brevo:', result);
       return result;
     } catch (error) {
       console.error('Error sending event confirmation email via Brevo:', error);
@@ -208,7 +205,6 @@ export class BrevoEmailService {
     
     try {
       const result = await apiInstance.sendTransacEmail(sendSmtpEmail);
-      console.log('Password reset email sent successfully via Brevo:', result);
       return result;
     } catch (error) {
       console.error('Error sending password reset email via Brevo:', error);

@@ -111,7 +111,6 @@ export default function BusinessChatPage() {
           if (createError) {
             console.error('Error creating business conversation:', createError);
           } else {
-            console.log('Created business conversation:', newConv.id);
           }
         }
       } catch (error) {

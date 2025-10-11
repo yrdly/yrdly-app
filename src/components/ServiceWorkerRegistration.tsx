@@ -26,7 +26,6 @@ export function ServiceWorkerRegistration() {
 
       // Handle controller change (new service worker activated)
       navigator.serviceWorker.addEventListener('controllerchange', () => {
-        console.log('New service worker activated');
         // Trigger sync when new service worker takes control
         setTimeout(() => {
           triggerSync();
@@ -35,10 +34,8 @@ export function ServiceWorkerRegistration() {
 
       // Handle service worker messages
       navigator.serviceWorker.addEventListener('message', (event) => {
-        console.log('Service Worker message received:', event.data);
-        
         if (event.data && event.data.type === 'SYNC_COMPLETED') {
-          console.log('Background sync completed');
+          // Background sync completed
         }
       });
 

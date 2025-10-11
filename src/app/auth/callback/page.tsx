@@ -17,9 +17,6 @@ export default function AuthCallback() {
     const handleAuthCallback = async () => {
       try {
         setStatus('Handling OAuth callback...');
-        console.log('Handling OAuth callback...');
-        console.log('Current URL:', window.location.href);
-        console.log('Timestamp:', new Date().toISOString());
         
         // Check if Supabase client is properly initialized
         if (!supabase || !supabase.auth) {
@@ -27,20 +24,15 @@ export default function AuthCallback() {
         }
         
         // Debug environment variables
-        console.log('Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL ? 'Set' : 'Missing');
-        console.log('Supabase Anon Key:', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'Set' : 'Missing');
         
         // Check if we have URL fragments (OAuth response)
         const hashParams = new URLSearchParams(window.location.hash.substring(1));
         const searchParams = new URLSearchParams(window.location.search);
         
-        console.log('Hash params:', Object.fromEntries(hashParams));
-        console.log('Search params:', Object.fromEntries(searchParams));
         
         // If we have an access token in the hash, exchange it for a session
         if (hashParams.get('access_token')) {
           setStatus('Exchanging tokens for session...');
-          console.log('Found access token, exchanging for session...');
           
           try {
             const { data, error } = await supabase.auth.setSession({
@@ -59,9 +51,6 @@ export default function AuthCallback() {
             
             if (data.session) {
               setStatus('Session established, redirecting...');
-              console.log('Session established:', data.session.user);
-              console.log('User email confirmed at:', data.session.user.email_confirmed_at);
-              console.log('User metadata:', data.session.user.user_metadata);
               
               // For OAuth users, we need to ensure they have a proper profile
               // The AuthProvider will handle creating the profile if it doesn't exist
@@ -102,14 +91,12 @@ export default function AuthCallback() {
 
         if (data.session) {
           setStatus('User already authenticated, redirecting...');
-          console.log('User already authenticated:', data.session.user);
           // Redirect to home immediately with cache busting
           setTimeout(() => {
             window.location.href = '/home';
           }, 1000);
         } else {
           setStatus('No session found, redirecting to login...');
-          console.log('No session found, redirecting to login');
           setTimeout(() => {
             window.location.href = '/login';
           }, 1000);

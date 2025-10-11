@@ -35,7 +35,6 @@ export function useHaptics() {
       }
     } catch (error) {
       // Fallback for web or if haptics fail
-      console.log('Haptic feedback not available:', error);
     }
   }, []);
 

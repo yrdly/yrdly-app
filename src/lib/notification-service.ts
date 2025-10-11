@@ -88,7 +88,6 @@ export class NotificationService {
 
       return data;
     } catch (rpcError) {
-      console.log('RPC function not available, using direct insert:', rpcError);
       
       // Fallback to direct insert if RPC function doesn't exist
       const { data, error } = await supabase
@@ -183,7 +182,6 @@ export class NotificationService {
 
       return data;
     } catch (rpcError) {
-      console.log('RPC function not available, using direct update:', rpcError);
       
       // Fallback to direct update
       const { error } = await supabase
@@ -221,7 +219,6 @@ export class NotificationService {
 
       return data;
     } catch (rpcError) {
-      console.log('RPC function not available, using direct update:', rpcError);
       
       // Fallback to direct update
       const { error } = await supabase
@@ -259,7 +256,6 @@ export class NotificationService {
 
       return data;
     } catch (rpcError) {
-      console.log('RPC function not available, using direct delete:', rpcError);
       
       // Fallback to direct delete
       const { error } = await supabase

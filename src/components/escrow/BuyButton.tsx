@@ -76,7 +76,6 @@ export function BuyButton({ itemId, itemTitle, price, sellerId, sellerName }: Bu
       setIsOpen(false);
       
       // TODO: Redirect to payment gateway
-      console.log('Redirecting to payment for transaction:', transactionId);
       
     } catch (error) {
       console.error('Failed to create transaction:', error);

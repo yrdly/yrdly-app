@@ -122,7 +122,6 @@ export function EditAccountDialog({ open, onOpenChange, account, onSuccess }: Ed
 
       // In a real implementation, you would call an update method
       // For now, we'll just show success
-      console.log('Updating account:', account.id, updatedDetails, data.isPrimary);
 
       toast({
         title: "Success",

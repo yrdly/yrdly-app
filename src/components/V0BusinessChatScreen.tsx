@@ -50,7 +50,6 @@ export function V0BusinessChatScreen({ business, item, onBack }: V0BusinessChatS
         }
 
         if (error) {
-          console.log('Business messages table not found, using empty array:', error.message);
           setMessages([]);
         } else {
           const transformedMessages: BusinessMessage[] = (filteredData || []).map(msg => ({
@@ -68,7 +67,6 @@ export function V0BusinessChatScreen({ business, item, onBack }: V0BusinessChatS
           setMessages(transformedMessages);
         }
       } catch (error) {
-        console.log('Error fetching messages:', error);
         setMessages([]);
       } finally {
         setLoading(false);
@@ -148,7 +146,6 @@ export function V0BusinessChatScreen({ business, item, onBack }: V0BusinessChatS
         });
 
       if (error) {
-        console.log('Business messages table not found, message not saved:', error.message);
         // Message is already in local state, so user can still see it
       } else {
         // Update the conversation's last message
@@ -163,7 +160,6 @@ export function V0BusinessChatScreen({ business, item, onBack }: V0BusinessChatS
           .contains('participant_ids', [user.id]);
       }
     } catch (error) {
-      console.log('Error sending message:', error);
       // Message is already in local state, so user can still see it
     }
   };

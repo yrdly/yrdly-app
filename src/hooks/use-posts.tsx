@@ -31,14 +31,12 @@ export const usePosts = () => {
           .order('timestamp', { ascending: false });
 
         if (error) {
-          console.error('Error fetching posts:', error);
           return;
         }
 
         setPosts(data as Post[]);
         setLoading(false);
       } catch (error) {
-        console.error('Error fetching posts:', error);
         setLoading(false);
       }
     };
@@ -53,15 +51,9 @@ export const usePosts = () => {
         schema: 'public', 
         table: 'posts' 
       }, (payload) => {
-        console.log('usePosts realtime change received!', payload);
-        console.log('Event type:', payload.eventType);
-        console.log('Payload new:', payload.new);
-        console.log('Payload old:', payload.old);
-        
         if (payload.eventType === 'INSERT') {
           // Add new post to the beginning of the list
           const newPost = payload.new as Post;
-          console.log('Adding new post:', newPost.id);
           
           // Fetch user data for the new post
           const fetchUserData = async () => {
@@ -83,7 +75,6 @@ export const usePosts = () => {
                 setPosts(prevPosts => [newPost, ...prevPosts]);
               }
             } catch (error) {
-              console.error('Error fetching user data for new post:', error);
               setPosts(prevPosts => [newPost, ...prevPosts]);
             }
           };
@@ -92,7 +83,6 @@ export const usePosts = () => {
         } else if (payload.eventType === 'UPDATE') {
           // Update existing post in the list
           const updatedPost = payload.new as Post;
-          console.log('Updating post:', updatedPost.id);
           
           // Fetch user data for the updated post
           const fetchUserData = async () => {
@@ -122,7 +112,6 @@ export const usePosts = () => {
                 );
               }
             } catch (error) {
-              console.error('Error fetching user data for updated post:', error);
               setPosts(prevPosts => 
                 prevPosts.map(post => 
                   post.id === updatedPost.id ? updatedPost : post
@@ -135,7 +124,6 @@ export const usePosts = () => {
         } else if (payload.eventType === 'DELETE') {
           // Remove deleted post from the list
           const deletedId = payload.old.id;
-          console.log('Deleting post:', deletedId);
           setPosts(prevPosts => 
             prevPosts.filter(post => post.id !== deletedId)
           );
@@ -174,7 +162,7 @@ export const usePosts = () => {
           })
         );
       } catch (error) {
-        console.error('Error refreshing user posts:', error);
+        // Error refreshing user posts
       }
     };
 
@@ -189,7 +177,6 @@ export const usePosts = () => {
     
     // Check if files is valid and has items
     if (!files || files.length === 0) {
-      console.warn('No files provided to uploadImages');
       return [];
     }
     
@@ -197,19 +184,16 @@ export const usePosts = () => {
         Array.from(files).map(async (file) => {
             // Additional check for individual file
             if (!file || !file.name || !file.size || !(file instanceof File)) {
-              console.warn('Invalid file in FileList:', file);
               return null;
             }
             
             try {
               const { url, error } = await StorageService.uploadPostImage(user.id, file);
               if (error) {
-                  console.error('Upload error:', error);
                   return null;
               }
               return url;
             } catch (error) {
-              console.error('Upload error:', error);
               return null;
             }
         })
@@ -234,16 +218,12 @@ export const usePosts = () => {
         // For editing: preserve existing images
         if (postIdToUpdate && postData.image_urls) {
           imageUrls = [...postData.image_urls];
-          console.log('Preserving existing images:', imageUrls.length);
         }
         
         // Add new images if any are uploaded
         if (imageFiles && imageFiles.length > 0) {
-            console.log('Uploading new images:', imageFiles.length, 'files');
             const uploadedUrls = await uploadImages(imageFiles, postData.category === 'Event' ? 'event_images' : 'posts');
             imageUrls = [...imageUrls, ...uploadedUrls];
-        } else {
-            console.log('No new image files to upload');
         }
 
         // Clean up the data to remove undefined values and exclude imageFiles
@@ -289,7 +269,6 @@ export const usePosts = () => {
           await UserActivityService.updateUserActivity(user.id);
         }
       } catch (error) {
-        console.error('Error creating/updating post:', error);
         toast({ variant: 'destructive', title: 'Error', description: 'Failed to save post.' });
       }
     },
@@ -345,7 +324,6 @@ export const usePosts = () => {
           await UserActivityService.updateUserActivity(user.id);
         }
       } catch (error) {
-        console.error('Error adding/updating business:', error);
         toast({ variant: 'destructive', title: 'Error', description: 'Failed to save business.' });
       }
     },
@@ -359,8 +337,6 @@ export const usePosts = () => {
             return;
         }
         try {
-            console.log('Deleting post:', postId);
-            
             // First, get the post to retrieve image URLs
             const { data: postData, error: fetchError } = await supabase
                 .from('posts')
@@ -369,7 +345,7 @@ export const usePosts = () => {
                 .single();
 
             if (fetchError) {
-                console.error('Error fetching post for deletion:', fetchError);
+                // Error fetching post for deletion
             }
 
             // Delete the post from database
@@ -379,8 +355,6 @@ export const usePosts = () => {
                 .eq('id', postId);
             
             if (error) throw error;
-            
-            console.log('Post deleted successfully from database:', postId);
 
             // Delete associated images from storage
             if (postData?.image_urls && postData.image_urls.length > 0) {
@@ -397,10 +371,10 @@ export const usePosts = () => {
                             .remove([path]);
                         
                         if (deleteError) {
-                            console.error('Error deleting image:', deleteError);
+                            // Error deleting image
                         }
                     } catch (error) {
-                        console.error('Error processing image deletion:', error);
+                        // Error processing image deletion
                     }
                 });
 
@@ -409,7 +383,6 @@ export const usePosts = () => {
 
             toast({ title: 'Success', description: 'Post deleted successfully.' });
         } catch (error) {
-            console.error('Error deleting post:', error);
             toast({ variant: 'destructive', title: 'Error', description: 'Failed to delete post.' });
         }
     },
@@ -431,7 +404,6 @@ export const usePosts = () => {
             if (error) throw error;
             toast({ title: 'Success', description: 'Business deleted successfully.' });
         } catch (error) {
-            console.error('Error deleting business:', error);
             toast({ variant: 'destructive', title: 'Error', description: 'Failed to delete business.' });
         }
     },
@@ -446,13 +418,12 @@ export const usePosts = () => {
         .order('timestamp', { ascending: false });
 
       if (error) {
-        console.error('Error fetching posts:', error);
         return;
       }
 
       setPosts(data as Post[]);
     } catch (error) {
-      console.error('Error fetching posts:', error);
+      // Error fetching posts
     }
   }, []);
 

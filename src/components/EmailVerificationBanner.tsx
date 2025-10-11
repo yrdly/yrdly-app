@@ -55,10 +55,8 @@ export function EmailVerificationBanner() {
                 // Send verification email via Brevo
                 await BrevoEmailService.sendVerificationEmail(user.email || '', verificationLink, user.user_metadata?.full_name || undefined);
                 
-                console.log('Verification email sent via Brevo');
             } catch (error: any) {
                 if (error.message === 'BREVO_NOT_CONFIGURED' || error.message === 'BREVO_SEND_FAILED') {
-                    console.log('Brevo email service not configured - please configure Brevo for email verification');
                     throw new Error('Email service not configured. Please contact support.');
                 } else {
                     throw error; // Re-throw other errors
