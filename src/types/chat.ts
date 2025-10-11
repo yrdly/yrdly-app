@@ -31,7 +31,7 @@ export interface ItemChat {
 export interface ChatParticipant {
   id: string;
   name: string;
-  avatarUrl?: string;
+  avatar_url?: string;
   isOnline: boolean;
   lastSeen?: Date;
 }

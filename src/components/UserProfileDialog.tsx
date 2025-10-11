@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card';
 import { MapPin, MessageSquare, UserPlus, Check, X, Clock, MoreHorizontal, ShieldBan, UserMinus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -76,7 +76,7 @@ export function UserProfileDialog({ user: profileUser, open, onOpenChange }: Use
                 if (!error && requestsData && requestsData.length > 0) {
                     const request = requestsData[0] as FriendRequest;
                     setFriendRequest(request);
-                    setFriendshipStatus(request.fromUserId === currentUser.id ? 'request_sent' : 'request_received');
+                    setFriendshipStatus(request.from_user_id === currentUser.id ? 'request_sent' : 'request_received');
                 } else {
                     setFriendRequest(null);
                     setFriendshipStatus('none');
@@ -111,7 +111,7 @@ export function UserProfileDialog({ user: profileUser, open, onOpenChange }: Use
                     user_id: profileUser.id,
                     type: 'friend_request',
                     title: 'New Friend Request',
-                    body: `${currentUser.user_metadata?.name || currentUser.email?.split('@')[0] || 'Someone'} wants to be your friend`,
+                    message: `${currentUser.user_metadata?.name || currentUser.email?.split('@')[0] || 'Someone'} wants to be your friend`,
                     data: {
                         from_user_id: currentUser.id,
                         from_user_name: currentUser.user_metadata?.name || currentUser.email?.split('@')[0] || 'Unknown',
@@ -154,7 +154,7 @@ export function UserProfileDialog({ user: profileUser, open, onOpenChange }: Use
             
             const { error: addFriendError } = await supabase
                 .from('users')
-                .update({ friends: [...(currentUserData.friends || []), friendRequest.fromUserId] })
+                .update({ friends: [...(currentUserData.friends || []), friendRequest.from_user_id] })
                 .eq('id', currentUser.id);
             
             if (addFriendError) throw addFriendError;
@@ -163,7 +163,7 @@ export function UserProfileDialog({ user: profileUser, open, onOpenChange }: Use
             const { data: otherUserData, error: fetchError2 } = await supabase
                 .from('users')
                 .select('friends')
-                .eq('id', friendRequest.fromUserId)
+                .eq('id', friendRequest.from_user_id)
                 .single();
             
             if (fetchError2) throw fetchError2;
@@ -171,7 +171,7 @@ export function UserProfileDialog({ user: profileUser, open, onOpenChange }: Use
             const { error: addFriendError2 } = await supabase
                 .from('users')
                 .update({ friends: [...(otherUserData.friends || []), currentUser.id] })
-                .eq('id', friendRequest.fromUserId);
+                .eq('id', friendRequest.from_user_id);
             
             if (addFriendError2) throw addFriendError2;
             
@@ -386,6 +386,9 @@ export function UserProfileDialog({ user: profileUser, open, onOpenChange }: Use
                     <Card className="border-none shadow-none">
                         <DialogHeader>
                             <DialogTitle className="sr-only">{`Profile of ${profileUser.name}`}</DialogTitle>
+                            <DialogDescription className="sr-only">
+                                View {profileUser.name}'s profile information, bio, interests, and available actions
+                            </DialogDescription>
                         </DialogHeader>
                         <CardHeader className="flex flex-col items-center text-center p-6 bg-muted/50 relative">
                             {profileUser.id !== currentUser?.id && (
@@ -433,13 +436,31 @@ export function UserProfileDialog({ user: profileUser, open, onOpenChange }: Use
                                     </AlertDialog>
                                 </div>
                             )}
-                            <Avatar className="h-24 w-24 mb-4 border-2 border-background"><AvatarImage src={profileUser.avatarUrl} alt={profileUser.name} /><AvatarFallback>{profileUser.name.charAt(0)}</AvatarFallback></Avatar>
+                            <Avatar className="h-24 w-24 mb-4 border-2 border-background"><AvatarImage src={profileUser.avatar_url} alt={profileUser.name} /><AvatarFallback>{profileUser.name.charAt(0)}</AvatarFallback></Avatar>
                             <h1 className="text-2xl font-bold">{profileUser.name}</h1>
                             {profileUser.location && (<div className="flex items-center text-sm text-muted-foreground mt-1"><MapPin className="h-4 w-4 mr-1" /><span>{displayLocation(profileUser.location)}</span></div>)}
                         </CardHeader>
-                        <CardContent className="p-6">
-                            <h2 className="font-semibold text-lg mb-2">Bio</h2>
-                            <p className="text-muted-foreground">{profileUser.bio || "This user hasn't written a bio yet."}</p>
+                        <CardContent className="p-6 space-y-6">
+                            <div>
+                                <h2 className="font-semibold text-lg mb-2">Bio</h2>
+                                <p className="text-muted-foreground">{profileUser.bio || "This user hasn't written a bio yet."}</p>
+                            </div>
+                            
+                            {profileUser.interests && profileUser.interests.length > 0 && (
+                                <div>
+                                    <h2 className="font-semibold text-lg mb-3">Interests</h2>
+                                    <div className="flex flex-wrap gap-2">
+                                        {profileUser.interests.map((interest, index) => (
+                                            <span 
+                                                key={index}
+                                                className="px-3 py-1 bg-primary/10 text-primary text-sm rounded-full border border-primary/20"
+                                            >
+                                                {interest}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                         </CardContent>
                         <CardFooter className="p-6 justify-center">
                             {renderActionButtons()}

@@ -28,14 +28,12 @@ function ProtectedLayout({ children }: { children: React.ReactNode }) {
   // Initialize online status service and update user activity
   useEffect(() => {
     if (user) {
-      console.log('Initializing online status service for user:', user.id);
       onlineStatusService.initialize(user.id);
       
       // Update user activity when they visit the app
       UserActivityService.updateUserActivity(user.id);
       
       return () => {
-        console.log('Cleaning up online status service');
         onlineStatusService.cleanup();
       };
     }

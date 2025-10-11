@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useAuth } from '@/hooks/use-supabase-auth';
 import { MapPin, User, Calendar, X, ChevronLeft, ChevronRight, Clock, Link as LinkIcon } from 'lucide-react';
 import { Post } from '@/types';
@@ -163,9 +163,14 @@ export function EventDetail({
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader className="flex flex-row items-center justify-between">
-            <DialogTitle className="text-xl font-bold">
-              {event.title || event.text}
-            </DialogTitle>
+            <div>
+              <DialogTitle className="text-xl font-bold">
+                {event.title || event.text}
+              </DialogTitle>
+              <DialogDescription>
+                View event details and join this event
+              </DialogDescription>
+            </div>
             <Button variant="ghost" size="icon" onClick={onClose}>
               <X className="h-4 w-4" />
             </Button>

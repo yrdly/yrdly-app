@@ -12,7 +12,6 @@ import {
   Calendar,
   Users,
   Star,
-  Edit,
   Share,
   MessageCircle,
   Heart,
@@ -405,96 +404,134 @@ export function V0ProfileScreen({ onBack, user, isOwnProfile = true, targetUserI
         <h2 className="text-2xl font-bold text-foreground">Profile</h2>
       </div>
 
-      {/* Profile Header */}
-      <Card className="p-6 yrdly-shadow">
-        <div className="flex flex-col items-center text-center space-y-4">
-          <Avatar className="w-24 h-24">
-            <AvatarImage src={(displayProfile as any)?.avatarUrl || (displayProfile as any)?.avatar_url || (displayUser as any)?.avatarUrl || (displayUser as any)?.avatar_url || "/placeholder.svg"} />
-            <AvatarFallback className="bg-primary text-primary-foreground text-2xl">
-              {displayProfile?.name?.charAt(0) || (displayUser as any)?.name?.charAt(0) || "U"}
-            </AvatarFallback>
-          </Avatar>
+      {/* Profile Header - Modern Card Design */}
+      <Card className="relative overflow-hidden yrdly-shadow">
+        {/* Background Pattern */}
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900"></div>
+        <div className="absolute inset-0 bg-slate-800/20"></div>
+        
+        <div className="relative p-8">
+          <div className="flex flex-col items-center text-center space-y-6">
+            {/* Avatar with enhanced styling */}
+            <div className="relative">
+              <Avatar className="w-32 h-32 ring-4 ring-white/20 ring-offset-4 ring-offset-slate-900">
+                <AvatarImage 
+                  src={(displayProfile as any)?.avatarUrl || (displayProfile as any)?.avatar_url || (displayUser as any)?.avatarUrl || (displayUser as any)?.avatar_url || "/placeholder.svg"} 
+                  className="object-cover"
+                />
+                <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-3xl font-bold">
+                  {displayProfile?.name?.charAt(0) || (displayUser as any)?.name?.charAt(0) || "U"}
+                </AvatarFallback>
+              </Avatar>
+              {/* Online indicator for friends */}
+              {actualIsOwnProfile && (
+                <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-green-500 rounded-full border-4 border-slate-900 flex items-center justify-center">
+                  <div className="w-3 h-3 bg-white rounded-full"></div>
+                </div>
+              )}
+            </div>
 
-          <div className="space-y-2">
-            <h3 className="text-2xl font-bold text-foreground">
-              {displayProfile?.name || (displayUser as any)?.name || "Unknown User"}
-            </h3>
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <MapPin className="w-4 h-4" />
-              <span>
-                {displayProfile?.location?.state && displayProfile?.location?.lga 
-                  ? `${displayProfile.location.state}, ${displayProfile.location.lga}`
-                  : displayProfile?.location?.state || "Location not set"
-                }
-              </span>
+            {/* User Info */}
+            <div className="space-y-3">
+              <h3 className="text-3xl font-bold text-white">
+                {displayProfile?.name || (displayUser as any)?.name || "Unknown User"}
+              </h3>
+              
+              {/* Bio/Tagline */}
+              {displayProfile?.bio && (
+                <p className="text-slate-300 text-lg max-w-md">
+                  {displayProfile.bio}
+                </p>
+              )}
+              
+              {/* Location and Join Date */}
+              <div className="flex flex-col sm:flex-row items-center gap-4 text-slate-400">
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-4 h-4" />
+                  <span>
+                    {displayProfile?.location?.state && displayProfile?.location?.lga 
+                      ? `${displayProfile.location.state}, ${displayProfile.location.lga}`
+                      : displayProfile?.location?.state || "Location not set"
+                    }
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4" />
+                  <span>Joined {new Date((displayUser as any)?.created_at || Date.now()).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</span>
+                </div>
+              </div>
             </div>
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Calendar className="w-4 h-4" />
-              <span>Joined {new Date((displayUser as any)?.created_at || Date.now()).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</span>
-            </div>
+
+            {/* Action Buttons for Other Users */}
+            {!actualIsOwnProfile && (
+              <div className="flex items-center gap-4">
+                <Button 
+                  className={isFriend ? "bg-red-500 hover:bg-red-600 text-white px-6 py-2" : "bg-blue-600 hover:bg-blue-700 text-white px-6 py-2"}
+                  onClick={handleAddFriend}
+                >
+                  <Users className="w-4 h-4 mr-2" />
+                  {isFriend ? "Remove Friend" : isFriendRequestSent ? "Request Sent" : "Add Friend"}
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="border-white/30 bg-white/10 text-white hover:bg-white/20 px-6 py-2"
+                  onClick={handleMessageUser}
+                >
+                  <MessageCircle className="w-4 h-4 mr-2" />
+                  Message
+                </Button>
+              </div>
+            )}
           </div>
-
-          {actualIsOwnProfile ? (
-            <div className="flex items-center gap-4">
-              <Button 
-                className="bg-primary text-primary-foreground hover:bg-primary/90"
-                onClick={() => router.push("/settings/profile")}
-              >
-                <Edit className="w-4 h-4 mr-2" />
-                Edit Profile
-              </Button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-4">
-              <Button 
-                className={isFriend ? "bg-red-500 hover:bg-red-600 text-white" : "bg-primary text-primary-foreground hover:bg-primary/90"}
-                onClick={handleAddFriend}
-              >
-                <Users className="w-4 h-4 mr-2" />
-                {isFriend ? "Remove Friend" : isFriendRequestSent ? "Friend Request Sent" : "Add Friend"}
-              </Button>
-              <Button 
-                variant="outline" 
-                className="border-border bg-transparent"
-                onClick={handleMessageUser}
-              >
-                <MessageCircle className="w-4 h-4 mr-2" />
-                Message
-              </Button>
-            </div>
-          )}
         </div>
       </Card>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 gap-4">
+      {/* Stats - Modern Design */}
+      <div className="grid grid-cols-2 gap-6">
         <Card 
-          className="p-4 text-center yrdly-shadow cursor-pointer hover:bg-muted/50 transition-colors"
+          className="p-6 text-center yrdly-shadow cursor-pointer hover:bg-muted/50 transition-all duration-200 hover:scale-105"
           onClick={() => setShowFriendsList(true)}
         >
-          <div className="space-y-2">
-            <Users className="w-6 h-6 mx-auto text-primary" />
-            <p className="text-2xl font-bold text-foreground">{stats.friends}</p>
-            <p className="text-sm text-muted-foreground">Friends</p>
+          <div className="space-y-3">
+            <div className="w-12 h-12 mx-auto bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
+              <Users className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+            </div>
+            <p className="text-3xl font-bold text-foreground">{stats.friends}</p>
+            <p className="text-sm font-medium text-muted-foreground">Friends</p>
           </div>
         </Card>
 
-        <Card className="p-4 text-center yrdly-shadow">
-          <div className="space-y-2">
-            <Calendar className="w-6 h-6 mx-auto text-accent" />
-            <p className="text-2xl font-bold text-foreground">{stats.events}</p>
-            <p className="text-sm text-muted-foreground">Events</p>
+        <Card className="p-6 text-center yrdly-shadow">
+          <div className="space-y-3">
+            <div className="w-12 h-12 mx-auto bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center">
+              <Calendar className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+            </div>
+            <p className="text-3xl font-bold text-foreground">{stats.events}</p>
+            <p className="text-sm font-medium text-muted-foreground">Events</p>
           </div>
         </Card>
       </div>
 
-      {/* About */}
-      {displayProfile?.bio && (
+      {/* Interests Section */}
+      {displayProfile?.interests && displayProfile.interests.length > 0 && (
         <Card className="p-6 yrdly-shadow">
-          <h4 className="font-semibold text-foreground mb-3">About</h4>
-          <p className="text-muted-foreground leading-relaxed">{displayProfile.bio}</p>
+          <h4 className="font-semibold text-foreground mb-4 flex items-center gap-2">
+            <Star className="w-5 h-5 text-yellow-500" />
+            Interests
+          </h4>
+          <div className="flex flex-wrap gap-2">
+            {displayProfile.interests.map((interest: string, index: number) => (
+              <Badge 
+                key={index} 
+                className="bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:from-blue-600 hover:to-purple-700 transition-all duration-200 px-3 py-1"
+              >
+                {interest}
+              </Badge>
+            ))}
+          </div>
         </Card>
       )}
+
 
       {/* Public Posts for External Profiles */}
       {!actualIsOwnProfile && userPosts.length > 0 && (
@@ -517,21 +554,8 @@ export function V0ProfileScreen({ onBack, user, isOwnProfile = true, targetUserI
         </Card>
       )}
 
-      {/* Interests */}
-      {(displayProfile as any)?.interests && (displayProfile as any).interests.length > 0 && (
-        <Card className="p-6 yrdly-shadow">
-          <h4 className="font-semibold text-foreground mb-3">Interests</h4>
-          <div className="flex flex-wrap gap-2">
-            {(displayProfile as any).interests.map((interest: string, index: number) => (
-              <Badge key={index} className="bg-primary/10 text-primary hover:bg-primary/20">
-                {interest}
-              </Badge>
-            ))}
-          </div>
-        </Card>
-      )}
 
-      {isOwnProfile && (
+      {actualIsOwnProfile && (
         <Tabs defaultValue="posts" className="w-full">
           <TabsList className="grid w-full grid-cols-4 bg-background border border-border rounded-xl p-0.5 gap-0.1">
             <TabsTrigger
@@ -944,18 +968,6 @@ export function V0ProfileScreen({ onBack, user, isOwnProfile = true, targetUserI
         </Tabs>
       )}
 
-      {!actualIsOwnProfile && (
-        <div className="flex gap-3">
-          <Button className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90">
-            <Users className="w-4 h-4 mr-2" />
-            Add Friend
-          </Button>
-          <Button variant="outline" className="flex-1 border-border bg-transparent">
-            <MessageCircle className="w-4 h-4 mr-2" />
-            Message
-          </Button>
-        </div>
-      )}
 
       {/* Friends List Modal */}
       {showFriendsList && (

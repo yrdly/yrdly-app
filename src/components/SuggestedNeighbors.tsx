@@ -82,7 +82,7 @@ export function SuggestedNeighbors() {
                 {suggestions.map(neighbor => (
                     <div key={neighbor.id} className="flex items-center gap-4">
                         <Avatar>
-                            <AvatarImage src={neighbor.avatarUrl} alt={neighbor.name} />
+                            <AvatarImage src={neighbor.avatar_url} alt={neighbor.name} />
                             <AvatarFallback>{neighbor.name.charAt(0)}</AvatarFallback>
                         </Avatar>
                         <div className="flex-1">

@@ -66,17 +66,77 @@ export function PostCard({ post, onDelete, onCreatePost }: PostCardProps) {
   const [isEventEditDialogOpen, setIsEventEditDialogOpen] = useState(false);
 
   useEffect(() => {
-    // Since we're using Supabase, the post already contains author information
-    // No need to fetch from Firebase
-    setLoadingAuthor(false);
-    setAuthor({ 
-      id: post.user_id || 'unknown',
-      uid: post.user_id || 'unknown',
-      name: post.author_name || 'Anonymous User', 
-      avatarUrl: post.author_image || 'https://placehold.co/100x100.png',
-      timestamp: (post.user as any)?.created_at || post.timestamp // Use user creation date, fallback to post date
-    });
-  }, [post.user_id, post.author_name, post.author_image, post.user, post.timestamp]);
+    const fetchAuthorData = async () => {
+      if (!post.user_id) {
+        setLoadingAuthor(false);
+        setAuthor({ 
+          id: 'unknown',
+          uid: 'unknown',
+          name: 'Anonymous User', 
+          avatar_url: 'https://placehold.co/100x100.png',
+          timestamp: post.timestamp
+        });
+        return;
+      }
+
+      try {
+        setLoadingAuthor(true);
+        
+        // First try to use the user data from the post if available (for performance)
+        if (post.user) {
+          setAuthor({ 
+            id: post.user_id,
+            uid: post.user_id,
+            name: post.user.name || post.author_name || 'Anonymous User', 
+            avatar_url: post.user.avatar_url || post.author_image || 'https://placehold.co/100x100.png',
+            timestamp: post.user.created_at || post.timestamp
+          });
+          setLoadingAuthor(false);
+        } else {
+          // Fallback: fetch fresh user data from database
+          const { data: userData, error } = await supabase
+            .from('users')
+            .select('id, name, avatar_url, created_at')
+            .eq('id', post.user_id)
+            .single();
+
+          if (error) {
+            console.error('Error fetching author data:', error);
+            // Use cached data as fallback
+            setAuthor({ 
+              id: post.user_id,
+              uid: post.user_id,
+              name: post.author_name || 'Anonymous User', 
+              avatar_url: post.author_image || 'https://placehold.co/100x100.png',
+              timestamp: post.timestamp
+            });
+          } else {
+            setAuthor({ 
+              id: userData.id,
+              uid: userData.id,
+              name: userData.name || 'Anonymous User', 
+              avatar_url: userData.avatar_url || 'https://placehold.co/100x100.png',
+              timestamp: userData.created_at || post.timestamp
+            });
+          }
+          setLoadingAuthor(false);
+        }
+      } catch (error) {
+        console.error('Error fetching author data:', error);
+        // Use cached data as fallback
+        setAuthor({ 
+          id: post.user_id,
+          uid: post.user_id,
+          name: post.author_name || 'Anonymous User', 
+          avatar_url: post.author_image || 'https://placehold.co/100x100.png',
+          timestamp: post.timestamp
+        });
+        setLoadingAuthor(false);
+      }
+    };
+
+    fetchAuthorData();
+  }, [post.user_id, post.user, post.timestamp]);
 
   useEffect(() => {
     if (!post.id) return;
@@ -375,7 +435,7 @@ export function PostCard({ post, onDelete, onCreatePost }: PostCardProps) {
             <h4 className="font-semibold text-md mb-2">Seller Information</h4>
             <button onClick={openProfile} className="flex items-center gap-3 hover:bg-muted p-2 rounded-lg w-full text-left">
                 <Avatar>
-                    <AvatarImage src={author?.avatarUrl} alt={author?.name} />
+                    <AvatarImage src={author?.avatar_url} alt={author?.name} />
                     <AvatarFallback>{author?.name?.charAt(0)}</AvatarFallback>
                 </Avatar>
                 <div>
@@ -446,7 +506,7 @@ export function PostCard({ post, onDelete, onCreatePost }: PostCardProps) {
             <>
                 <button onClick={openProfile} className="cursor-pointer">
                     <Avatar className="h-10 w-10">
-                        <AvatarImage src={author.avatarUrl} alt={author.name} data-ai-hint="person portrait" />
+                        <AvatarImage src={author.avatar_url} alt={author.name} data-ai-hint="person portrait" />
                         <AvatarFallback>{author.name?.charAt(0)}</AvatarFallback>
                     </Avatar>
                 </button>

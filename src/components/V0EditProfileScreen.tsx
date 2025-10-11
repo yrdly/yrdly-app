@@ -10,21 +10,26 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Camera, Loader2 } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { ArrowLeft, Camera, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
 import { useAuth } from '@/hooks/use-supabase-auth';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 import { StorageService } from '@/lib/storage-service';
-import { allStates, lgasByState } from '@/lib/geo-data';
+import { allStates, lgasByState, wardsByLga } from '@/lib/geo-data';
+import interestsData from '@/data/interests.json';
 
 const profileFormSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
   bio: z.string().max(160, { message: 'Bio cannot exceed 160 characters.' }).optional(),
   locationState: z.string().optional(),
   locationLga: z.string().optional(),
+  locationWard: z.string().optional(),
   avatar: z.any().optional(),
+  interests: z.array(z.string()).optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
@@ -35,11 +40,15 @@ interface V0EditProfileScreenProps {
 
 export function V0EditProfileScreen({ onBack }: V0EditProfileScreenProps) {
   const router = useRouter();
-  const { user, profile, loading: authLoading } = useAuth();
+  const { user, profile, loading: authLoading, updateProfile } = useAuth();
   const { toast } = useToast();
   const [formLoading, setFormLoading] = useState(false);
   const [lgas, setLgas] = useState<string[]>([]);
+  const [wards, setWards] = useState<string[]>([]);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isInterestsOpen, setIsInterestsOpen] = useState(false);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -48,6 +57,8 @@ export function V0EditProfileScreen({ onBack }: V0EditProfileScreenProps) {
       bio: '',
       locationState: '',
       locationLga: '',
+      locationWard: '',
+      interests: [],
     },
   });
 
@@ -59,8 +70,11 @@ export function V0EditProfileScreen({ onBack }: V0EditProfileScreenProps) {
         bio: profile.bio || '',
         locationState: profile.location?.state || '',
         locationLga: profile.location?.lga || '',
+        locationWard: profile.location?.ward || '',
+        interests: profile.interests || [],
       });
       setAvatarPreview(profile.avatar_url || null);
+      setSelectedInterests(profile.interests || []);
     }
   }, [profile, form]);
 
@@ -70,14 +84,31 @@ export function V0EditProfileScreen({ onBack }: V0EditProfileScreenProps) {
     if (selectedState) {
       setLgas(lgasByState[selectedState] || []);
       form.setValue('locationLga', ''); // Reset LGA when state changes
+      form.setValue('locationWard', ''); // Reset ward when state changes
     } else {
       setLgas([]);
+      setWards([]);
     }
   }, [selectedState, form]);
+
+  // Update wards when LGA changes
+  const selectedLga = form.watch('locationLga');
+  useEffect(() => {
+    if (selectedLga) {
+      setWards(wardsByLga[selectedLga] || []);
+      form.setValue('locationWard', ''); // Reset ward when LGA changes
+    } else {
+      setWards([]);
+    }
+  }, [selectedLga, form]);
 
   const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      // Set the form value
+      form.setValue('avatar', [file]);
+      
+      // Set preview
       const reader = new FileReader();
       reader.onload = (e) => {
         setAvatarPreview(e.target?.result as string);
@@ -97,30 +128,30 @@ export function V0EditProfileScreen({ onBack }: V0EditProfileScreenProps) {
       if (values.avatar && values.avatar.length > 0) {
         const file = values.avatar[0];
         const fileName = `avatars/${user.id}/${Date.now()}-${file.name}`;
+        
         const { data, error } = await StorageService.uploadFile('user-avatars', fileName, file);
         if (error) {
           console.error('Error uploading avatar:', error);
           throw error;
         }
-        avatarUrl = data?.path;
+        
+        // Get the public URL for the uploaded file
+        avatarUrl = StorageService.getPublicUrl('user-avatars', data.path);
       }
 
-      // Update profile in Supabase
-      const { error } = await supabase
-        .from('users')
-        .update({
-          name: values.name,
-          bio: values.bio,
-          avatar_url: avatarUrl,
-          location: values.locationState && values.locationLga ? {
-            state: values.locationState,
-            lga: values.locationLga,
-          } : null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', user.id);
-
-      if (error) throw error;
+      // Update profile using auth hook to ensure local state is updated
+      await updateProfile({
+        name: values.name,
+        bio: values.bio,
+        avatar_url: avatarUrl,
+        interests: selectedInterests,
+        location: values.locationState && values.locationLga ? {
+          state: values.locationState,
+          lga: values.locationLga,
+          ward: values.locationWard || null,
+        } : null,
+        updated_at: new Date().toISOString(),
+      });
 
       toast({
         title: 'Profile updated successfully!',
@@ -308,7 +339,130 @@ export function V0EditProfileScreen({ onBack }: V0EditProfileScreenProps) {
                   </FormItem>
                 )}
               />
+
+              <FormField
+                control={form.control}
+                name="locationWard"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Ward</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value} disabled={!form.watch('locationLga')}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select your ward" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {wards.map((ward) => (
+                          <SelectItem key={ward} value={ward}>
+                            {ward}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </Card>
+          </div>
+
+          {/* Interests Selection */}
+          <div className="space-y-4">
+            <Collapsible open={isInterestsOpen} onOpenChange={setIsInterestsOpen}>
+              <Card className="p-4 yrdly-shadow">
+                <CollapsibleTrigger className="flex w-full items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-semibold text-foreground">Interests</h3>
+                    {selectedInterests.length > 0 && (
+                      <Badge variant="secondary" className="text-xs">
+                        {selectedInterests.length}/10
+                      </Badge>
+                    )}
+                  </div>
+                  {isInterestsOpen ? (
+                    <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </CollapsibleTrigger>
+                
+                <CollapsibleContent className="space-y-4 mt-4">
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-sm font-medium text-foreground">Select your interests</label>
+                      <p className="text-xs text-muted-foreground">Choose topics that interest you (up to 10)</p>
+                    </div>
+                    
+                    {/* Search Input */}
+                    <Input
+                      placeholder="Search interests..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full"
+                    />
+                    
+                    {/* Selected Interests */}
+                    {selectedInterests.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium text-foreground">Selected ({selectedInterests.length}/10):</p>
+                        <div className="flex flex-wrap gap-2">
+                          {selectedInterests.map((interest) => (
+                            <Badge
+                              key={interest}
+                              className="bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer"
+                              onClick={() => {
+                                const newInterests = selectedInterests.filter(i => i !== interest);
+                                setSelectedInterests(newInterests);
+                                form.setValue('interests', newInterests);
+                              }}
+                            >
+                              {interest} ×
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Available Interests */}
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-foreground">Available interests:</p>
+                      <div className="max-h-48 overflow-y-auto border rounded-md p-3 space-y-1">
+                        {interestsData
+                          .filter(interest => 
+                            interest.toLowerCase().includes(searchTerm.toLowerCase()) &&
+                            !selectedInterests.includes(interest)
+                          )
+                          .slice(0, 50) // Limit to first 50 for performance
+                          .map((interest) => (
+                            <div
+                              key={interest}
+                              className="flex items-center justify-between p-2 hover:bg-muted rounded cursor-pointer"
+                              onClick={() => {
+                                if (selectedInterests.length < 10) {
+                                  const newInterests = [...selectedInterests, interest];
+                                  setSelectedInterests(newInterests);
+                                  form.setValue('interests', newInterests);
+                                }
+                              }}
+                            >
+                              <span className="text-sm">{interest}</span>
+                              {selectedInterests.length < 10 && (
+                                <span className="text-xs text-muted-foreground">+</span>
+                              )}
+                            </div>
+                          ))}
+                        {selectedInterests.length >= 10 && (
+                          <p className="text-xs text-muted-foreground text-center py-2">
+                            Maximum 10 interests selected
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
           </div>
 
           {/* Save Button */}

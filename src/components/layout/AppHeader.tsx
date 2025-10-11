@@ -37,7 +37,7 @@ export function AppHeader() {
     }
   };
 
-  const avatarUrl = profile?.avatar_url || user?.user_metadata?.avatar_url || `https://placehold.co/100x100.png`;
+  const avatar_url = profile?.avatar_url || user?.user_metadata?.avatar_url || `https://placehold.co/100x100.png`;
   const displayName = profile?.name || user?.user_metadata?.name || 'User';
 
   return (
@@ -85,7 +85,7 @@ export function AppHeader() {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="rounded-full">
                  <Avatar className="h-8 w-8">
-                   <AvatarImage src={avatarUrl} alt={displayName} data-ai-hint="person portrait" />
+                   <AvatarImage src={avatar_url} alt={displayName} data-ai-hint="person portrait" />
                    <AvatarFallback>{displayName.charAt(0)}</AvatarFallback>
                  </Avatar>
                </Button>

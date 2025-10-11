@@ -56,7 +56,7 @@ export function FriendsList({ userId, onBack }: FriendsListProps) {
         const mappedFriends = (friendsData || []).map(friend => ({
           ...friend,
           uid: friend.id, // Add uid property
-          avatarUrl: friend.avatar_url, // Map avatar_url to avatarUrl
+          avatar_url: friend.avatar_url,
           timestamp: friend.created_at, // Map created_at to timestamp
         }));
 
@@ -172,7 +172,7 @@ export function FriendsList({ userId, onBack }: FriendsListProps) {
                     className="w-12 h-12 cursor-pointer"
                     onClick={() => router.push(`/profile/${friend.id}`)}
                   >
-                    <AvatarImage src={friend.avatarUrl || "/placeholder.svg"} />
+                    <AvatarImage src={friend.avatar_url || "/placeholder.svg"} />
                     <AvatarFallback className="bg-primary text-primary-foreground">
                       {friend.name?.substring(0, 2).toUpperCase() || "U"}
                     </AvatarFallback>

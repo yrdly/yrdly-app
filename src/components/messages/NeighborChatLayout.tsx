@@ -162,7 +162,7 @@ export function NeighborChatLayout({ selectedConversationId }: NeighborChatLayou
               id: userData.id,
               uid: userData.id,
               name: userData.name,
-              avatarUrl: userData.avatar_url || 'https://placehold.co/100x100.png',
+              avatar_url: userData.avatar_url || 'https://placehold.co/100x100.png',
               email: userData.email || '',
               bio: userData.bio || '',
               location: userData.location || { state: '', lga: '' },
@@ -404,7 +404,7 @@ export function NeighborChatLayout({ selectedConversationId }: NeighborChatLayou
                 >
                   <div className="relative">
                     <Avatar className="h-12 w-12 ring-2 ring-slate-200 dark:ring-slate-600 group-hover:ring-blue-300 dark:group-hover:ring-blue-600 transition-all">
-                    <AvatarImage src={otherParticipant.avatarUrl} alt={otherParticipant.name} />
+                    <AvatarImage src={otherParticipant.avatar_url} alt={otherParticipant.name} />
                       <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-semibold">
                         {otherParticipant.name.charAt(0)}
                       </AvatarFallback>
@@ -548,7 +548,7 @@ export function NeighborChatLayout({ selectedConversationId }: NeighborChatLayou
               >
                 {message.sender_id !== user?.id && (
                     <Avatar className="h-8 w-8 flex-shrink-0">
-                    <AvatarImage src={otherParticipant.avatarUrl} alt={otherParticipant.name} />
+                    <AvatarImage src={otherParticipant.avatar_url} alt={otherParticipant.name} />
                       <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-xs">
                         {otherParticipant.name.charAt(0)}
                       </AvatarFallback>
@@ -681,7 +681,7 @@ export function NeighborChatLayout({ selectedConversationId }: NeighborChatLayou
             </Button>
             <div className="flex items-center gap-3 flex-1">
               <Avatar className="h-10 w-10">
-                <AvatarImage src={getOtherParticipant(selectedConversation)?.avatarUrl} />
+                <AvatarImage src={getOtherParticipant(selectedConversation)?.avatar_url} />
                 <AvatarFallback>
                   {getOtherParticipant(selectedConversation)?.name.charAt(0)}
                 </AvatarFallback>
@@ -720,7 +720,7 @@ export function NeighborChatLayout({ selectedConversationId }: NeighborChatLayou
                     >
                       {message.sender_id !== user?.id && (
                         <Avatar className="h-8 w-8 flex-shrink-0">
-                          <AvatarImage src={getOtherParticipant(selectedConversation)?.avatarUrl} alt={getOtherParticipant(selectedConversation)?.name} />
+                          <AvatarImage src={getOtherParticipant(selectedConversation)?.avatar_url} alt={getOtherParticipant(selectedConversation)?.name} />
                           <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-xs">
                             {getOtherParticipant(selectedConversation)?.name.charAt(0)}
                           </AvatarFallback>

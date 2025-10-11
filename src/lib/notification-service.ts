@@ -381,7 +381,7 @@ export class NotificationService {
       senderId: likerId,
       relatedId: postId,
       relatedType: 'post',
-      title: 'Someone liked your post',
+      title: `${likerName} liked your post`,
       message: `${likerName} liked your post`,
       data: { likerName, postId }
     });

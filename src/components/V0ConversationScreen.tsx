@@ -119,7 +119,7 @@ export function V0ConversationScreen({ conversationId }: V0ConversationScreenPro
           participantsMap[participant.id] = {
             ...participant,
             uid: participant.id,
-            avatarUrl: participant.avatar_url,
+            avatar_url: participant.avatar_url,
             timestamp: participant.created_at,
           };
         });
@@ -433,7 +433,7 @@ export function V0ConversationScreen({ conversationId }: V0ConversationScreenPro
             onClick={() => router.push(`/profile/${otherParticipant.id}`)}
           >
             <Avatar className="h-12 w-12 ring-2 ring-slate-200 dark:ring-slate-600">
-              <AvatarImage src={otherParticipant.avatarUrl} alt={otherParticipant.name} />
+              <AvatarImage src={otherParticipant.avatar_url} alt={otherParticipant.name} />
               <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-semibold">
                 {otherParticipant.name.charAt(0)}
               </AvatarFallback>
@@ -479,7 +479,7 @@ export function V0ConversationScreen({ conversationId }: V0ConversationScreenPro
                 >
                   {!isOwnMessage && sender && (
                     <Avatar className="w-8 h-8 flex-shrink-0">
-                      <AvatarImage src={sender.avatarUrl} alt={sender.name} />
+                      <AvatarImage src={sender.avatar_url} alt={sender.name} />
                       <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-xs">
                         {sender.name.charAt(0)}
                       </AvatarFallback>

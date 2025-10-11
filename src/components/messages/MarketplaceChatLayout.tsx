@@ -162,7 +162,7 @@ export function MarketplaceChatLayout({
                 id: userData.id,
                 uid: userData.id,
                 name: userData.name,
-                avatarUrl: userData.avatar_url || 'https://placehold.co/100x100.png',
+                avatar_url: userData.avatar_url || 'https://placehold.co/100x100.png',
                 email: userData.email || '',
                 bio: userData.bio || '',
                 location: userData.location || { state: '', lga: '' },
@@ -230,7 +230,7 @@ export function MarketplaceChatLayout({
             id: userData.id,
             uid: userData.id,
             name: userData.name,
-            avatarUrl: userData.avatar_url || 'https://placehold.co/100x100.png',
+            avatar_url: userData.avatar_url || 'https://placehold.co/100x100.png',
             email: userData.email || '',
             bio: userData.bio || '',
             location: userData.location || { state: '', lga: '' },
@@ -356,7 +356,7 @@ export function MarketplaceChatLayout({
               >
                 <div className="relative">
                   <Avatar>
-                    <AvatarImage src={otherParticipant?.avatarUrl} alt={otherParticipant?.name || participantRole} />
+                    <AvatarImage src={otherParticipant?.avatar_url} alt={otherParticipant?.name || participantRole} />
                     <AvatarFallback>
                       {otherParticipant?.name?.charAt(0) || participantRole.charAt(0)}
                     </AvatarFallback>
@@ -428,7 +428,7 @@ export function MarketplaceChatLayout({
             <div className="flex items-center gap-3">
               <div className="relative">
                 <Avatar>
-                  <AvatarImage src={buyer.avatarUrl} alt={buyer.name} />
+                  <AvatarImage src={buyer.avatar_url} alt={buyer.name} />
                   <AvatarFallback>{buyer.name.charAt(0)}</AvatarFallback>
                 </Avatar>
                 <AvatarOnlineIndicator 
@@ -500,7 +500,7 @@ export function MarketplaceChatLayout({
                   >
                     {msg.senderId !== user?.id && (
                       <Avatar className="h-8 w-8">
-                        <AvatarImage src={buyer.avatarUrl} />
+                        <AvatarImage src={buyer.avatar_url} />
                         <AvatarFallback>{buyer.name.charAt(0)}</AvatarFallback>
                       </Avatar>
                     )}

@@ -148,6 +148,39 @@ export const usePosts = () => {
     };
   }, []);
 
+  // Listen for profile changes to refresh posts with updated user data
+  useEffect(() => {
+    if (!user || !profile) return;
+
+    const refreshUserPosts = async () => {
+      try {
+        // Update posts that belong to the current user with fresh profile data
+        setPosts(prevPosts => 
+          prevPosts.map(post => {
+            if (post.user_id === user.id) {
+              return {
+                ...post,
+                author_name: profile.name || post.author_name,
+                author_image: profile.avatar_url || post.author_image,
+                user: {
+                  id: user.id,
+                  name: profile.name || post.user?.name,
+                  avatar_url: profile.avatar_url || post.user?.avatar_url,
+                  created_at: post.user?.created_at
+                }
+              };
+            }
+            return post;
+          })
+        );
+      } catch (error) {
+        console.error('Error refreshing user posts:', error);
+      }
+    };
+
+    refreshUserPosts();
+  }, [user?.id, profile?.name, profile?.avatar_url]);
+
   const uploadImages = useCallback(async (
     files: FileList,
     path: 'posts' | 'event_images' | 'businesses' | 'avatars'

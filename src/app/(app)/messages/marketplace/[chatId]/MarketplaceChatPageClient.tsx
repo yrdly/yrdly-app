@@ -34,7 +34,7 @@ export function MarketplaceChatPageClient({ chatId }: { chatId: string }) {
         id: user.id,
         uid: user.id,
         name: profile?.name || user.user_metadata?.name || user.email?.split('@')[0] || 'Anonymous',
-        avatarUrl: profile?.avatar_url || user.user_metadata?.avatar_url || `https://placehold.co/100x100.png`,
+        avatar_url: profile?.avatar_url || user.user_metadata?.avatar_url || `https://placehold.co/100x100.png`,
     } as User : null, [user, profile]);
 
     // Simulate loading for a moment

@@ -134,7 +134,7 @@ export class NotificationTriggers {
             senderId: likerId,
             relatedId: postId,
             relatedType: 'post',
-            title: 'Someone liked your post',
+            title: `${likerData.name} liked your post`,
             message: `${likerData.name} liked your post`,
             data: { likerName: likerData.name, postId }
           });
@@ -176,7 +176,7 @@ export class NotificationTriggers {
             senderId: commenterId,
             relatedId: postId,
             relatedType: 'post',
-            title: 'New comment on your post',
+            title: `${commenterData.name} commented on your post`,
             message: `${commenterData.name} commented: "${commentPreview}"`,
             data: { commenterName: commenterData.name, postId, commentPreview }
           });

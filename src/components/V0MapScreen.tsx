@@ -18,6 +18,7 @@ import {
 import { APIProvider, Map, AdvancedMarker, Pin, InfoWindow } from '@vis.gl/react-google-maps';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/hooks/use-supabase-auth';
 import type { Business, Post } from '@/types';
 import { Input } from '@/components/ui/input';
 
@@ -27,7 +28,7 @@ interface V0MapScreenProps {
 
 type MarkerData = {
   id: string;
-  type: 'event' | 'business';
+  type: 'event' | 'business' | 'friend';
   position: { lat: number; lng: number; };
   title: string;
   address: string;
@@ -35,15 +36,19 @@ type MarkerData = {
   date?: string;
   time?: string;
   attendees?: number;
+  avatar_url?: string;
+  last_seen?: string;
 };
 
 export function V0MapScreen({ className }: V0MapScreenProps) {
+  const { user } = useAuth();
   const [markers, setMarkers] = useState<MarkerData[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMarker, setSelectedMarker] = useState<MarkerData | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [nearbyEvents, setNearbyEvents] = useState(0);
   const [nearbyBusinesses, setNearbyBusinesses] = useState(0);
+  const [nearbyFriends, setNearbyFriends] = useState(0);
   const router = useRouter();
 
   useEffect(() => {
@@ -63,20 +68,25 @@ export function V0MapScreen({ className }: V0MapScreenProps) {
           // Handle different event_location data structures
           let lat, lng, address;
           
-          if (post.event_location?.geopoint) {
-            // New structure with geopoint
-            lat = post.event_location.geopoint.latitude;
-            lng = post.event_location.geopoint.longitude;
-            address = post.event_location.address;
-          } else if (post.event_location?.latitude && post.event_location?.longitude) {
-            // Direct lat/lng structure
-            lat = post.event_location.latitude;
-            lng = post.event_location.longitude;
-            address = post.event_location.address || post.event_location.name;
-          } else if (typeof post.event_location === 'string') {
-            // String address - we'll skip this for now as we need coordinates
-            return;
-          }
+           if (post.event_location?.geopoint) {
+             // New structure with geopoint
+             lat = post.event_location.geopoint.latitude;
+             lng = post.event_location.geopoint.longitude;
+             address = post.event_location.address;
+           } else if (post.event_location?.latitude && post.event_location?.longitude) {
+             // Direct lat/lng structure
+             lat = post.event_location.latitude;
+             lng = post.event_location.longitude;
+             address = post.event_location.address || post.event_location.name;
+           } else if (post.event_location?.lat && post.event_location?.lng) {
+             // Alternative lat/lng structure
+             lat = post.event_location.lat;
+             lng = post.event_location.lng;
+             address = post.event_location.address || post.event_location.name;
+           } else if (typeof post.event_location === 'string') {
+             // String address - we'll skip this for now as we need coordinates
+             return;
+           }
           
           if (lat && lng) {
             fetchedMarkers.push({
@@ -100,32 +110,88 @@ export function V0MapScreen({ className }: V0MapScreenProps) {
         .select('*')
         .not('location', 'is', null);
       
-      if (!businessesError && businessesData) {
-        businessesData.forEach(business => {
-          if (business.location?.geopoint) {
-            fetchedMarkers.push({
-              id: business.id,
-              type: 'business',
-              position: { 
-                lat: business.location.geopoint.latitude, 
-                lng: business.location.geopoint.longitude 
-              },
-              title: business.name,
-              address: business.location.address,
-              description: business.description,
-            });
-          }
-        });
-      }
+       if (!businessesError && businessesData) {
+         businessesData.forEach(business => {
+           // Handle different location data structures
+           let lat, lng, address;
+           
+           if (business.location?.geopoint) {
+             // New structure with geopoint
+             lat = business.location.geopoint.latitude;
+             lng = business.location.geopoint.longitude;
+             address = business.location.address;
+           } else if (business.location?.latitude && business.location?.longitude) {
+             // Direct lat/lng structure
+             lat = business.location.latitude;
+             lng = business.location.longitude;
+             address = business.location.address;
+           } else if (business.location?.lat && business.location?.lng) {
+             // Alternative lat/lng structure
+             lat = business.location.lat;
+             lng = business.location.lng;
+             address = business.location.address;
+           }
+           
+           if (lat && lng) {
+             fetchedMarkers.push({
+               id: business.id,
+               type: 'business',
+               position: { lat, lng },
+               title: business.name,
+               address: address || 'Location not specified',
+               description: business.description,
+             });
+           }
+         });
+       }
+
+       // Fetch friends locations
+       if (user?.id) {
+         const { data: friendsData, error: friendsError } = await supabase.rpc('get_friends_locations', {
+           user_id: user.id
+         });
+         
+         if (!friendsError && friendsData) {
+           friendsData.forEach((friend: any) => {
+             // Handle different location data structures
+             let lat, lng, address;
+             
+             if (friend.location?.lat && friend.location?.lng) {
+               // Direct lat/lng structure
+               lat = friend.location.lat;
+               lng = friend.location.lng;
+               address = friend.location.address;
+             } else if (friend.location?.geopoint) {
+               // Geopoint structure
+               lat = friend.location.geopoint.latitude;
+               lng = friend.location.geopoint.longitude;
+               address = friend.location.geopoint.address;
+             }
+             
+             if (lat && lng) {
+               fetchedMarkers.push({
+                 id: friend.friend_id,
+                 type: 'friend',
+                 position: { lat, lng },
+                 title: friend.friend_name,
+                 address: address || 'Location not specified',
+                 avatar_url: friend.friend_avatar_url,
+                 last_seen: friend.last_seen,
+               });
+             }
+           });
+         }
+       }
       
       setMarkers(fetchedMarkers);
       setNearbyEvents(fetchedMarkers.filter(m => m.type === 'event').length);
       setNearbyBusinesses(fetchedMarkers.filter(m => m.type === 'business').length);
+      setNearbyFriends(fetchedMarkers.filter(m => m.type === 'friend').length);
       setLoading(false);
     };
 
     fetchData();
-  }, []);
+  }, [user?.id]);
 
   const handleMarkerClick = (marker: MarkerData) => {
     setSelectedMarker(marker);
@@ -138,8 +204,10 @@ export function V0MapScreen({ className }: V0MapScreenProps) {
   const handleViewDetails = (marker: MarkerData) => {
     if (marker.type === 'event') {
       router.push(`/posts/${marker.id}`);
-    } else {
+    } else if (marker.type === 'business') {
       router.push(`/businesses/${marker.id}`);
+    } else if (marker.type === 'friend') {
+      router.push(`/profile/${marker.id}`);
     }
   };
 
@@ -222,27 +290,31 @@ export function V0MapScreen({ className }: V0MapScreenProps) {
             }
           ]}
         >
-          {filteredMarkers.map(marker => (
-            <AdvancedMarker 
-              key={marker.id} 
-              position={marker.position} 
-              onClick={() => handleMarkerClick(marker)}
-            >
-              <div className="relative">
-                <Pin 
-                  background={marker.type === 'business' ? '#3b82f6' : '#ef4444'}
-                  borderColor={'#1a202c'}
-                  glyphColor={'white'}
-                />
-                {/* Location Labels */}
-                <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 whitespace-nowrap">
-                  <span className="text-white text-sm font-medium bg-black/50 px-2 py-1 rounded">
-                    {marker.title}
-                  </span>
-                </div>
-              </div>
-            </AdvancedMarker>
-          ))}
+           {filteredMarkers.map(marker => (
+             <AdvancedMarker 
+               key={marker.id} 
+               position={marker.position} 
+               onClick={() => handleMarkerClick(marker)}
+             >
+               <div className="relative">
+                 <Pin 
+                   background={
+                     marker.type === 'business' ? '#3b82f6' : 
+                     marker.type === 'event' ? '#ef4444' : 
+                     '#10b981' // Green for friends
+                   }
+                   borderColor={'#1a202c'}
+                   glyphColor={'white'}
+                 />
+                 {/* Location Labels */}
+                 <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 whitespace-nowrap">
+                   <span className="text-white text-sm font-medium bg-black/50 px-2 py-1 rounded">
+                     {marker.title}
+                   </span>
+                 </div>
+               </div>
+             </AdvancedMarker>
+           ))}
 
           {selectedMarker && (
             <InfoWindow position={selectedMarker.position} onCloseClick={handleInfoWindowClose}>
@@ -250,14 +322,22 @@ export function V0MapScreen({ className }: V0MapScreenProps) {
                 <div className="flex items-center gap-2 mb-2">
                   {selectedMarker.type === 'event' ? (
                     <Calendar className="w-4 h-4 text-red-500" />
-                  ) : (
+                  ) : selectedMarker.type === 'business' ? (
                     <Briefcase className="w-4 h-4 text-blue-500" />
+                  ) : (
+                    <Users className="w-4 h-4 text-green-500" />
                   )}
                   <Badge 
-                    variant={selectedMarker.type === 'event' ? 'destructive' : 'default'}
+                    variant={
+                      selectedMarker.type === 'event' ? 'destructive' : 
+                      selectedMarker.type === 'business' ? 'default' : 
+                      'secondary'
+                    }
                     className="text-xs"
                   >
-                    {selectedMarker.type === 'event' ? 'Event' : 'Business'}
+                    {selectedMarker.type === 'event' ? 'Event' : 
+                     selectedMarker.type === 'business' ? 'Business' : 
+                     'Friend'}
                   </Badge>
                 </div>
                 <h3 className="text-white font-semibold text-base mb-2">{selectedMarker.title}</h3>
@@ -280,12 +360,19 @@ export function V0MapScreen({ className }: V0MapScreenProps) {
                   </div>
                 )}
 
-                {selectedMarker.type === 'event' && selectedMarker.attendees && (
-                  <div className="flex items-center gap-2 text-sm text-gray-300 mb-3">
-                    <Users className="w-4 h-4" />
-                    <span>{selectedMarker.attendees} attending</span>
-                  </div>
-                )}
+                 {selectedMarker.type === 'event' && selectedMarker.attendees && (
+                   <div className="flex items-center gap-2 text-sm text-gray-300 mb-3">
+                     <Users className="w-4 h-4" />
+                     <span>{selectedMarker.attendees} attending</span>
+                   </div>
+                 )}
+
+                 {selectedMarker.type === 'friend' && selectedMarker.last_seen && (
+                   <div className="flex items-center gap-2 text-sm text-gray-300 mb-3">
+                     <Clock className="w-4 h-4" />
+                     <span>Last seen: {new Date(selectedMarker.last_seen).toLocaleString()}</span>
+                   </div>
+                 )}
 
                 <Button 
                   size="sm" 
@@ -305,23 +392,30 @@ export function V0MapScreen({ className }: V0MapScreenProps) {
       <div className="absolute bottom-4 left-4 right-4 z-10">
         <Card className="bg-gray-800 border-gray-700 rounded-xl">
           <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              {/* Events Count */}
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-5 h-5 text-red-500" />
-                  <span className="text-white font-medium">
-                    {nearbyEvents} Event{nearbyEvents !== 1 ? 's' : ''} nearby
-                  </span>
-                </div>
-                <div className="w-px h-6 bg-gray-600"></div>
-                <div className="flex items-center gap-2">
-                  <Briefcase className="w-5 h-5 text-blue-500" />
-                  <span className="text-white font-medium">
-                    {nearbyBusinesses} Business{nearbyBusinesses !== 1 ? 'es' : ''}
-                  </span>
-                </div>
-              </div>
+             <div className="flex items-center justify-between">
+               {/* Counts */}
+               <div className="flex items-center gap-3">
+                 <div className="flex items-center gap-2">
+                   <Calendar className="w-5 h-5 text-red-500" />
+                   <span className="text-white font-medium">
+                     {nearbyEvents} Event{nearbyEvents !== 1 ? 's' : ''}
+                   </span>
+                 </div>
+                 <div className="w-px h-6 bg-gray-600"></div>
+                 <div className="flex items-center gap-2">
+                   <Briefcase className="w-5 h-5 text-blue-500" />
+                   <span className="text-white font-medium">
+                     {nearbyBusinesses} Business{nearbyBusinesses !== 1 ? 'es' : ''}
+                   </span>
+                 </div>
+                 <div className="w-px h-6 bg-gray-600"></div>
+                 <div className="flex items-center gap-2">
+                   <Users className="w-5 h-5 text-green-500" />
+                   <span className="text-white font-medium">
+                     {nearbyFriends} Friend{nearbyFriends !== 1 ? 's' : ''}
+                   </span>
+                 </div>
+               </div>
               
               {/* View All Button */}
               <Button 

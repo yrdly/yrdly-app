@@ -33,14 +33,24 @@ interface V0SettingsScreenProps {
 export function V0SettingsScreen({ onBack }: V0SettingsScreenProps) {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
-  const { user, profile, signOut } = useAuth();
+  const { user, profile, signOut, updateProfile } = useAuth();
 
 
   const [privacy, setPrivacy] = useState({
     profileVisible: true,
-    locationVisible: false,
+    locationVisible: profile?.shareLocation ?? false,
     onlineStatus: true,
   });
+
+  // Update privacy state when profile changes
+  useEffect(() => {
+    if (profile) {
+      setPrivacy(prev => ({
+        ...prev,
+        locationVisible: profile.shareLocation ?? false,
+      }));
+    }
+  }, [profile]);
 
   const handleLogout = async () => {
     try {
@@ -77,6 +87,18 @@ export function V0SettingsScreen({ onBack }: V0SettingsScreenProps) {
 
   const handleSecurity = () => {
     router.push("/settings/security");
+  };
+
+  const handleLocationSharingToggle = async (checked: boolean) => {
+    try {
+      await updateProfile({
+        shareLocation: checked,
+        updated_at: new Date().toISOString(),
+      });
+      setPrivacy({ ...privacy, locationVisible: checked });
+    } catch (error) {
+      console.error('Error updating location sharing preference:', error);
+    }
   };
 
   return (
@@ -164,7 +186,7 @@ export function V0SettingsScreen({ onBack }: V0SettingsScreenProps) {
             </div>
             <Switch
               checked={privacy.locationVisible}
-              onCheckedChange={(checked) => setPrivacy({ ...privacy, locationVisible: checked })}
+              onCheckedChange={handleLocationSharingToggle}
               className="cursor-pointer"
             />
           </div>

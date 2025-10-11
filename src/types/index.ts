@@ -131,7 +131,7 @@ export interface User {
   uid: string;
   name: string;
   email?: string;
-  avatarUrl?: string;
+  avatar_url?: string;
   bio?: string;
   location?: {
     state?: string;
@@ -141,6 +141,15 @@ export interface User {
   };
   friends?: string[];
   blockedUsers?: string[];
+  interests?: string[];
+  shareLocation?: boolean;
+  currentLocation?: {
+    lat: number;
+    lng: number;
+    address?: string;
+    lastUpdated: string;
+  };
+  locationUpdatedAt?: string;
   notificationSettings?: NotificationSettings;
   timestamp?: string; // Changed from Timestamp to string for Supabase
   // Online status fields
@@ -150,9 +159,9 @@ export interface User {
 
 export interface FriendRequest {
     id: string;
-    fromUserId: string;
-    toUserId: string;
-    participantIds: string[];
+    from_user_id: string;
+    to_user_id: string;
+    participant_ids: string[];
     status: 'pending' | 'accepted' | 'declined';
     timestamp: string; // Changed from Timestamp to string for Supabase
 }

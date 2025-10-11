@@ -131,7 +131,6 @@ export function V0MainLayout({ children }: V0MainLayoutProps) {
           
           // For marketplace conversations, check chat_messages table
           if (conv.type === 'marketplace') {
-            console.log(`Processing marketplace conversation: ${conv.id}, type: ${conv.type}`);
             const { data: chatMessages, error: chatMessagesError } = await supabase
               .from('chat_messages')
               .select('sender_id, created_at')
@@ -143,27 +142,16 @@ export function V0MainLayout({ children }: V0MainLayoutProps) {
               continue;
             }
 
-            console.log(`Marketplace conversation ${conv.id}:`, {
-              chatMessagesCount: chatMessages?.length || 0,
-              chatMessages: chatMessages,
-              conversationType: conv.type,
-              participantIds: conv.participant_ids
-            });
-
             // If no messages exist, consider the chat as read
             if (!chatMessages || chatMessages.length === 0) {
-              console.log(`Marketplace conversation ${conv.id} has no messages - considering as read`);
               continue; // Skip this chat - it's considered read
             }
 
             const lastMessage = chatMessages?.[chatMessages.length - 1];
             const lastMessageSentByUser = lastMessage?.sender_id === user.id;
             
-            console.log(`Last message from user: ${lastMessageSentByUser}, sender_id: ${lastMessage?.sender_id}, user_id: ${user.id}`);
-            
             // If the user sent the last message, the chat should be considered read
             if (lastMessageSentByUser) {
-              console.log(`Skipping marketplace conversation ${conv.id} - user sent last message`);
               continue; // Skip this chat - it's considered read
             }
             
@@ -248,8 +236,8 @@ export function V0MainLayout({ children }: V0MainLayoutProps) {
                     alt="Yrdly" 
                     width={60}
                     height={60}
-                    className="w-15 h-15 sm:w-17 sm:h-17 md:w-19 md:h-19 object-contain"
-                    style={{ height: "auto" }}
+                    className="object-contain"
+                    style={{ width: "auto", height: "auto" }}
                   />
                 </Link>
 

@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { BuyButton } from '@/components/escrow/BuyButton';
 import { ChatButton } from '@/components/escrow/ChatButton';
 import { useAuth } from '@/hooks/use-supabase-auth';
@@ -75,9 +75,14 @@ export function MarketplaceItemDetail({
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader className="flex flex-row items-center justify-between">
-            <DialogTitle className="text-xl font-bold">
-              {item.title || item.text}
-            </DialogTitle>
+            <div>
+              <DialogTitle className="text-xl font-bold">
+                {item.title || item.text}
+              </DialogTitle>
+              <DialogDescription>
+                View details and purchase this marketplace item
+              </DialogDescription>
+            </div>
             <Button variant="ghost" size="icon" onClick={onClose}>
               <X className="h-4 w-4" />
             </Button>

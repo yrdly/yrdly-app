@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { DeliverySelector } from './DeliverySelector';
 import { DeliveryOption, DeliveryDetails, PaymentMethod } from '@/types/escrow';
 import { EscrowService } from '@/lib/escrow-service';
@@ -109,6 +109,9 @@ export function BuyButton({ itemId, itemTitle, price, sellerId, sellerName }: Bu
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Complete Your Purchase</DialogTitle>
+          <DialogDescription>
+            Choose your delivery method and complete the secure purchase
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">

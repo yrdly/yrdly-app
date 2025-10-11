@@ -4,7 +4,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { User, Post, FriendRequest, Business } from "../types";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useRouter } from 'next/navigation';
@@ -106,8 +106,9 @@ export function SearchDialog({ open, onOpenChange }: { open: boolean, onOpenChan
                 // User search
                 const { data: usersData, error: usersError } = await supabase
                     .from('users')
-                    .select('*')
-                    .or(`name.ilike.%${searchTerm}%,bio.ilike.%${searchTerm}%`);
+                    .select('id, name, avatar_url, bio, location, interests, created_at')
+                    .or(`name.ilike.%${searchTerm}%,bio.ilike.%${searchTerm}%`)
+                    .neq('id', currentUser?.id); // Exclude current user from search results
                 
                 if (!usersError && usersData) {
                     const usersResults = usersData.map(user => ({ type: 'user', data: user as User } as SearchResult));
@@ -189,7 +190,7 @@ export function SearchDialog({ open, onOpenChange }: { open: boolean, onOpenChan
                 return (
                     <div key={`user-${user.id}`} className="flex items-center gap-4 p-3 rounded-md hover:bg-muted cursor-pointer" onClick={() => handleResultClick(result)}>
                         <Avatar className="h-12 w-12">
-                            <AvatarImage src={user.avatarUrl} alt={user.name} />
+                            <AvatarImage src={user.avatar_url} alt={user.name} />
                             <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
                         </Avatar>
                         <div className="flex-1 min-w-0">
@@ -321,6 +322,9 @@ export function SearchDialog({ open, onOpenChange }: { open: boolean, onOpenChan
             <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
                     <DialogTitle>Search Yrdly</DialogTitle>
+                    <DialogDescription>
+                        Search for people, posts, events, businesses, and more in your neighborhood
+                    </DialogDescription>
                 </DialogHeader>
                 <div className="p-4 pb-0">
                     <Input

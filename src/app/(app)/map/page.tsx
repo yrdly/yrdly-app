@@ -1,4 +1,3 @@
-
 "use client";
 
 import { V0MapScreen } from "@/components/V0MapScreen";
@@ -7,5 +6,5 @@ import { V0MapScreen } from "@/components/V0MapScreen";
 export const dynamic = 'force-dynamic';
 
 export default function MapPage() {
-  return <V0MapScreen />;
+    return <V0MapScreen />;
 }

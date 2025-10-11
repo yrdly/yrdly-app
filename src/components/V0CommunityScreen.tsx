@@ -16,7 +16,8 @@ import {
   Share,
   Calendar,
   Bell,
-  TrendingUp
+  TrendingUp,
+  UserPlus
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-supabase-auth";
 import { useRouter } from "next/navigation";
@@ -66,6 +67,7 @@ export function V0CommunityScreen({ className }: V0CommunityScreenProps) {
   const [users, setUsers] = useState<any[]>([]);
   const [userSearchLoading, setUserSearchLoading] = useState(false);
   const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set());
+  const [friendshipStatus, setFriendshipStatus] = useState<Record<string, 'friends' | 'request_sent' | 'request_received' | 'none'>>({});
   const [stats, setStats] = useState({
     totalUsers: 0,
     activeToday: 0,
@@ -206,10 +208,39 @@ export function V0CommunityScreen({ className }: V0CommunityScreenProps) {
     );
   }, [posts, searchQuery]);
 
+  const checkFriendshipStatus = async (userId: string) => {
+    if (!currentUser || !profile) return 'none';
+    
+    // Check if they're already friends
+    if (profile.friends?.includes(userId)) {
+      return 'friends';
+    }
+    
+    // Check for pending friend requests
+    const { data: requests, error } = await supabase
+      .from('friend_requests')
+      .select('*')
+      .or(`and(from_user_id.eq.${currentUser.id},to_user_id.eq.${userId}),and(from_user_id.eq.${userId},to_user_id.eq.${currentUser.id})`)
+      .eq('status', 'pending');
+    
+    if (error) {
+      console.error('Error checking friendship status:', error);
+      return 'none';
+    }
+    
+    if (requests && requests.length > 0) {
+      const request = requests[0];
+      return request.from_user_id === currentUser.id ? 'request_sent' : 'request_received';
+    }
+    
+    return 'none';
+  };
+
   const searchUsers = async (query: string) => {
     if (!query.trim()) {
       setUsers([]);
       setShowUserSearch(false);
+      setFriendshipStatus({});
       return;
     }
 
@@ -217,14 +248,30 @@ export function V0CommunityScreen({ className }: V0CommunityScreenProps) {
     try {
       const { data, error } = await supabase
         .from('users')
-        .select('id, name, email, avatar_url, created_at')
+        .select('id, name, avatar_url, created_at')
         .ilike('name', `%${query}%`)
         .neq('id', currentUser?.id) // Exclude current user from search results
         .limit(10);
 
       if (error) throw error;
-      setUsers(data || []);
+      
+      const usersData = data || [];
+      setUsers(usersData);
       setShowUserSearch(true);
+      
+      // Check friendship status for each user
+      const statusPromises = usersData.map(async (user) => {
+        const status = await checkFriendshipStatus(user.id);
+        return { userId: user.id, status };
+      });
+      
+      const statusResults = await Promise.all(statusPromises);
+      const statusMap = statusResults.reduce((acc, { userId, status }) => {
+        acc[userId] = status;
+        return acc;
+      }, {} as Record<string, 'friends' | 'request_sent' | 'request_received' | 'none'>);
+      
+      setFriendshipStatus(statusMap);
     } catch (error) {
       console.error('Error searching users:', error);
       toast({
@@ -244,6 +291,124 @@ export function V0CommunityScreen({ className }: V0CommunityScreenProps) {
     } else {
       setShowUserSearch(false);
       setUsers([]);
+      setFriendshipStatus({});
+    }
+  };
+
+  const handleFriendAction = async (userId: string, action: 'add' | 'remove') => {
+    if (!currentUser) return;
+    
+    try {
+      if (action === 'add') {
+        // Send friend request
+        const { error } = await supabase
+          .from('friend_requests')
+          .insert({
+            from_user_id: currentUser.id,
+            to_user_id: userId,
+            status: 'pending',
+            created_at: new Date().toISOString(),
+          });
+        
+        if (error) throw error;
+        
+        // Update friendship status
+        setFriendshipStatus(prev => ({ ...prev, [userId]: 'request_sent' }));
+        
+        toast({
+          title: "Friend Request Sent",
+          description: "Your friend request has been sent.",
+        });
+      } else if (action === 'remove') {
+        // Remove friend
+        const { data: currentUserData } = await supabase
+          .from('users')
+          .select('friends')
+          .eq('id', currentUser.id)
+          .single();
+
+        const updatedFriends = currentUserData?.friends?.filter((id: string) => id !== userId) || [];
+
+        await supabase
+          .from('users')
+          .update({ friends: updatedFriends })
+          .eq('id', currentUser.id);
+
+        // Also remove from target user's friends list
+        const { data: targetUserData } = await supabase
+          .from('users')
+          .select('friends')
+          .eq('id', userId)
+          .single();
+
+        const targetUpdatedFriends = targetUserData?.friends?.filter((id: string) => id !== currentUser.id) || [];
+
+        await supabase
+          .from('users')
+          .update({ friends: targetUpdatedFriends })
+          .eq('id', userId);
+        
+        // Update friendship status
+        setFriendshipStatus(prev => ({ ...prev, [userId]: 'none' }));
+        
+        toast({
+          title: "Friend Removed",
+          description: "You are no longer friends with this user.",
+        });
+      }
+    } catch (error) {
+      console.error('Error handling friend action:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to process friend request. Please try again.",
+      });
+    }
+  };
+
+  const handleMessageUser = async (userId: string) => {
+    if (!currentUser) return;
+
+    try {
+      // Check if conversation already exists
+      const sortedParticipantIds = [currentUser.id, userId].sort();
+      const { data: existingConversations, error: fetchError } = await supabase
+        .from('conversations')
+        .select('id')
+        .contains('participant_ids', sortedParticipantIds)
+        .eq('type', 'friend');
+
+      if (fetchError) throw fetchError;
+
+      let conversationId: string;
+
+      if (existingConversations && existingConversations.length > 0) {
+        conversationId = existingConversations[0].id;
+      } else {
+        // Create new conversation
+        const { data: newConv, error: createError } = await supabase
+          .from('conversations')
+          .insert({
+            participant_ids: sortedParticipantIds,
+            type: 'friend',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .select('id')
+          .single();
+
+        if (createError) throw createError;
+        conversationId = newConv.id;
+      }
+
+      router.push(`/messages/${conversationId}`);
+    } catch (error) {
+      console.error('Error creating conversation:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Could not open conversation. Please try again.",
+      });
     }
   };
 
@@ -413,33 +578,63 @@ export function V0CommunityScreen({ className }: V0CommunityScreenProps) {
             </div>
           ) : users.length > 0 ? (
             <div className="space-y-2">
-              {users.map((user) => (
-                <Card 
-                  key={user.id} 
-                  className="p-3 cursor-pointer hover:bg-muted/50 transition-colors"
-                  onClick={() => router.push(`/profile/${user.id}`)}
-                >
-                  <div className="flex items-center gap-3">
-                    <Avatar className="w-10 h-10">
-                      <AvatarImage src={user.avatar_url || "/placeholder.svg"} />
-                      <AvatarFallback className="bg-primary text-primary-foreground">
-                        {user.name?.substring(0, 2).toUpperCase() || "U"}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-semibold text-foreground truncate">
-                        {user.name || "Unknown User"}
-                      </h4>
-                      <p className="text-sm text-muted-foreground truncate">
-                        {user.email}
-                      </p>
+              {users.map((user) => {
+                const status = friendshipStatus[user.id] || 'none';
+                return (
+                  <Card 
+                    key={user.id} 
+                    className="p-3 hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div 
+                        className="flex items-center gap-3 flex-1 cursor-pointer"
+                        onClick={() => router.push(`/profile/${user.id}`)}
+                      >
+                        <Avatar className="w-10 h-10">
+                          <AvatarImage src={user.avatar_url || "/placeholder.svg"} />
+                          <AvatarFallback className="bg-primary text-primary-foreground">
+                            {user.name?.substring(0, 2).toUpperCase() || "U"}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-semibold text-foreground truncate">
+                            {user.name || "Unknown User"}
+                          </h4>
+                          <p className="text-sm text-muted-foreground truncate">
+                            {user.email}
+                          </p>
+                        </div>
+                      </div>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (status === 'friends') {
+                            handleMessageUser(user.id);
+                          } else if (status === 'none') {
+                            handleFriendAction(user.id, 'add');
+                          } else if (status === 'request_sent') {
+                            // Could add cancel request functionality here
+                            toast({
+                              title: "Friend Request Pending",
+                              description: "You have already sent a friend request to this user.",
+                            });
+                          }
+                        }}
+                      >
+                        {status === 'friends' ? (
+                          <MessageCircle className="w-4 h-4" />
+                        ) : status === 'request_sent' ? (
+                          <UserPlus className="w-4 h-4 opacity-50" />
+                        ) : (
+                          <UserPlus className="w-4 h-4" />
+                        )}
+                      </Button>
                     </div>
-                    <Button variant="ghost" size="sm">
-                      <MessageCircle className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </Card>
-              ))}
+                  </Card>
+                );
+              })}
             </div>
           ) : (
             <div className="text-center py-4">

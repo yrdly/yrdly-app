@@ -32,7 +32,7 @@ interface Notification {
   id: string;
   type: 'friend_request' | 'message' | 'post_like' | 'post_comment' | 'event_invite' | 'system';
   title: string;
-  body: string;
+  message: string;
   data?: any;
   is_read: boolean;
   created_at: string;
@@ -94,7 +94,7 @@ function NotificationCard({ notification, onMarkAsRead, onDelete }: {
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1">
                 <h4 className="font-semibold text-foreground">{notification.title}</h4>
-                <p className="text-sm text-muted-foreground mt-1">{notification.body}</p>
+                <p className="text-sm text-muted-foreground mt-1">{notification.message}</p>
                 
                 {/* From User */}
                 {notification.from_user_name && (
@@ -213,7 +213,7 @@ export function V0NotificationsScreen({ className }: V0NotificationsScreenProps)
           id: notif.id,
           type: notif.type,
           title: notif.title,
-          body: notif.body,
+          message: notif.message,
           data: notif.data,
           is_read: notif.is_read,
           created_at: notif.created_at,
@@ -247,7 +247,7 @@ export function V0NotificationsScreen({ className }: V0NotificationsScreenProps)
             id: newNotification.id,
             type: newNotification.type,
             title: newNotification.title,
-            body: newNotification.body,
+            message: newNotification.message,
             data: newNotification.data,
             is_read: newNotification.is_read,
             created_at: newNotification.created_at,
