@@ -136,7 +136,7 @@ export function PostCard({ post, onDelete, onCreatePost }: PostCardProps) {
     };
 
     fetchAuthorData();
-  }, [post.user_id, post.user, post.timestamp]);
+  }, [post.user_id, post.user, post.timestamp, post.author_image, post.author_name]);
 
   useEffect(() => {
     if (!post.id) return;

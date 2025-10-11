@@ -387,7 +387,7 @@ export function UserProfileDialog({ user: profileUser, open, onOpenChange }: Use
                         <DialogHeader>
                             <DialogTitle className="sr-only">{`Profile of ${profileUser.name}`}</DialogTitle>
                             <DialogDescription className="sr-only">
-                                View {profileUser.name}'s profile information, bio, interests, and available actions
+                                View {profileUser.name}&apos;s profile information, bio, interests, and available actions
                             </DialogDescription>
                         </DialogHeader>
                         <CardHeader className="flex flex-col items-center text-center p-6 bg-muted/50 relative">

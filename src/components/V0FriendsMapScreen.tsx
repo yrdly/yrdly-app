@@ -65,7 +65,7 @@ export function V0FriendsMapScreen({ onBack }: V0FriendsMapScreenProps) {
         }
       );
     }
-  }, [profile?.shareLocation, toast]);
+  }, [profile?.shareLocation, toast, updateUserLocation]);
 
   // Fetch friends' locations
   const fetchFriendsLocations = async () => {
@@ -133,7 +133,7 @@ export function V0FriendsMapScreen({ onBack }: V0FriendsMapScreenProps) {
 
   useEffect(() => {
     fetchFriendsLocations();
-  }, [user]);
+  }, [user, fetchFriendsLocations]);
 
   const handleBack = () => {
     if (onBack) {

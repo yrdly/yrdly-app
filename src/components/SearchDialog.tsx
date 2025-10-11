@@ -181,7 +181,7 @@ export function SearchDialog({ open, onOpenChange }: { open: boolean, onOpenChan
         }, 300); // 300ms debounce
 
         return () => clearTimeout(debounceTimeout);
-    }, [searchTerm]);
+    }, [searchTerm, currentUser?.id]);
     
     const renderResult = (result: SearchResult, index?: number) => {
         switch(result.type) {
