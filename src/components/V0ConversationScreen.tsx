@@ -299,7 +299,7 @@ export function V0ConversationScreen({ conversationId }: V0ConversationScreenPro
       const messageData = {
         conversation_id: selectedConversation.id,
         sender_id: user.id,
-        text: newMessage.trim() || (imageUrl ? 'Image' : ''),
+        text: newMessage.trim() || '',
         image_url: imageUrl,
         created_at: new Date().toISOString(),
         is_read: true, // Mark as read for the sender
@@ -322,7 +322,7 @@ export function V0ConversationScreen({ conversationId }: V0ConversationScreenPro
         .from('conversations')
         .update({ 
           updated_at: new Date().toISOString(),
-          last_message_text: newMessage.trim() || (imageUrl ? 'Image' : ''),
+          last_message_text: newMessage.trim() || (imageUrl ? '📷 Photo' : ''),
           last_message_timestamp: new Date().toISOString(),
           last_message_sender_id: user.id,
         })
