@@ -160,11 +160,11 @@ export const usePosts = () => {
             if (post.user_id === user.id) {
               return {
                 ...post,
-                author_name: profile.name || post.author_name,
+                author_name: profile.name || post.author_name || 'Unknown User',
                 author_image: profile.avatar_url || post.author_image,
                 user: {
                   id: user.id,
-                  name: profile.name || post.user?.name,
+                  name: profile.name || post.user?.name || 'Unknown User',
                   avatar_url: profile.avatar_url || post.user?.avatar_url,
                   created_at: post.user?.created_at
                 }

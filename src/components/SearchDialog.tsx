@@ -106,7 +106,7 @@ export function SearchDialog({ open, onOpenChange }: { open: boolean, onOpenChan
                 // User search
                 const { data: usersData, error: usersError } = await supabase
                     .from('users')
-                    .select('id, name, avatar_url, bio, location, interests, created_at')
+                    .select('id, uid, name, avatar_url, bio, location, interests, created_at')
                     .or(`name.ilike.%${searchTerm}%,bio.ilike.%${searchTerm}%`)
                     .neq('id', currentUser?.id); // Exclude current user from search results
                 

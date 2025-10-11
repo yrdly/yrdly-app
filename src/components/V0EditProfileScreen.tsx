@@ -148,8 +148,8 @@ export function V0EditProfileScreen({ onBack }: V0EditProfileScreenProps) {
         location: values.locationState && values.locationLga ? {
           state: values.locationState,
           lga: values.locationLga,
-          ward: values.locationWard || null,
-        } : null,
+          ward: values.locationWard || undefined,
+        } : undefined,
         updated_at: new Date().toISOString(),
       });
 

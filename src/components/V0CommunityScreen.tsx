@@ -208,7 +208,7 @@ export function V0CommunityScreen({ className }: V0CommunityScreenProps) {
     );
   }, [posts, searchQuery]);
 
-  const checkFriendshipStatus = async (userId: string) => {
+  const checkFriendshipStatus = async (userId: string): Promise<'friends' | 'request_sent' | 'request_received' | 'none'> => {
     if (!currentUser || !profile) return 'none';
     
     // Check if they're already friends

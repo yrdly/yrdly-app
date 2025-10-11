@@ -22,7 +22,7 @@ export const getFriendshipStatus = async (currentUser: User, targetUser: User): 
 
     if (requests && requests.length > 0) {
         const request = requests[0] as FriendRequest;
-        return request.fromUserId === currentUser.id ? 'request_sent' : 'request_received';
+        return request.from_user_id === currentUser.id ? 'request_sent' : 'request_received';
     }
 
     return 'none';

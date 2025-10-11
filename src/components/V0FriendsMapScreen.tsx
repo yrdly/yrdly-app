@@ -35,12 +35,35 @@ export function V0FriendsMapScreen({ onBack }: V0FriendsMapScreenProps) {
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locationPermission, setLocationPermission] = useState<'granted' | 'denied' | 'prompt'>('prompt');
 
+  // Update user's location in database
+  const updateUserLocation = useCallback(async (lat: number, lng: number) => {
+    if (!user || !profile?.shareLocation) return;
+
+    try {
+      // Get address from coordinates (you can use a geocoding service here)
+      const address = await getAddressFromCoordinates(lat, lng);
+      
+      const { error } = await supabase.rpc('update_user_location', {
+        user_id: user.id,
+        latitude: lat,
+        longitude: lng,
+        address: address
+      });
+
+      if (error) {
+        console.error('Error updating location:', error);
+      }
+    } catch (error) {
+      console.error('Error updating location:', error);
+    }
+  }, [user, profile?.shareLocation]);
+
   // Get user's current location
   useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          const { latitude, lng: longitude } = position.coords;
+          const { latitude, longitude } = position.coords;
           setUserLocation({ lat: latitude, lng: longitude });
           setLocationPermission('granted');
           
@@ -94,29 +117,6 @@ export function V0FriendsMapScreen({ onBack }: V0FriendsMapScreenProps) {
       setLoading(false);
     }
   }, [user, toast]);
-
-  // Update user's location in database
-  const updateUserLocation = useCallback(async (lat: number, lng: number) => {
-    if (!user || !profile?.shareLocation) return;
-
-    try {
-      // Get address from coordinates (you can use a geocoding service here)
-      const address = await getAddressFromCoordinates(lat, lng);
-      
-      const { error } = await supabase.rpc('update_user_location', {
-        user_id: user.id,
-        latitude: lat,
-        longitude: lng,
-        address: address
-      });
-
-      if (error) {
-        console.error('Error updating location:', error);
-      }
-    } catch (error) {
-      console.error('Error updating location:', error);
-    }
-  }, [user, profile?.shareLocation]);
 
   // Simple geocoding (you might want to use a proper geocoding service)
   const getAddressFromCoordinates = async (lat: number, lng: number): Promise<string> => {
