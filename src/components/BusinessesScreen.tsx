@@ -53,7 +53,7 @@ import {
 import { usePosts } from "@/hooks/use-posts";
 import { useToast } from "@/hooks/use-toast";
 
-interface V0BusinessesScreenProps {
+interface BusinessesScreenProps {
   className?: string;
 }
 
@@ -274,7 +274,7 @@ function EmptyBusinesses() {
   );
 }
 
-export function V0BusinessesScreen({ className }: V0BusinessesScreenProps) {
+export function BusinessesScreen({ className }: BusinessesScreenProps) {
   const { user } = useAuth();
   const router = useRouter();
   const [businesses, setBusinesses] = useState<Business[]>([]);

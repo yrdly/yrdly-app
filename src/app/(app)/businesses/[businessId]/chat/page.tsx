@@ -1,6 +1,6 @@
 "use client";
 
-import { V0BusinessChatScreen } from "@/components/V0BusinessChatScreen";
+import { BusinessChatScreen } from "@/components/BusinessChatScreen";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
@@ -148,7 +148,7 @@ export default function BusinessChatPage() {
   }
 
   return (
-    <V0BusinessChatScreen
+    <BusinessChatScreen
       business={business}
       onBack={handleBack}
     />

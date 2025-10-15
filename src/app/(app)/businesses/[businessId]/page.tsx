@@ -1,6 +1,6 @@
 "use client";
 
-import { V0BusinessDetailScreen } from "@/components/V0BusinessDetailScreen";
+import { BusinessDetailScreen } from "@/components/BusinessDetailScreen";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
@@ -123,7 +123,7 @@ export default function BusinessDetailPage() {
   }
 
   return (
-    <V0BusinessDetailScreen
+    <BusinessDetailScreen
       business={business}
       onBack={() => router.push("/businesses")}
       onMessageOwner={handleMessageOwner}

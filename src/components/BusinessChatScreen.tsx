@@ -11,13 +11,13 @@ import { useAuth } from "@/hooks/use-supabase-auth";
 import { supabase } from "@/lib/supabase";
 import Image from "next/image";
 
-interface V0BusinessChatScreenProps {
+interface BusinessChatScreenProps {
   business: Business;
   item?: CatalogItem;
   onBack: () => void;
 }
 
-export function V0BusinessChatScreen({ business, item, onBack }: V0BusinessChatScreenProps) {
+export function BusinessChatScreen({ business, item, onBack }: BusinessChatScreenProps) {
   const { user } = useAuth();
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<BusinessMessage[]>([]);

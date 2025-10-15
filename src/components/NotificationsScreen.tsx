@@ -24,7 +24,7 @@ import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNowStrict } from 'date-fns';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
-interface V0NotificationsScreenProps {
+interface NotificationsScreenProps {
   className?: string;
 }
 
@@ -186,7 +186,7 @@ function EmptyNotifications() {
   );
 }
 
-export function V0NotificationsScreen({ className }: V0NotificationsScreenProps) {
+export function NotificationsScreen({ className }: NotificationsScreenProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [notifications, setNotifications] = useState<Notification[]>([]);

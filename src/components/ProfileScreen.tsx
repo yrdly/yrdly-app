@@ -30,7 +30,7 @@ import { useToast } from "@/hooks/use-toast";
 import { shortenAddress } from "@/lib/utils";
 import Image from "next/image";
 
-interface V0ProfileScreenProps {
+interface ProfileScreenProps {
   onBack?: () => void;
   user?: User;
   isOwnProfile?: boolean;
@@ -38,7 +38,7 @@ interface V0ProfileScreenProps {
   targetUser?: any;
 }
 
-export function V0ProfileScreen({ onBack, user, isOwnProfile = true, targetUserId, targetUser: externalTargetUser }: V0ProfileScreenProps) {
+export function ProfileScreen({ onBack, user, isOwnProfile = true, targetUserId, targetUser: externalTargetUser }: ProfileScreenProps) {
   const router = useRouter();
   const { user: currentUser, profile: currentProfile } = useAuth();
   const { toast } = useToast();

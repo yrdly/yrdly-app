@@ -22,7 +22,7 @@ import { useAuth } from '@/hooks/use-supabase-auth';
 import type { Business, Post } from '@/types';
 import { Input } from '@/components/ui/input';
 
-interface V0MapScreenProps {
+interface MapScreenProps {
   className?: string;
 }
 
@@ -40,7 +40,7 @@ type MarkerData = {
   last_seen?: string;
 };
 
-export function V0MapScreen({ className }: V0MapScreenProps) {
+export function MapScreen({ className }: MapScreenProps) {
   const { user } = useAuth();
   const [markers, setMarkers] = useState<MarkerData[]>([]);
   const [loading, setLoading] = useState(true);

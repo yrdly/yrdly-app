@@ -34,11 +34,11 @@ const profileFormSchema = z.object({
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
-interface V0EditProfileScreenProps {
+interface EditProfileScreenProps {
   onBack?: () => void;
 }
 
-export function V0EditProfileScreen({ onBack }: V0EditProfileScreenProps) {
+export function EditProfileScreen({ onBack }: EditProfileScreenProps) {
   const router = useRouter();
   const { user, profile, loading: authLoading, updateProfile } = useAuth();
   const { toast } = useToast();

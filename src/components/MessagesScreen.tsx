@@ -35,12 +35,12 @@ interface Conversation {
   };
 }
 
-interface V0MessagesScreenProps {
+interface MessagesScreenProps {
   onOpenChat?: (conversation: Conversation) => void;
   selectedConversationId?: string;
 }
 
-export function V0MessagesScreen({ onOpenChat, selectedConversationId }: V0MessagesScreenProps) {
+export function MessagesScreen({ onOpenChat, selectedConversationId }: MessagesScreenProps) {
   const { user, profile } = useAuth();
   const [activeTab, setActiveTab] = useState<"all" | "friends" | "marketplace" | "businesses">("friends");
   const [searchQuery, setSearchQuery] = useState("");
@@ -48,13 +48,11 @@ export function V0MessagesScreen({ onOpenChat, selectedConversationId }: V0Messa
   const [loading, setLoading] = useState(true);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
 
-  // Fetch conversations from Supabase
   useEffect(() => {
     if (!user) return;
 
     const fetchConversations = async () => {
       try {
-        // Fetch conversations from Supabase using the correct schema
         const { data: conversationsData, error: conversationsError } = await supabase
           .from('conversations')
           .select(`
@@ -77,11 +75,9 @@ export function V0MessagesScreen({ onOpenChat, selectedConversationId }: V0Messa
         if (conversationsData && conversationsData.length > 0) {
         }
 
-        // Calculate unread count for each conversation
+        // Count unread messages for each conversation
         const conversationsWithUnreadCount = await Promise.all((conversationsData || []).map(async (conv) => {
-          // For marketplace conversations, we need to check chat_messages table
           if (conv.type === 'marketplace') {
-            // Get the last message from chat_messages table
             const { data: chatMessages, error: chatMessagesError } = await supabase
               .from('chat_messages')
               .select('sender_id, created_at')
@@ -93,7 +89,6 @@ export function V0MessagesScreen({ onOpenChat, selectedConversationId }: V0Messa
               return { ...conv, unread_count: 0 };
             }
 
-            // If no messages exist, consider the chat as read
             if (!chatMessages || chatMessages.length === 0) {
               return {
                 ...conv,
@@ -104,7 +99,7 @@ export function V0MessagesScreen({ onOpenChat, selectedConversationId }: V0Messa
             const lastMessage = chatMessages?.[chatMessages.length - 1];
             const lastMessageSentByUser = lastMessage?.sender_id === user.id;
             
-            // If the user sent the last message, the chat should be considered read
+            // If you sent the last message, consider it read
             if (lastMessageSentByUser) {
               return {
                 ...conv,
@@ -112,9 +107,7 @@ export function V0MessagesScreen({ onOpenChat, selectedConversationId }: V0Messa
               };
             }
             
-            // For marketplace conversations, since chat_messages doesn't have is_read column,
-            // we'll count all messages from other users as potentially unread
-            // This is a simplified approach - in a real app, you'd want to add read tracking
+            // Count messages from others as unread
             const unreadCount = chatMessages?.filter((msg: any) => 
               msg.sender_id !== user.id
             ).length || 0;
@@ -124,11 +117,10 @@ export function V0MessagesScreen({ onOpenChat, selectedConversationId }: V0Messa
               unread_count: unreadCount
             };
           } else {
-            // For other conversation types, use the existing logic
             const lastMessage = conv.messages?.[conv.messages.length - 1];
             const lastMessageSentByUser = lastMessage?.sender_id === user.id;
             
-            // If the user sent the last message, the chat should be considered read
+            // If you sent the last message, consider it read
             if (lastMessageSentByUser) {
               return {
                 ...conv,
@@ -136,7 +128,7 @@ export function V0MessagesScreen({ onOpenChat, selectedConversationId }: V0Messa
               };
             }
             
-            // Otherwise, count unread messages from other users
+            // Count unread messages from others
             const unreadCount = conv.messages?.filter((msg: any) => 
               msg.sender_id !== user.id && 
               (!msg.is_read || !msg.read_by?.includes(user.id))
@@ -149,12 +141,9 @@ export function V0MessagesScreen({ onOpenChat, selectedConversationId }: V0Messa
           }
         }));
 
-        // Transform data to match our interface
         const transformedConversations: Conversation[] = conversationsWithUnreadCount.map(conv => {
-          // Get the other participant ID
           const otherParticipantId = conv.participant_ids?.find((id: string) => id !== user.id);
           
-          // Handle business conversations differently
           if (conv.type === 'business') {
             return {
               id: conv.id,
@@ -173,7 +162,6 @@ export function V0MessagesScreen({ onOpenChat, selectedConversationId }: V0Messa
             };
           }
 
-          // Handle marketplace conversations
           if (conv.type === 'marketplace') {
             return {
               id: conv.id,
@@ -207,22 +195,11 @@ export function V0MessagesScreen({ onOpenChat, selectedConversationId }: V0Messa
           };
         });
 
-        // Debug unread counts
-        const totalUnreadMessages = transformedConversations.reduce((sum, conv) => sum + conv.unreadCount, 0);
-        const unreadChats = transformedConversations.filter(conv => conv.unreadCount > 0).length;
-        
-        // Debug each conversation's last message and unread status
-        transformedConversations.forEach(conv => {
-          const conversationData = conversationsData.find(c => c.id === conv.id);
-          const lastMessage = conversationData?.messages?.[conversationData.messages.length - 1]; // Last message in the array
-        });
-        
         setConversations(transformedConversations);
         
-        // Fetch participant details for each conversation
         const fetchParticipantDetails = async () => {
           const participantIds = transformedConversations
-            .filter(conv => conv.type !== 'business') // Skip business conversations as they have their own names
+            .filter(conv => conv.type !== 'business')
             .map(conv => conv.participantId)
             .filter(id => id !== user.id);
           
@@ -233,10 +210,8 @@ export function V0MessagesScreen({ onOpenChat, selectedConversationId }: V0Messa
               .in('id', participantIds);
             
             if (!usersError && usersData) {
-              // Update conversations with participant details
               setConversations(prevConversations => 
                 prevConversations.map(conv => {
-                  // Skip business conversations as they already have proper names
                   if (conv.type === 'business') return conv;
                   
                   const participant = usersData.find(user => user.id === conv.participantId);
@@ -282,7 +257,6 @@ export function V0MessagesScreen({ onOpenChat, selectedConversationId }: V0Messa
     };
   }, [user]);
 
-  // Real-time subscription for message updates to refresh unread counts
   useEffect(() => {
     if (!user) return;
 
@@ -294,8 +268,7 @@ export function V0MessagesScreen({ onOpenChat, selectedConversationId }: V0Messa
         table: 'messages',
         filter: `read_by.cs.{${user.id}}`
       }, (payload) => {
-        // Refresh conversations to update unread counts
-        // Note: This would need to be implemented to refresh the conversations list
+        // TODO: Refresh conversations to update unread counts
       })
       .subscribe();
 
@@ -304,7 +277,6 @@ export function V0MessagesScreen({ onOpenChat, selectedConversationId }: V0Messa
     };
   }, [user]);
 
-  // Handle selected conversation ID
   useEffect(() => {
     if (selectedConversationId && conversations.length > 0) {
       const conversation = conversations.find(conv => conv.id === selectedConversationId);
@@ -312,12 +284,10 @@ export function V0MessagesScreen({ onOpenChat, selectedConversationId }: V0Messa
         setSelectedConversation(conversation);
       }
     } else {
-      // Clear selected conversation when no selectedConversationId
       setSelectedConversation(null);
     }
   }, [selectedConversationId, conversations]);
 
-  // Clear selected conversation when component mounts without selectedConversationId
   useEffect(() => {
     if (!selectedConversationId) {
       setSelectedConversation(null);
@@ -329,8 +299,6 @@ export function V0MessagesScreen({ onOpenChat, selectedConversationId }: V0Messa
     const matchesTab = (conv: Conversation) => {
       if (activeTab === "all") return true;
       if (activeTab === "friends") {
-        // For friends tab, show conversations that are NOT marketplace or business
-        // This includes general friend conversations and any conversation without specific context
         return conv.type !== "marketplace" && conv.type !== "business";
       }
       if (activeTab === "marketplace" && conv.type === "marketplace") return true;

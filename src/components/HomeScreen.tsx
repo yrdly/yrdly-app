@@ -11,11 +11,11 @@ import { EmptyFeed } from "@/components/EmptyFeed";
 import { CreatePostDialog } from "@/components/CreatePostDialog";
 import { PostCard } from "@/components/PostCard";
 
-interface V0HomeScreenProps {
+interface HomeScreenProps {
   onViewProfile?: (user: any) => void;
 }
 
-export function V0HomeScreen({ onViewProfile }: V0HomeScreenProps) {
+export function HomeScreen({ onViewProfile }: HomeScreenProps) {
   const { user, profile } = useAuth();
   const { triggerHaptic } = useHaptics();
   const { posts, loading, refreshPosts, deletePost, createPost } = usePosts();
@@ -24,7 +24,10 @@ export function V0HomeScreen({ onViewProfile }: V0HomeScreenProps) {
 
   return (
     <div className="p-3 sm:p-4 space-y-3 sm:space-y-4 pb-20 sm:pb-24 max-w-2xl mx-auto">
- 
+      {/* Email verification banner removed - users verify during registration */}
+
+      {/* Welcome banner removed as requested */}
+
       {/* Create Post Card */}
       <Card className="p-3 sm:p-4 yrdly-shadow">
         <div className="flex items-center gap-2 sm:gap-3">

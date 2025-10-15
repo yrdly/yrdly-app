@@ -4,7 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/use-supabase-auth";
-import { V0ProfileScreen } from "@/components/V0ProfileScreen";
+import { ProfileScreen } from "@/components/ProfileScreen";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -120,7 +120,7 @@ export default function UserProfilePage() {
           Back
         </Button>
       </div>
-      <V0ProfileScreen 
+      <ProfileScreen 
         targetUserId={params.userId as string}
         targetUser={targetUser}
         isOwnProfile={false}

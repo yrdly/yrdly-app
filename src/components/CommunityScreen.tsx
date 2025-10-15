@@ -30,7 +30,7 @@ import { CommentSection } from "./CommentSection";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import Image from "next/image";
 
-interface V0CommunityScreenProps {
+interface CommunityScreenProps {
   className?: string;
 }
 
@@ -58,7 +58,7 @@ const PostSkeleton = () => (
   </Card>
 );
 
-export function V0CommunityScreen({ className }: V0CommunityScreenProps) {
+export function CommunityScreen({ className }: CommunityScreenProps) {
   const { user: currentUser, profile } = useAuth();
   const router = useRouter();
   const { toast } = useToast();

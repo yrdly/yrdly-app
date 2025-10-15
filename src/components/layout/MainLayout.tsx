@@ -27,11 +27,11 @@ import { supabase } from "@/lib/supabase";
 import type { User } from "@/types";
 import Image from "next/image";
 
-interface V0MainLayoutProps {
+interface MainLayoutProps {
   children: React.ReactNode;
 }
 
-export function V0MainLayout({ children }: V0MainLayoutProps) {
+export function MainLayout({ children }: MainLayoutProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, profile } = useAuth();

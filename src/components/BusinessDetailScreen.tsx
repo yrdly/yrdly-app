@@ -13,19 +13,19 @@ import { useAuth } from "@/hooks/use-supabase-auth";
 import Image from "next/image";
 import { shortenAddress } from "@/lib/utils";
 
-interface V0BusinessDetailScreenProps {
+interface BusinessDetailScreenProps {
   business: Business;
   onBack: () => void;
   onMessageOwner: (business: Business, item?: CatalogItem) => void;
   onViewCatalogItem: (item: CatalogItem) => void;
 }
 
-export function V0BusinessDetailScreen({
+export function BusinessDetailScreen({
   business,
   onBack,
   onMessageOwner,
   onViewCatalogItem,
-}: V0BusinessDetailScreenProps) {
+}: BusinessDetailScreenProps) {
   const [activeTab, setActiveTab] = useState("catalog");
   const [catalogItems, setCatalogItems] = useState<CatalogItem[]>([]);
   const [reviews, setReviews] = useState<any[]>([]);

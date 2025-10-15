@@ -1,7 +1,7 @@
 
 "use client";
 
-import { V0ConversationScreen } from "@/components/V0ConversationScreen";
+import { ConversationScreen } from "@/components/ConversationScreen";
 import { useParams } from 'next/navigation';
 
 // Force dynamic rendering to avoid prerender issues
@@ -12,5 +12,5 @@ export default function ConversationPage() {
     const conversationId = params?.convId as string;
     
     
-    return <V0ConversationScreen conversationId={conversationId} />;
+    return <ConversationScreen conversationId={conversationId} />;
 }

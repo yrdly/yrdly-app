@@ -17,12 +17,12 @@ import { supabase } from "@/lib/supabase";
 import type { Post as PostType } from "@/types";
 import Image from "next/image";
 
-interface V0MarketplaceScreenProps {
+interface MarketplaceScreenProps {
   onItemClick?: (item: PostType) => void;
   onMessageSeller?: (item: PostType) => void;
 }
 
-export function V0MarketplaceScreen({ onItemClick, onMessageSeller }: V0MarketplaceScreenProps) {
+export function MarketplaceScreen({ onItemClick, onMessageSeller }: MarketplaceScreenProps) {
   const { user } = useAuth();
   const router = useRouter();
   const [items, setItems] = useState<PostType[]>([]);

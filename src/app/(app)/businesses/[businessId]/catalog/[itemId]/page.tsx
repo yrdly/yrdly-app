@@ -1,6 +1,6 @@
 "use client";
 
-import { V0CatalogItemScreen } from "@/components/V0CatalogItemScreen";
+import { CatalogItemScreen } from "@/components/CatalogItemScreen";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
@@ -122,7 +122,7 @@ export default function CatalogItemPage() {
   }
 
   return (
-    <V0CatalogItemScreen
+    <CatalogItemScreen
       business={business}
       item={catalogItem}
       onBack={handleBack}

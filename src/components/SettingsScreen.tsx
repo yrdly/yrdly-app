@@ -26,11 +26,11 @@ import { useAuth } from "@/hooks/use-supabase-auth";
 import { useTheme } from "@/components/ThemeProvider";
 import { TawkChat } from "@/components/TawkChat";
 
-interface V0SettingsScreenProps {
+interface SettingsScreenProps {
   onBack?: () => void;
 }
 
-export function V0SettingsScreen({ onBack }: V0SettingsScreenProps) {
+export function SettingsScreen({ onBack }: SettingsScreenProps) {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
   const { user, profile, signOut, updateProfile } = useAuth();

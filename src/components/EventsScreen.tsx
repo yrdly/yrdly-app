@@ -29,7 +29,7 @@ import { CreateEventDialog } from "@/components/CreateEventDialog";
 import { formatDistanceToNowStrict } from 'date-fns';
 import { sendEventConfirmationEmail } from "@/lib/email-actions";
 
-interface V0EventsScreenProps {
+interface EventsScreenProps {
   className?: string;
 }
 
@@ -207,7 +207,7 @@ function EventCard({ event, onLike, onComment, onShare, onClick, onRSVP, isRSVPL
   );
 }
 
-export function V0EventsScreen({ className }: V0EventsScreenProps) {
+export function EventsScreen({ className }: EventsScreenProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const { triggerHaptic } = useHaptics();

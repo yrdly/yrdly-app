@@ -10,19 +10,19 @@ import { useState } from "react";
 import { useAuth } from "@/hooks/use-supabase-auth";
 import Image from "next/image";
 
-interface V0CatalogItemScreenProps {
+interface CatalogItemScreenProps {
   business: Business;
   item: CatalogItem;
   onBack: () => void;
   onMessageOwner: (item?: CatalogItem) => void;
 }
 
-export function V0CatalogItemScreen({
+export function CatalogItemScreen({
   business,
   item,
   onBack,
   onMessageOwner,
-}: V0CatalogItemScreenProps) {
+}: CatalogItemScreenProps) {
   const { user } = useAuth();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 

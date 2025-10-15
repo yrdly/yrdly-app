@@ -1,11 +1,11 @@
 
 "use client";
 
-import { V0EventsScreen } from "@/components/V0EventsScreen";
+import { EventsScreen } from "@/components/EventsScreen";
 
 // Force dynamic rendering to avoid prerender issues
 export const dynamic = 'force-dynamic';
 
 export default function EventsPage() {
-  return <V0EventsScreen />;
+  return <EventsScreen />;
 }

@@ -13,7 +13,7 @@ import { useDeepLinking } from '@/hooks/use-deep-linking';
 import { ServiceWorkerRegistration } from '@/components/ServiceWorkerRegistration';
 import { OfflineStatus } from '@/components/OfflineStatus';
 import { OnboardingGuard } from '@/components/OnboardingGuard';
-import { V0MainLayout } from '@/components/layout/V0MainLayout';
+import { MainLayout } from '@/components/layout/MainLayout';
 import { onlineStatusService } from '@/lib/online-status';
 import { UserActivityService } from '@/lib/user-activity-service';
 
@@ -68,9 +68,9 @@ function ProtectedLayout({ children }: { children: React.ReactNode }) {
     <OnboardingGuard>
       <ServiceWorkerRegistration />
       <PushNotificationManager />
-      <V0MainLayout>
+      <MainLayout>
         {children}
-      </V0MainLayout>
+      </MainLayout>
       {/* Offline Status Component */}
       <OfflineStatus />
     </OnboardingGuard>

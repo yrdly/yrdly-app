@@ -1,10 +1,10 @@
 "use client";
 
-import { V0EditProfileScreen } from "@/components/V0EditProfileScreen";
+import { EditProfileScreen } from "@/components/EditProfileScreen";
 
 // Force dynamic rendering to avoid prerender issues
 export const dynamic = 'force-dynamic';
 
 export default function ProfilePage() {
-    return <V0EditProfileScreen />;
+    return <EditProfileScreen />;
 }

@@ -1,7 +1,7 @@
 
 "use client";
 
-import { V0MarketplaceScreen } from "@/components/V0MarketplaceScreen";
+import { MarketplaceScreen } from "@/components/MarketplaceScreen";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-supabase-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -91,7 +91,7 @@ export default function MarketplacePage() {
   };
 
   return (
-    <V0MarketplaceScreen 
+    <MarketplaceScreen 
       onItemClick={handleItemClick}
       onMessageSeller={handleMessageSeller}
     />

@@ -50,7 +50,7 @@ export function EventCard({ event }: EventCardProps) {
   useEffect(() => {
     if (!event.id) return;
     
-    // Set up real-time subscription for event updates
+    // Keep track of who's coming to this event in real-time
     const channel = supabase
       .channel(`event_${event.id}`)
       .on('postgres_changes', {
@@ -85,7 +85,6 @@ export function EventCard({ event }: EventCardProps) {
 
     try {
       if (isAttending) {
-        // Remove user from attendees array
         const { error } = await supabase
           .from('posts')
           .update({ 
@@ -100,7 +99,6 @@ export function EventCard({ event }: EventCardProps) {
           description: "You're no longer interested in this event.",
         });
       } else {
-        // Add user to attendees array
         const { error } = await supabase
           .from('posts')
           .update({ 
@@ -110,10 +108,10 @@ export function EventCard({ event }: EventCardProps) {
         
         if (error) throw error;
         
-        // Send confirmation email to the attendee (the person who just RSVP'd)
+        // Send them a nice confirmation email
         if (user.email) {
           const emailResult = await sendEventConfirmationEmail({
-            attendeeEmail: user.email, // Send to the person attending, not the event creator
+            attendeeEmail: user.email,
             attendeeName: user.user_metadata?.name || user.email?.split('@')[0] || 'User',
             eventName: event.title || 'Event',
             eventDate: event.event_date,
@@ -173,7 +171,7 @@ export function EventCard({ event }: EventCardProps) {
   }
 
   const handleCardClick = (e: React.MouseEvent) => {
-    // Prevent navigation when clicking on interactive elements
+    // Don't open details if they clicked a button or link
     if ((e.target as HTMLElement).closest('a, button, [role="menu"]')) {
       return;
     }
@@ -192,7 +190,6 @@ export function EventCard({ event }: EventCardProps) {
             style={{ objectFit: "cover" }}
             data-ai-hint="event image"
           />
-          {/* Image count indicator for multiple images */}
           {event.image_urls && event.image_urls.length > 1 && (
             <div className="absolute top-2 right-2 bg-black/50 text-white px-2 py-1 rounded text-xs">
               +{event.image_urls.length - 1}
@@ -300,7 +297,6 @@ export function EventCard({ event }: EventCardProps) {
       </CardFooter>
     </Card>
 
-    {/* Event Detail View */}
     <EventDetail
       event={event}
       isOpen={isDetailOpen}
@@ -312,7 +308,6 @@ export function EventCard({ event }: EventCardProps) {
       onDeleteEvent={handleDelete}
     />
 
-    {/* Edit Event Dialog */}
     <CreateEventDialog 
       postToEdit={event}
       onOpenChange={setIsEditOpen}

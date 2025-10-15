@@ -1,6 +1,6 @@
 "use client";
 
-import { V0ProfileScreen } from "@/components/V0ProfileScreen";
+import { ProfileScreen } from "@/components/ProfileScreen";
 import { useAuth } from "@/hooks/use-supabase-auth";
 
 // Force dynamic rendering to avoid prerender issues
@@ -11,6 +11,6 @@ export default function ProfilePage() {
   
   // isOwnProfile is true when viewing own profile (no userId in route)
   // This page is for the logged-in user's own profile
-  return <V0ProfileScreen isOwnProfile={true} targetUserId={user?.id} />;
+  return <ProfileScreen isOwnProfile={true} targetUserId={user?.id} />;
 }
 

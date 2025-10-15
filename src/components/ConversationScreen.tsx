@@ -38,11 +38,11 @@ interface ChatMessage {
   is_read: boolean;
 }
 
-interface V0ConversationScreenProps {
+interface ConversationScreenProps {
   conversationId: string;
 }
 
-export function V0ConversationScreen({ conversationId }: V0ConversationScreenProps) {
+export function ConversationScreen({ conversationId }: ConversationScreenProps) {
   const { user, profile } = useAuth();
   const router = useRouter();
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -61,7 +61,6 @@ export function V0ConversationScreen({ conversationId }: V0ConversationScreenPro
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messageInputRef = useRef<HTMLInputElement>(null);
 
-  // Scroll to bottom when new messages arrive
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, []);
@@ -70,7 +69,6 @@ export function V0ConversationScreen({ conversationId }: V0ConversationScreenPro
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
-  // Fetch conversations and participants
   useEffect(() => {
     if (!user) return;
 
@@ -89,7 +87,6 @@ export function V0ConversationScreen({ conversationId }: V0ConversationScreenPro
 
         setConversations(conversationsData || []);
 
-        // Find the selected conversation
         const conversation = conversationsData?.find(conv => conv.id === conversationId);
         if (conversation) {
           setSelectedConversation(conversation);
@@ -102,7 +99,6 @@ export function V0ConversationScreen({ conversationId }: V0ConversationScreenPro
     fetchConversations();
   }, [user, conversationId]);
 
-  // Fetch participants
   useEffect(() => {
     if (!selectedConversation) return;
 
@@ -138,7 +134,6 @@ export function V0ConversationScreen({ conversationId }: V0ConversationScreenPro
     fetchParticipants();
   }, [selectedConversation]);
 
-  // Fetch messages
   useEffect(() => {
     if (!selectedConversation) return;
 
@@ -165,13 +160,11 @@ export function V0ConversationScreen({ conversationId }: V0ConversationScreenPro
     fetchMessages();
   }, [selectedConversation]);
 
-  // Mark all messages as read when conversation is opened
   useEffect(() => {
     if (!selectedConversation || !user) return;
 
     const markMessagesAsRead = async () => {
       try {
-        // First, get all unread messages in this conversation
         const { data: unreadMessages, error: fetchError } = await supabase
           .from('messages')
           .select('id, read_by')
@@ -185,10 +178,9 @@ export function V0ConversationScreen({ conversationId }: V0ConversationScreenPro
         }
 
         if (!unreadMessages || unreadMessages.length === 0) {
-          return; // No unread messages to mark
+          return;
         }
 
-        // Update each message to mark as read and add user to read_by array
         for (const message of unreadMessages) {
           const currentReadBy = message.read_by || [];
           const updatedReadBy = [...currentReadBy, user.id];
@@ -206,7 +198,6 @@ export function V0ConversationScreen({ conversationId }: V0ConversationScreenPro
           }
         }
 
-        // Update conversation's unread count to 0
         const { error: conversationUpdateError } = await supabase
           .from('conversations')
           .update({ 
@@ -217,8 +208,6 @@ export function V0ConversationScreen({ conversationId }: V0ConversationScreenPro
 
         if (conversationUpdateError) {
           console.error('Error updating conversation unread count:', conversationUpdateError);
-        } else {
-          console.log('✅ Conversation unread count updated to 0');
         }
 
       } catch (error) {
@@ -229,7 +218,6 @@ export function V0ConversationScreen({ conversationId }: V0ConversationScreenPro
     markMessagesAsRead();
   }, [selectedConversation, user]);
 
-  // Real-time subscription for messages
   useEffect(() => {
     if (!selectedConversation) return;
 
