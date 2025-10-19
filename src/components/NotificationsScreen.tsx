@@ -223,6 +223,23 @@ export function NotificationsScreen({ className }: NotificationsScreenProps) {
 
         setNotifications(formattedNotifications);
         setLoading(false);
+
+        // Mark all notifications as read when the screen is opened
+        const unreadNotifications = formattedNotifications.filter(n => !n.is_read);
+        if (unreadNotifications.length > 0) {
+          const unreadIds = unreadNotifications.map(n => n.id);
+          await supabase
+            .from('notifications')
+            .update({ is_read: true })
+            .in('id', unreadIds);
+          
+          // Update local state
+          setNotifications(prev => 
+            prev.map(notif => 
+              unreadIds.includes(notif.id) ? { ...notif, is_read: true } : notif
+            )
+          );
+        }
       } catch (error) {
         console.error('Error fetching notifications:', error);
         setLoading(false);

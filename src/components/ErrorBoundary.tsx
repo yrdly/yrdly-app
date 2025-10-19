@@ -5,6 +5,8 @@ import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import * as Sentry from '@sentry/nextjs';
+import { trackComponentError } from '@/lib/sentry';
 
 interface Props {
   children: ReactNode;
@@ -47,13 +49,31 @@ export class ErrorBoundary extends Component<Props, State> {
       console.error('ErrorBoundary caught an error:', error, errorInfo);
     }
 
+    // Track error with Sentry
+    trackComponentError(error, {
+      component: 'ErrorBoundary',
+      props: {
+        hasCustomFallback: !!this.props.fallback,
+        hasCustomErrorHandler: !!this.props.onError,
+      },
+    });
+
+    // Also capture with Sentry directly for additional context
+    Sentry.captureException(error, {
+      contexts: {
+        react: {
+          componentStack: errorInfo.componentStack,
+        },
+      },
+      tags: {
+        error_boundary: true,
+      },
+    });
+
     // Call custom error handler if provided
     if (this.props.onError) {
       this.props.onError(error, errorInfo);
     }
-
-    // In production, you might want to send this to an error reporting service
-    // Example: Sentry.captureException(error, { extra: errorInfo });
   }
 
   handleRetry = () => {
@@ -129,6 +149,13 @@ export function useErrorHandler() {
     if (process.env.NODE_ENV === 'development') {
       console.error('Error caught by useErrorHandler:', error, errorInfo);
     }
-    // In production, you might want to send this to an error reporting service
+    
+    // Track error with Sentry
+    trackComponentError(error, {
+      component: 'useErrorHandler',
+      props: {
+        errorInfo,
+      },
+    });
   };
 }

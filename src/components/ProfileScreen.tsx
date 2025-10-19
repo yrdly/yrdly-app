@@ -28,6 +28,7 @@ import type { User, Post } from "@/types";
 import { FriendsList } from "./FriendsList";
 import { useToast } from "@/hooks/use-toast";
 import { shortenAddress } from "@/lib/utils";
+import { ActivityIndicator } from "@/components/ActivityIndicator";
 import Image from "next/image";
 
 interface ProfileScreenProps {
@@ -63,6 +64,37 @@ export function ProfileScreen({ onBack, user, isOwnProfile = true, targetUserId,
   
   // Determine if this is the user's own profile
   const actualIsOwnProfile = isOwnProfile !== undefined ? isOwnProfile : !isExternalProfile;
+
+  // Function to refresh profile data
+  const refreshProfileData = async () => {
+    if (!targetUser) return;
+    
+    try {
+      const { data: userData } = await supabase
+        .from('users')
+        .select('*, friends')
+        .eq('id', targetUser.id)
+        .single();
+
+      if (userData) {
+        const friendsCount = userData?.friends?.length || 0;
+        setStats(prev => ({
+          ...prev,
+          friends: friendsCount
+        }));
+        setProfileData(userData);
+      }
+    } catch (error) {
+      console.error('Error refreshing profile data:', error);
+    }
+  };
+
+  // Refresh profile data when target user changes
+  useEffect(() => {
+    if (targetUser) {
+      refreshProfileData();
+    }
+  }, [targetUser?.id]);
 
   useEffect(() => {
     if (!targetUser) return;
@@ -192,7 +224,7 @@ export function ProfileScreen({ onBack, user, isOwnProfile = true, targetUserId,
           try {
             const { data: userData } = await supabase
               .from('users')
-              .select('*')
+              .select('*, friends')
               .eq('id', targetUser.id)
               .single();
 
@@ -312,6 +344,10 @@ export function ProfileScreen({ onBack, user, isOwnProfile = true, targetUserId,
           .eq('id', targetUser.id);
 
         setIsFriend(false);
+        
+        // Refresh profile data to get accurate friends count
+        await refreshProfileData();
+        
         toast({
           title: "Friend Removed",
           description: `You are no longer friends with ${targetUser.name || 'this user'}.`,
@@ -484,9 +520,20 @@ export function ProfileScreen({ onBack, user, isOwnProfile = true, targetUserId,
 
             {/* User Info */}
             <div className="space-y-3">
-              <h3 className="text-3xl font-bold text-white">
-                {displayProfile?.name || (displayUser as any)?.name || "Unknown User"}
-              </h3>
+              <div className="flex items-center gap-3">
+                <h3 className="text-3xl font-bold text-white">
+                  {displayProfile?.name || (displayUser as any)?.name || "Unknown User"}
+                </h3>
+                {/* Activity Indicator */}
+                {!actualIsOwnProfile && targetUser && (
+                  <ActivityIndicator 
+                    userId={targetUser.id} 
+                    showText={true}
+                    size="md"
+                    className="text-slate-300"
+                  />
+                )}
+              </div>
               
               {/* Bio/Tagline */}
               {displayProfile?.bio && (
@@ -647,9 +694,13 @@ export function ProfileScreen({ onBack, user, isOwnProfile = true, targetUserId,
 
           <TabsContent value="posts" className="mt-6">
             {userPosts.length > 0 ? (
-              <div className="grid gap-4">
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {userPosts.map((post) => (
-                  <Card key={post.id} className="p-5 yrdly-shadow hover:shadow-lg transition-shadow duration-200">
+                  <Card 
+                    key={post.id} 
+                    className="p-5 yrdly-shadow hover:shadow-lg transition-all duration-200 cursor-pointer hover:scale-105"
+                    onClick={() => router.push(`/posts/${post.id}`)}
+                  >
                     <div className="space-y-3">
                       <div className="flex items-start justify-between">
                         <div className="flex-1 min-w-0">
@@ -663,7 +714,7 @@ export function ProfileScreen({ onBack, user, isOwnProfile = true, targetUserId,
                                 alt={post.text || post.title || "Post image"}
                                 width={400}
                                 height={200}
-                                className="w-full h-48 object-cover"
+                                className="w-full h-auto object-contain max-h-96"
                                 style={{ height: "auto" }}
                               />
                             </div>
@@ -719,9 +770,13 @@ export function ProfileScreen({ onBack, user, isOwnProfile = true, targetUserId,
 
           <TabsContent value="items" className="mt-6">
             {userItems.length > 0 ? (
-              <div className="grid gap-4">
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {userItems.map((item) => (
-                  <Card key={item.id} className="p-5 yrdly-shadow hover:shadow-lg transition-shadow duration-200">
+                  <Card 
+                    key={item.id} 
+                    className="p-5 yrdly-shadow hover:shadow-lg transition-all duration-200 cursor-pointer hover:scale-105"
+                    onClick={() => router.push(`/posts/${item.id}`)}
+                  >
                     <div className="flex items-start gap-4">
                       {item.image_urls && item.image_urls.length > 0 ? (
                         <div className="relative">
@@ -806,9 +861,13 @@ export function ProfileScreen({ onBack, user, isOwnProfile = true, targetUserId,
 
           <TabsContent value="businesses" className="mt-6">
             {userBusinesses.length > 0 ? (
-              <div className="grid gap-4">
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {userBusinesses.map((business) => (
-                  <Card key={business.id} className="p-5 yrdly-shadow hover:shadow-lg transition-shadow duration-200">
+                  <Card 
+                    key={business.id} 
+                    className="p-5 yrdly-shadow hover:shadow-lg transition-all duration-200 cursor-pointer hover:scale-105"
+                    onClick={() => router.push(`/businesses/${business.id}`)}
+                  >
                     <div className="flex items-start gap-4">
                       {business.image_urls && business.image_urls.length > 0 ? (
                         <div className="relative">
@@ -898,9 +957,13 @@ export function ProfileScreen({ onBack, user, isOwnProfile = true, targetUserId,
 
           <TabsContent value="events" className="mt-6">
             {userEvents.length > 0 ? (
-              <div className="grid gap-4">
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {userEvents.map((event) => (
-                  <Card key={event.id} className="p-5 yrdly-shadow hover:shadow-lg transition-shadow duration-200">
+                  <Card 
+                    key={event.id} 
+                    className="p-5 yrdly-shadow hover:shadow-lg transition-all duration-200 cursor-pointer hover:scale-105"
+                    onClick={() => router.push(`/posts/${event.id}`)}
+                  >
                     <div className="flex items-start gap-4">
                       {event.image_urls && event.image_urls.length > 0 ? (
                         <div className="relative">

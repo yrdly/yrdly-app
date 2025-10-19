@@ -264,7 +264,7 @@ export function CommentSection({ postId, onCommentCountChange, onClose }: Commen
             console.error('Error posting comment:', error);
             toast({ variant: 'destructive', title: 'Error', description: 'Could not post comment.' });
         }
-    }, [currentUser, userDetails, newComment, postId, replyingTo, toast, onCommentCountChange, authTimeout, loading]);
+    }, [currentUser, userDetails, newComment, postId, replyingTo, toast, onCommentCountChange]);
 
     const handleEditComment = useCallback(async (commentId: string) => {
         if (!currentUser || !editText.trim()) return;
@@ -410,6 +410,15 @@ export function CommentSection({ postId, onCommentCountChange, onClose }: Commen
                 .eq('id', commentId);
             
             if (error) throw error;
+            
+            // Update local state immediately for better UX
+            setComments(prev => 
+                prev.map(c => 
+                    c.id === commentId 
+                        ? { ...c, reactions: newReactions }
+                        : c
+                )
+            );
             
         } catch (error) {
             console.error('Error handling reaction:', error);

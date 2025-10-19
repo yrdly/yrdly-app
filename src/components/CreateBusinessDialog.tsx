@@ -467,7 +467,7 @@ const CreateBusinessDialogComponent = ({ children, postToEdit, onOpenChange }: C
       <DialogTrigger asChild>
         { children || <Trigger /> }
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[525px] p-0 flex flex-col max-h-[90vh]">
+      <DialogContent className="sm:max-w-[600px] lg:max-w-[700px] xl:max-w-[800px] p-0 flex flex-col max-h-[90vh]">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col h-full">
             <DialogHeader className="p-6 pb-0 flex-shrink-0">
@@ -477,7 +477,7 @@ const CreateBusinessDialogComponent = ({ children, postToEdit, onOpenChange }: C
               </DialogDescription>
             </DialogHeader>
             <div className="flex-1 overflow-y-auto p-6 min-h-0">
-                <div className="space-y-4 px-1 pb-4">
+                <div className="space-y-4 px-1 pb-4 max-w-4xl mx-auto">
                     <FormField
                         control={form.control}
                         name="name"

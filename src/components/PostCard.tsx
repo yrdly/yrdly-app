@@ -254,8 +254,42 @@ export function PostCard({ post, onDelete, onCreatePost }: PostCardProps) {
 
   const handleDelete = async () => {
     if (!currentUser || !post.id || currentUser.id !== post.user_id) return;
-    if (onDelete) {
-      await onDelete(post.id);
+    
+    try {
+      // Delete the post from the database
+      const { error } = await supabase
+        .from('posts')
+        .delete()
+        .eq('id', post.id);
+
+      if (error) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to delete post. Please try again.",
+        });
+        return;
+      }
+
+      // Also delete associated comments
+      await supabase
+        .from('comments')
+        .delete()
+        .eq('post_id', post.id);
+
+      toast({ title: "Post deleted successfully" });
+      
+      // Call the onDelete callback if provided
+      if (onDelete) {
+        await onDelete(post.id);
+      }
+    } catch (error) {
+      console.error('Error deleting post:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to delete post. Please try again.",
+      });
     }
   }
 
@@ -558,14 +592,16 @@ export function PostCard({ post, onDelete, onCreatePost }: PostCardProps) {
             <div className="px-3 pb-2">
               {post.image_urls.length === 1 ? (
                 <div 
-                  className="relative w-full aspect-video rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
+                  className="relative w-full rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
                   onClick={() => handleImageClick(0)}
                 >
                   <Image
                     src={post.image_urls[0]}
                     alt="Post image"
-                    fill
-                    className="object-cover"
+                    width={400}
+                    height={300}
+                    className="w-full h-auto object-contain max-h-96"
+                    style={{ height: "auto" }}
                   />
                 </div>
               ) : (

@@ -132,6 +132,9 @@ function NotificationItem({ notification, onMarkAsRead, onDelete }: {
           console.error('Error creating friend request accepted notification:', error);
         }
 
+        // Mark this notification as read
+        await onMarkAsRead(notification.id);
+
         toast({ title: "Friend request accepted!" });
       } catch (error) {
         console.error('Error accepting friend request:', error);
@@ -149,6 +152,9 @@ function NotificationItem({ notification, onMarkAsRead, onDelete }: {
 
         if (error) throw error;
 
+        // Mark this notification as read
+        await onMarkAsRead(notification.id);
+
         toast({ title: "Friend request declined." });
       } catch (error) {
         console.error('Error declining friend request:', error);
@@ -164,27 +170,27 @@ function NotificationItem({ notification, onMarkAsRead, onDelete }: {
     <div className={`p-3 border-b border-border last:border-b-0 hover:bg-muted/50 transition-colors ${!notification.is_read ? 'bg-primary/5' : ''}`}>
       <div className="flex items-start gap-3">
         {/* Icon */}
-        <div className="flex-shrink-0 mt-1">
+        <div className="flex-shrink-0 mt-1 w-5 h-5">
           <NotificationIcon type={notification.type} />
         </div>
 
         {/* Content */}
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
-            <div className="flex-1">
-              <h4 className="font-semibold text-sm text-foreground">{notification.title}</h4>
+            <div className="flex-1 min-w-0">
+              <h4 className="font-semibold text-sm text-foreground truncate">{notification.title}</h4>
               <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{notification.message}</p>
               
               {/* From User */}
               {notification.from_user_name && (
                 <div className="flex items-center gap-2 mt-2">
-                  <Avatar className="w-5 h-5">
+                  <Avatar className="w-5 h-5 flex-shrink-0">
                     <AvatarImage src={notification.from_user_avatar || "/placeholder.svg"} />
                     <AvatarFallback className="text-xs">
                       {notification.from_user_name.charAt(0)}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-xs text-muted-foreground truncate">
                     from {notification.from_user_name}
                   </span>
                 </div>
@@ -197,7 +203,7 @@ function NotificationItem({ notification, onMarkAsRead, onDelete }: {
             </div>
 
             {/* Actions */}
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 flex-shrink-0">
               {!notification.is_read && (
                 <Badge variant="destructive" className="text-xs px-1 py-0">
                   New

@@ -14,8 +14,8 @@ import { ServiceWorkerRegistration } from '@/components/ServiceWorkerRegistratio
 import { OfflineStatus } from '@/components/OfflineStatus';
 import { OnboardingGuard } from '@/components/OnboardingGuard';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { onlineStatusService } from '@/lib/online-status';
-import { UserActivityService } from '@/lib/user-activity-service';
+import { useActivityTracking } from '@/hooks/use-activity-tracking';
+import { setUserContext, clearUserContext, trackUserAction } from '@/lib/sentry';
 
 function ProtectedLayout({ children }: { children: React.ReactNode }) {
   const { user, profile, loading } = useAuth(); // Using Supabase auth
@@ -25,19 +25,30 @@ function ProtectedLayout({ children }: { children: React.ReactNode }) {
   // Initialize deep linking
   useDeepLinking();
 
-  // Initialize online status service and update user activity
+  // Initialize activity tracking
+  useActivityTracking();
+
+  // Set user context for Sentry
   useEffect(() => {
-    if (user) {
-      onlineStatusService.initialize(user.id);
+    if (user && profile) {
+      setUserContext({
+        id: user.id,
+        email: user.email,
+        name: profile.name,
+        avatar_url: profile.avatar_url,
+      });
       
-      // Update user activity when they visit the app
-      UserActivityService.updateUserActivity(user.id);
-      
-      return () => {
-        onlineStatusService.cleanup();
-      };
+      // Track user login
+      trackUserAction('user_logged_in', {
+        userId: user.id,
+        userEmail: user.email,
+      });
+    } else if (!loading && !user) {
+      // Clear user context on logout
+      clearUserContext();
+      trackUserAction('user_logged_out');
     }
-  }, [user]);
+  }, [user, profile, loading]);
 
   useEffect(() => {
     if (!loading && !user) {

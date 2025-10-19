@@ -11,6 +11,7 @@ import { useAuth } from "@/hooks/use-supabase-auth";
 import { supabase } from "@/lib/supabase";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
+import { ActivityIndicator } from "@/components/ActivityIndicator";
 import type { User } from "@/types";
 import Image from "next/image";
 
@@ -430,9 +431,11 @@ export function MessagesScreen({ onOpenChat, selectedConversationId }: MessagesS
                         {conversation.participantName.slice(0, 2).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
-                    {conversation.isOnline && (
-                      <div className="absolute -bottom-1 -right-1 w-3 h-3 sm:w-3.5 sm:h-3.5 bg-green-500 rounded-full border-2 border-white"></div>
-                    )}
+                    <ActivityIndicator 
+                      userId={conversation.participantId} 
+                      size="sm"
+                      className="absolute -bottom-1 -right-1"
+                    />
                     <div className="absolute -top-1 -right-1">
                       {conversation.type === "marketplace" && (
                         <div className="w-4 h-4 sm:w-5 sm:h-5 bg-accent text-accent-foreground rounded-full flex items-center justify-center">

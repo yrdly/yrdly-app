@@ -12,6 +12,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { ImagePlus, Send, MessageCircle, Users, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
+import { ActivityIndicator } from "@/components/ActivityIndicator";
+import { TypingIndicator, MultipleTypingIndicator } from "@/components/TypingIndicator";
+import { useTypingDetection } from "@/hooks/use-typing-detection";
 import type { User } from "@/types";
 import Image from "next/image";
 
@@ -54,12 +57,12 @@ export function ConversationScreen({ conversationId }: ConversationScreenProps) 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
-  const [editingMessage, setEditingMessage] = useState<string | null>(null);
-  const [editText, setEditText] = useState("");
-  const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messageInputRef = useRef<HTMLInputElement>(null);
+
+  // Typing detection
+  const { otherTypingUsers, handleTyping, stopTyping } = useTypingDetection(conversationId);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -325,10 +328,28 @@ export function ConversationScreen({ conversationId }: ConversationScreenProps) 
         })
         .eq('id', selectedConversation.id);
 
+      // Send notification to other participants
+      const otherParticipantIds = selectedConversation.participant_ids.filter(id => id !== user.id);
+      for (const participantId of otherParticipantIds) {
+        try {
+          const { NotificationTriggers } = await import('@/lib/notification-triggers');
+          await NotificationTriggers.onMessageSent(
+            participantId,
+            user.id,
+            selectedConversation.id,
+            newMessage.trim() || (imageUrl ? '📷 Photo' : '')
+          );
+        } catch (error) {
+          console.error('Error creating message notification:', error);
+        }
+      }
+
       setNewMessage("");
       setSelectedFile(null);
       setImagePreview(null);
-      setReplyingTo(null);
+      
+      // Stop typing when message is sent
+      stopTyping();
     } catch (error) {
       console.error('Error sending message:', error);
     } finally {
@@ -370,68 +391,6 @@ export function ConversationScreen({ conversationId }: ConversationScreenProps) 
     }
   }, []);
 
-  // Message editing functions
-  const startEditing = useCallback((messageId: string, currentText: string) => {
-    setEditingMessage(messageId);
-    setEditText(currentText);
-  }, []);
-
-  const cancelEditing = useCallback(() => {
-    setEditingMessage(null);
-    setEditText("");
-  }, []);
-
-  const saveEdit = useCallback(async (messageId: string) => {
-    if (!editText.trim()) return;
-
-    try {
-      const { error } = await supabase
-        .from('messages')
-        .update({ 
-          text: editText.trim(),
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', messageId);
-
-      if (error) {
-        console.error('Error updating message:', error);
-        return;
-      }
-
-      // Update local state
-      setMessages(prev => prev.map(msg => 
-        msg.id === messageId 
-          ? { ...msg, text: editText.trim(), updated_at: new Date().toISOString() }
-          : msg
-      ));
-
-      setEditingMessage(null);
-      setEditText("");
-    } catch (error) {
-      console.error('Error saving edit:', error);
-    }
-  }, [editText]);
-
-  const canEditMessage = useCallback((message: ChatMessage) => {
-    if (message.sender_id !== user?.id) return false;
-    
-    const messageTime = new Date(message.created_at);
-    const now = new Date();
-    const timeDiff = now.getTime() - messageTime.getTime();
-    const thirtyMinutes = 30 * 60 * 1000; // 30 minutes in milliseconds
-    
-    return timeDiff <= thirtyMinutes;
-  }, [user?.id]);
-
-  // Reply functions
-  const startReply = useCallback((message: ChatMessage) => {
-    setReplyingTo(message);
-    messageInputRef.current?.focus();
-  }, []);
-
-  const cancelReply = useCallback(() => {
-    setReplyingTo(null);
-  }, []);
 
   // Update user activity status
   const updateUserActivity = useCallback(async () => {
@@ -614,15 +573,19 @@ export function ConversationScreen({ conversationId }: ConversationScreenProps) 
             className="relative cursor-pointer hover:opacity-80 transition-opacity"
             onClick={() => router.push(`/profile/${otherParticipant.id}`)}
           >
-            <Avatar className="h-12 w-12 ring-2 ring-slate-200 dark:ring-slate-600">
-              <AvatarImage src={otherParticipant.avatar_url} alt={otherParticipant.name} />
-              <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-semibold">
-                {otherParticipant.name.charAt(0)}
-              </AvatarFallback>
-            </Avatar>
-            {otherParticipant.isOnline && (
-              <div className="absolute -bottom-1 -right-1 h-4 w-4 bg-green-500 border-2 border-white dark:border-slate-800 rounded-full" />
-            )}
+            <div className="relative">
+              <Avatar className="h-12 w-12 ring-2 ring-slate-200 dark:ring-slate-600">
+                <AvatarImage src={otherParticipant.avatar_url} alt={otherParticipant.name} />
+                <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-semibold">
+                  {otherParticipant.name.charAt(0)}
+                </AvatarFallback>
+              </Avatar>
+              <ActivityIndicator 
+                userId={otherParticipant.id} 
+                size="md"
+                className="absolute -bottom-1 -right-1"
+              />
+            </div>
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 truncate">
@@ -686,109 +649,46 @@ export function ConversationScreen({ conversationId }: ConversationScreenProps) 
                         />
                       </div>
                     )}
-                    {editingMessage === message.id ? (
-                      <div className="space-y-2">
-                        <textarea
-                          value={editText}
-                          onChange={(e) => setEditText(e.target.value)}
-                          className="w-full p-2 text-sm bg-white/10 border border-white/20 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-white/30"
-                          rows={2}
-                          autoFocus
-                        />
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => saveEdit(message.id)}
-                            className="px-3 py-1 bg-white/20 hover:bg-white/30 rounded text-xs transition-colors"
-                          >
-                            Save
-                          </button>
-                          <button
-                            onClick={cancelEditing}
-                            className="px-3 py-1 bg-white/10 hover:bg-white/20 rounded text-xs transition-colors"
-                          >
-                            Cancel
-                          </button>
-                        </div>
+                    <p className="text-sm break-words leading-relaxed">{message.text || message.content}</p>
+                    <div className="flex items-center justify-between mt-2">
+                      <div className="flex items-center gap-2">
+                        <p className="text-xs opacity-60">
+                          {new Date(message.created_at).toLocaleTimeString([], { 
+                            hour: '2-digit', 
+                            minute: '2-digit' 
+                          })}
+                        </p>
                       </div>
-                    ) : (
-                      <>
-                        <p className="text-sm break-words leading-relaxed">{message.text || message.content}</p>
-                        <div className="flex items-center justify-between mt-2">
-                          <div className="flex items-center gap-2">
-                            <p className="text-xs opacity-60">
-                              {new Date(message.created_at).toLocaleTimeString([], { 
-                                hour: '2-digit', 
-                                minute: '2-digit' 
-                              })}
-                            </p>
-                            {message.updated_at && message.updated_at !== message.created_at && (
-                              <span className="text-xs opacity-50 italic">edited</span>
-                            )}
-                          </div>
-                          {isOwnMessage && (
-                            <div className="flex items-center gap-1">
-                              <div className="w-1 h-1 bg-white/60 rounded-full"></div>
-                              <div className="w-1 h-1 bg-white/60 rounded-full"></div>
-                            </div>
-                          )}
-                        </div>
-                        <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                          {isOwnMessage && canEditMessage(message) && !message.image_url && (
-                            <button
-                              onClick={() => startEditing(message.id, message.text || message.content || '')}
-                              className="p-1 hover:bg-white/10 rounded"
-                              title="Edit message"
-                            >
-                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                              </svg>
-                            </button>
-                          )}
-                          <button
-                            onClick={() => startReply(message)}
-                            className="p-1 hover:bg-white/10 rounded"
-                            title="Reply to message"
-                          >
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
-                            </svg>
-                          </button>
-                        </div>
-                      </>
-                    )}
+                    </div>
                   </div>
                 </div>
               );
             })
           )}
+          
+          {/* Typing Indicator */}
+          {otherTypingUsers.length > 0 && (
+            <div className="px-2">
+              {otherTypingUsers.length === 1 ? (
+                <TypingIndicator 
+                  isVisible={true}
+                  userName={otherTypingUsers[0].user_name}
+                />
+              ) : (
+                <MultipleTypingIndicator 
+                  isVisible={true}
+                  userNames={otherTypingUsers.map(u => u.user_name)}
+                />
+              )}
+            </div>
+          )}
+          
           <div ref={messagesEndRef} />
         </div>
       </div>
 
       {/* Message Input - Fixed at bottom */}
       <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm flex-shrink-0">
-        {/* Reply Preview */}
-        {replyingTo && (
-          <div className="mb-3 p-3 bg-slate-100 dark:bg-slate-700 rounded-lg border-l-4 border-blue-500">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-xs font-medium text-blue-600 dark:text-blue-400">
-                Replying to {participants[replyingTo.sender_id]?.name || 'Unknown'}
-              </span>
-              <button
-                type="button"
-                onClick={cancelReply}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            <p className="text-sm text-slate-600 dark:text-slate-300 truncate">
-              {replyingTo.text || replyingTo.content || 'Image'}
-            </p>
-          </div>
-        )}
         
         <form onSubmit={handleSendMessage} className="flex items-end gap-2">
           <div className="flex-1 relative">
@@ -815,7 +715,10 @@ export function ConversationScreen({ conversationId }: ConversationScreenProps) 
             <Input
               ref={messageInputRef}
               value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
+              onChange={(e) => {
+                setNewMessage(e.target.value);
+                handleTyping(); // Detect typing
+              }}
               placeholder="Type a message..."
               className="pr-12"
               disabled={sending}

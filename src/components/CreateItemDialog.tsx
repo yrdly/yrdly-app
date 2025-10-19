@@ -44,7 +44,7 @@ import Image from "next/image";
 
 const getFormSchema = (isEditMode: boolean, postToEdit?: Post) => z.object({
   text: z.string().min(1, "Item title can't be empty.").max(100),
-  description: z.string().optional(),
+  description: z.string().min(1, "Item description is required.").max(1000),
   price: z.preprocess(
       (val) => (val === "" || val === null || val === undefined ? undefined : Number(val)),
       z.number().positive("Price must be positive.").optional()
@@ -230,7 +230,9 @@ const CreateItemDialogComponent = ({ children, postToEdit, onOpenChange, open: e
                                 name="description"
                                 render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Description (Optional)</FormLabel>
+                                    <FormLabel>
+                                        Description <span className="text-destructive">*</span>
+                                    </FormLabel>
                                     <FormControl>
                                     <Textarea
                                         placeholder="Add more details about the item, its condition, etc."
@@ -372,7 +374,9 @@ const CreateItemDialogComponent = ({ children, postToEdit, onOpenChange, open: e
                         name="description"
                         render={({ field }) => (
                         <FormItem>
-                            <FormLabel>Description (Optional)</FormLabel>
+                            <FormLabel>
+                                Description <span className="text-destructive">*</span>
+                            </FormLabel>
                             <FormControl>
                             <Textarea
                                 placeholder="Add more details about the item, its condition, etc."

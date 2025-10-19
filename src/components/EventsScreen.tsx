@@ -84,7 +84,7 @@ function EventCard({ event, onLike, onComment, onShare, onClick, onRSVP, isRSVPL
             alt={event.title || "Event image"}
             width={400}
             height={192}
-            className="w-full h-48 object-cover rounded-lg"
+            className="w-full h-auto object-contain max-h-96 rounded-lg"
             style={{ height: "auto" }}
           />
         </div>
