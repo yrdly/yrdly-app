@@ -372,6 +372,7 @@ export function ProfileScreen({ onBack, user, isOwnProfile = true, targetUserId,
           .insert({
             from_user_id: currentUser.id,
             to_user_id: targetUser.id,
+            participant_ids: [currentUser.id, targetUser.id].sort(),
             status: 'pending',
             created_at: new Date().toISOString(),
           });

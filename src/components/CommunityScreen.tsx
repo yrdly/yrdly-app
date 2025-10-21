@@ -352,6 +352,7 @@ export function CommunityScreen({ className }: CommunityScreenProps) {
           .insert({
             from_user_id: currentUser.id,
             to_user_id: userId,
+            participant_ids: [currentUser.id, userId].sort(),
             status: 'pending',
             created_at: new Date().toISOString(),
           });
