@@ -3,10 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 9002",
+    "dev": "next dev --turbo -p 9002",
+    "dev:webpack": "next dev -p 9002",
     "genkit:dev": "genkit start -- tsx src/ai/dev.ts",
     "genkit:watch": "genkit start -- tsx --watch src/ai/dev.ts",
-    "build": "next build",
+    "build": "next build --turbo",
+    "build:webpack": "next build",
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit"

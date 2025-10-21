@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/use-supabase-auth';
 import { DisputeService, DisputeData } from '@/lib/dispute-service';
 import { useToast } from '@/hooks/use-toast';
@@ -28,15 +28,6 @@ export default function DisputeManagementPage() {
   const [disputes, setDisputes] = useState<DisputeData[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!user) {
-      router.push('/signin');
-      return;
-    }
-
-    fetchDisputes();
-  }, [user, router, fetchDisputes]);
-
   const fetchDisputes = useCallback(async () => {
     try {
       const data = await DisputeService.getDisputesByUser(user!.id);
@@ -52,6 +43,15 @@ export default function DisputeManagementPage() {
       setLoading(false);
     }
   }, [user, toast]);
+
+  useEffect(() => {
+    if (!user) {
+      router.push('/signin');
+      return;
+    }
+
+    fetchDisputes();
+  }, [user, router, fetchDisputes]);
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {

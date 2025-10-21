@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-supabase-auth';
 import { DisputeService, DisputeData, DisputeEvidence } from '@/lib/dispute-service';
