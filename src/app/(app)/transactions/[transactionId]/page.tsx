@@ -88,9 +88,9 @@ export default function TransactionDetailsPage() {
     }
 
     fetchTransactionDetails();
-  }, [user, transactionId]);
+  }, [user, transactionId, router, fetchTransactionDetails]);
 
-  const fetchTransactionDetails = async () => {
+  const fetchTransactionDetails = useCallback(async () => {
     try {
       const data = await TransactionStatusService.getTransactionDetails(transactionId);
       setTransaction(data);
@@ -115,7 +115,7 @@ export default function TransactionDetailsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [transactionId, user, toast]);
 
   const handleStatusUpdate = async (action: 'shipped' | 'delivered' | 'completed') => {
     if (!user || !transaction) return;
@@ -274,7 +274,7 @@ export default function TransactionDetailsPage() {
             <AlertTriangle className="h-12 w-12 text-orange-500 mx-auto mb-4" />
             <h3 className="text-lg font-semibold mb-2">Transaction Not Found</h3>
             <p className="text-muted-foreground mb-4">
-              The transaction you're looking for doesn't exist or you don't have access to it.
+              The transaction you&apos;re looking for doesn&apos;t exist or you don&apos;t have access to it.
             </p>
             <Button onClick={() => router.push('/marketplace')}>
               Back to Marketplace

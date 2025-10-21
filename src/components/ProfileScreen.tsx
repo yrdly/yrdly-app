@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -66,7 +66,7 @@ export function ProfileScreen({ onBack, user, isOwnProfile = true, targetUserId,
   const actualIsOwnProfile = isOwnProfile !== undefined ? isOwnProfile : !isExternalProfile;
 
   // Function to refresh profile data
-  const refreshProfileData = async () => {
+  const refreshProfileData = useCallback(async () => {
     if (!targetUser) return;
     
     try {
@@ -87,14 +87,14 @@ export function ProfileScreen({ onBack, user, isOwnProfile = true, targetUserId,
     } catch (error) {
       console.error('Error refreshing profile data:', error);
     }
-  };
+  }, [targetUser]);
 
   // Refresh profile data when target user changes
   useEffect(() => {
     if (targetUser) {
       refreshProfileData();
     }
-  }, [targetUser?.id, refreshProfileData]);
+  }, [targetUser?.id, refreshProfileData, targetUser]);
 
   useEffect(() => {
     if (!targetUser) return;

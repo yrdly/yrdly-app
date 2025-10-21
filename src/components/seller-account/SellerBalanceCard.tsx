@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/use-supabase-auth';
 import { PayoutService, SellerBalance } from '@/lib/payout-service';
 import { useToast } from '@/hooks/use-toast';
@@ -30,9 +30,9 @@ export function SellerBalanceCard() {
     if (!user) return;
 
     fetchBalance();
-  }, [user]);
+  }, [user, fetchBalance]);
 
-  const fetchBalance = async () => {
+  const fetchBalance = useCallback(async () => {
     try {
       const data = await PayoutService.getSellerBalance(user!.id);
       setBalance(data);
@@ -46,7 +46,7 @@ export function SellerBalanceCard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, toast]);
 
   const handleViewPayouts = () => {
     router.push('/profile/payouts');

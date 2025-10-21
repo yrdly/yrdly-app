@@ -1,6 +1,0 @@
-<svg width="400" height="300" viewBox="0 0 400 300" fill="none" xmlns="http://www.w3.org/2000/svg">
-<rect width="400" height="300" fill="#F3F4F6"/>
-<path d="M200 150C200 165.464 187.464 180 172 180C156.536 180 144 165.464 144 150C144 134.536 156.536 122 172 122C187.464 122 200 134.536 200 150Z" fill="#9B9B9B"/>
-<path d="M172 140C172 137.791 173.791 136 176 136H188C190.209 136 192 137.791 192 140H172Z" fill="#9B9B9B"/>
-<text x="200" y="200" font-family="Arial, sans-serif" font-size="14" fill="#9B9B9B" text-anchor="middle">Event Image</text>
-</svg>

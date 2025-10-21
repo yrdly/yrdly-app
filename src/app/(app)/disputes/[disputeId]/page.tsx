@@ -37,16 +37,7 @@ export default function DisputeDetailsPage() {
 
   const disputeId = params.disputeId as string;
 
-  useEffect(() => {
-    if (!user) {
-      router.push('/signin');
-      return;
-    }
-
-    fetchDisputeDetails();
-  }, [user, disputeId]);
-
-  const fetchDisputeDetails = async () => {
+  const fetchDisputeDetails = useCallback(async () => {
     try {
       const data = await DisputeService.getDisputeDetails(disputeId);
       if (!data) {
@@ -69,7 +60,16 @@ export default function DisputeDetailsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [disputeId, toast, router]);
+
+  useEffect(() => {
+    if (!user) {
+      router.push('/signin');
+      return;
+    }
+
+    fetchDisputeDetails();
+  }, [user, disputeId, router, fetchDisputeDetails]);
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
@@ -247,18 +247,18 @@ export default function DisputeDetailsPage() {
               <div className="flex gap-4">
                 <div className="w-20 h-20 relative rounded-lg overflow-hidden">
                   <Image
-                    src={transaction.item?.[0]?.image_urls?.[0] || "/placeholder.svg"}
-                    alt={transaction.item?.[0]?.title || transaction.item?.[0]?.text || "Item"}
+                    src={transaction.item?.image_urls?.[0] || "/placeholder.svg"}
+                    alt={transaction.item?.title || transaction.item?.text || "Item"}
                     fill
                     className="object-cover"
                   />
                 </div>
                 <div className="flex-1">
                   <h3 className="font-semibold">
-                    {transaction.item?.[0]?.title || transaction.item?.[0]?.text || "Untitled Item"}
+                    {transaction.item?.title || transaction.item?.text || "Untitled Item"}
                   </h3>
                   <p className="text-sm text-muted-foreground">
-                    {transaction.item?.[0]?.text || "No description available"}
+                    {transaction.item?.text || "No description available"}
                   </p>
                   <p className="text-lg font-bold text-primary mt-2">
                     ₦{transaction.amount.toLocaleString()}

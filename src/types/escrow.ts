@@ -44,6 +44,8 @@ export interface EscrowTransaction {
   completedAt?: Date;
   disputeReason?: string;
   disputeResolvedAt?: Date;
+  paymentReference?: string;
+  flutterwaveTxRef?: string;
 }
 
 export interface EscrowStats {

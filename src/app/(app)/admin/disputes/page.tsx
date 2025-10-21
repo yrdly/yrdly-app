@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/use-supabase-auth';
 import { DisputeService, DisputeData } from '@/lib/dispute-service';
 import { useToast } from '@/hooks/use-toast';
@@ -33,18 +33,7 @@ export default function AdminDisputesPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
 
-  useEffect(() => {
-    if (!user) {
-      router.push('/signin');
-      return;
-    }
-
-    // TODO: Add admin role check
-    // For now, we'll allow any user to access this page
-    fetchDisputes();
-  }, [user, statusFilter]);
-
-  const fetchDisputes = async () => {
+  const fetchDisputes = useCallback(async () => {
     try {
       let data: DisputeData[] = [];
       
@@ -70,7 +59,18 @@ export default function AdminDisputesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [statusFilter, toast]);
+
+  useEffect(() => {
+    if (!user) {
+      router.push('/signin');
+      return;
+    }
+
+    // TODO: Add admin role check
+    // For now, we'll allow any user to access this page
+    fetchDisputes();
+  }, [user, statusFilter, router, fetchDisputes]);
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {

@@ -150,7 +150,7 @@ export function OpenDisputeDialog({ transactionId, children }: OpenDisputeDialog
             Open Dispute
           </DialogTitle>
           <DialogDescription>
-            Please provide details about the issue you're experiencing with this transaction.
+            Please provide details about the issue you&apos;re experiencing with this transaction.
           </DialogDescription>
         </DialogHeader>
 
@@ -267,7 +267,7 @@ export function OpenDisputeDialog({ transactionId, children }: OpenDisputeDialog
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription>
               <strong>Important:</strong> Opening a dispute will freeze the transaction funds until resolved. 
-              Please ensure you've tried to resolve the issue with the other party first.
+              Please ensure you&apos;ve tried to resolve the issue with the other party first.
             </AlertDescription>
           </Alert>
 

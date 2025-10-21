@@ -35,9 +35,9 @@ export default function PayoutHistoryPage() {
     }
 
     fetchPayouts();
-  }, [user]);
+  }, [user, router, fetchPayouts]);
 
-  const fetchPayouts = async () => {
+  const fetchPayouts = useCallback(async () => {
     try {
       const data = await PayoutService.getSellerPayoutHistory(user!.id);
       setPayouts(data);
@@ -51,7 +51,7 @@ export default function PayoutHistoryPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, toast]);
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
@@ -129,7 +129,7 @@ export default function PayoutHistoryPage() {
               <Wallet className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-semibold mb-2">No Payouts Yet</h3>
               <p className="text-muted-foreground mb-4">
-                You haven't received any payouts yet. Complete some sales to see your payout history here.
+                You haven&apos;t received any payouts yet. Complete some sales to see your payout history here.
               </p>
               <Button onClick={() => router.push('/marketplace')}>
                 Start Selling

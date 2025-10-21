@@ -35,9 +35,9 @@ export default function DisputeManagementPage() {
     }
 
     fetchDisputes();
-  }, [user]);
+  }, [user, router, fetchDisputes]);
 
-  const fetchDisputes = async () => {
+  const fetchDisputes = useCallback(async () => {
     try {
       const data = await DisputeService.getDisputesByUser(user!.id);
       setDisputes(data);
@@ -51,7 +51,7 @@ export default function DisputeManagementPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, toast]);
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
@@ -99,7 +99,7 @@ export default function DisputeManagementPage() {
         <div className="max-w-4xl mx-auto space-y-6">
           <div>
             <h1 className="text-2xl font-bold">My Disputes</h1>
-            <p className="text-muted-foreground">Disputes you've opened or are involved in</p>
+            <p className="text-muted-foreground">Disputes you&apos;ve opened or are involved in</p>
           </div>
           
           <div className="space-y-4">
@@ -128,7 +128,7 @@ export default function DisputeManagementPage() {
       <div className="max-w-4xl mx-auto space-y-6">
         <div>
           <h1 className="text-2xl font-bold">My Disputes</h1>
-          <p className="text-muted-foreground">Disputes you've opened or are involved in</p>
+          <p className="text-muted-foreground">Disputes you&apos;ve opened or are involved in</p>
         </div>
 
         {disputes.length === 0 ? (
@@ -137,7 +137,7 @@ export default function DisputeManagementPage() {
               <AlertTriangle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-semibold mb-2">No Disputes</h3>
               <p className="text-muted-foreground">
-                You haven't opened any disputes yet. If you have an issue with a transaction, 
+                You haven&apos;t opened any disputes yet. If you have an issue with a transaction, 
                 you can open a dispute from the transaction details page.
               </p>
             </CardContent>

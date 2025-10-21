@@ -24,8 +24,8 @@ export async function POST(request: NextRequest) {
         verificationResult.transactionReference!,
         EscrowStatus.PAID,
         {
-          paymentReference: transactionReference,
-          paidAt: new Date().toISOString(),
+          flutterwaveTxRef: transactionReference,
+          paidAt: new Date(),
         }
       );
 

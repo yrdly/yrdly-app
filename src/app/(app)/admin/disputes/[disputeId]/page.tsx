@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-supabase-auth';
 import { DisputeService, DisputeData, DisputeEvidence } from '@/lib/dispute-service';
@@ -47,16 +47,7 @@ export default function AdminDisputeReviewPage() {
 
   const disputeId = params.disputeId as string;
 
-  useEffect(() => {
-    if (!user) {
-      router.push('/signin');
-      return;
-    }
-
-    fetchDisputeDetails();
-  }, [user, disputeId]);
-
-  const fetchDisputeDetails = async () => {
+  const fetchDisputeDetails = useCallback(async () => {
     try {
       const data = await DisputeService.getDisputeDetails(disputeId);
       if (!data) {
@@ -83,7 +74,16 @@ export default function AdminDisputeReviewPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [disputeId, toast, router]);
+
+  useEffect(() => {
+    if (!user) {
+      router.push('/signin');
+      return;
+    }
+
+    fetchDisputeDetails();
+  }, [user, disputeId, router, fetchDisputeDetails]);
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
@@ -279,6 +279,25 @@ export default function AdminDisputeReviewPage() {
   const transaction = dispute.transaction;
   const totalAmount = transaction?.amount || 0;
 
+  if (!transaction) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Card className="w-full max-w-md">
+          <CardContent className="text-center p-6">
+            <AlertTriangle className="h-12 w-12 text-orange-500 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold mb-2">Transaction Not Found</h3>
+            <p className="text-muted-foreground mb-4">
+              The transaction associated with this dispute could not be found.
+            </p>
+            <Button onClick={() => router.push('/admin/disputes')}>
+              Back to Disputes
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background p-4">
       <div className="max-w-6xl mx-auto space-y-6">
@@ -306,18 +325,18 @@ export default function AdminDisputeReviewPage() {
                 <div className="flex gap-4">
                   <div className="w-20 h-20 relative rounded-lg overflow-hidden">
                     <Image
-                      src={transaction.item?.[0]?.image_urls?.[0] || "/placeholder.svg"}
-                      alt={transaction.item?.[0]?.title || transaction.item?.[0]?.text || "Item"}
+                      src={transaction.item?.image_urls?.[0] || "/placeholder.svg"}
+                      alt={transaction.item?.title || transaction.item?.text || "Item"}
                       fill
                       className="object-cover"
                     />
                   </div>
                   <div className="flex-1">
                     <h3 className="font-semibold">
-                      {transaction.item?.[0]?.title || transaction.item?.[0]?.text || "Untitled Item"}
+                      {transaction.item?.title || transaction.item?.text || "Untitled Item"}
                     </h3>
                     <p className="text-sm text-muted-foreground">
-                      {transaction.item?.[0]?.text || "No description available"}
+                      {transaction.item?.text || "No description available"}
                     </p>
                     <p className="text-lg font-bold text-primary mt-2">
                       ₦{totalAmount.toLocaleString()}

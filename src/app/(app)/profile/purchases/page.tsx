@@ -35,9 +35,9 @@ export default function PurchaseHistoryPage() {
     }
 
     fetchPurchases();
-  }, [user]);
+  }, [user, router, fetchPurchases]);
 
-  const fetchPurchases = async () => {
+  const fetchPurchases = useCallback(async () => {
     try {
       const data = await ItemTrackingService.getUserPurchases(user!.id);
       setPurchases(data);
@@ -51,7 +51,7 @@ export default function PurchaseHistoryPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, toast]);
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
@@ -87,7 +87,7 @@ export default function PurchaseHistoryPage() {
         <div className="max-w-4xl mx-auto space-y-6">
           <div>
             <h1 className="text-2xl font-bold">Purchase History</h1>
-            <p className="text-muted-foreground">Items you've purchased</p>
+            <p className="text-muted-foreground">Items you&apos;ve purchased</p>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -112,7 +112,7 @@ export default function PurchaseHistoryPage() {
       <div className="max-w-4xl mx-auto space-y-6">
         <div>
           <h1 className="text-2xl font-bold">Purchase History</h1>
-          <p className="text-muted-foreground">Items you've purchased</p>
+          <p className="text-muted-foreground">Items you&apos;ve purchased</p>
         </div>
 
         {purchases.length === 0 ? (
@@ -121,7 +121,7 @@ export default function PurchaseHistoryPage() {
               <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-semibold mb-2">No Purchases Yet</h3>
               <p className="text-muted-foreground mb-4">
-                You haven't purchased any items yet. Start shopping in the marketplace!
+                You haven&apos;t purchased any items yet. Start shopping in the marketplace!
               </p>
               <Button onClick={() => router.push('/marketplace')}>
                 Browse Marketplace

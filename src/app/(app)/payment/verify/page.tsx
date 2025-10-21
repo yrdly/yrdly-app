@@ -36,9 +36,9 @@ export default function PaymentVerificationPage() {
     }
 
     verifyPayment();
-  }, [user, txRef, transactionRef]);
+  }, [user, txRef, transactionRef, router, verifyPayment]);
 
-  const verifyPayment = async () => {
+  const verifyPayment = useCallback(async () => {
     try {
       setVerificationStatus('loading');
       
@@ -68,7 +68,6 @@ export default function PaymentVerificationPage() {
       if (result.success) {
         setVerificationStatus('success');
         setTransactionId(result.transactionId);
-        setSuccessMessage(`Payment of ₦${result.amount?.toLocaleString()} verified successfully!`);
         
         toast({
           title: "Payment Successful",
@@ -88,7 +87,7 @@ export default function PaymentVerificationPage() {
       setVerificationStatus('error');
       setErrorMessage('An unexpected error occurred during verification');
     }
-  };
+  }, [transactionRef, txRef, toast, router]);
 
   const handleRetry = async () => {
     setIsRetrying(true);

@@ -37,9 +37,9 @@ export default function SoldItemsPage() {
     }
 
     fetchSoldItems();
-  }, [user]);
+  }, [user, router, fetchSoldItems]);
 
-  const fetchSoldItems = async () => {
+  const fetchSoldItems = useCallback(async () => {
     try {
       const data = await ItemTrackingService.getUserSoldItems(user!.id);
       setSoldItems(data);
@@ -57,7 +57,7 @@ export default function SoldItemsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, toast]);
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
@@ -93,7 +93,7 @@ export default function SoldItemsPage() {
         <div className="max-w-4xl mx-auto space-y-6">
           <div>
             <h1 className="text-2xl font-bold">Sold Items</h1>
-            <p className="text-muted-foreground">Items you've sold</p>
+            <p className="text-muted-foreground">Items you&apos;ve sold</p>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -118,7 +118,7 @@ export default function SoldItemsPage() {
       <div className="max-w-4xl mx-auto space-y-6">
         <div>
           <h1 className="text-2xl font-bold">Sold Items</h1>
-          <p className="text-muted-foreground">Items you've sold</p>
+          <p className="text-muted-foreground">Items you&apos;ve sold</p>
         </div>
 
         {/* Earnings Summary */}
@@ -151,7 +151,7 @@ export default function SoldItemsPage() {
               <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-semibold mb-2">No Items Sold Yet</h3>
               <p className="text-muted-foreground mb-4">
-                You haven't sold any items yet. Start listing items in the marketplace!
+                You haven&apos;t sold any items yet. Start listing items in the marketplace!
               </p>
               <Button onClick={() => router.push('/marketplace')}>
                 List an Item
