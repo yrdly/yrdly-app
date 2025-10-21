@@ -4,6 +4,7 @@ import { BusinessChatScreen } from "@/components/BusinessChatScreen";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/hooks/use-supabase-auth";
 import type { Business, CatalogItem } from "@/types";
 
 // Force dynamic rendering to avoid prerender issues
@@ -12,6 +13,7 @@ export const dynamic = 'force-dynamic';
 export default function ItemChatPage() {
   const params = useParams();
   const router = useRouter();
+  const { user } = useAuth();
   const businessId = params.businessId as string;
   const itemId = params.itemId as string;
   const [business, setBusiness] = useState<Business | null>(null);
@@ -86,6 +88,62 @@ export default function ItemChatPage() {
 
     fetchData();
   }, [businessId, itemId]);
+
+  // Create or get conversation entry for catalog item chat
+  useEffect(() => {
+    if (!business || !catalogItem || !user) return;
+
+    const createOrGetConversation = async () => {
+      try {
+        // Check if conversation already exists for this catalog item
+        const { data: existingConversations, error: fetchError } = await supabase
+          .from('conversations')
+          .select('id, participant_ids')
+          .contains('participant_ids', [user.id])
+          .eq('type', 'business')
+          .eq('business_id', businessId)
+          .eq('item_id', itemId);
+
+        if (fetchError) {
+          console.error('Error fetching catalog item conversations:', fetchError);
+          return;
+        }
+
+        if (!existingConversations || existingConversations.length === 0) {
+          // Create new business conversation with catalog item context
+          const { data: newConv, error: createError } = await supabase
+            .from('conversations')
+            .insert({
+              participant_ids: [user.id, business.owner_id],
+              type: 'business',
+              business_id: businessId,
+              business_name: business.name,
+              business_logo: business.logo,
+              item_id: itemId,
+              item_title: catalogItem.title,
+              item_image: catalogItem.images?.[0] || "/placeholder.svg",
+              item_price: catalogItem.price,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            })
+            .select('id')
+            .single();
+
+          if (createError) {
+            console.error('Error creating catalog item conversation:', createError);
+          } else {
+            console.log('Created catalog item conversation:', newConv.id);
+          }
+        } else {
+          console.log('Using existing catalog item conversation:', existingConversations[0].id);
+        }
+      } catch (error) {
+        console.error('Error in createOrGetConversation:', error);
+      }
+    };
+
+    createOrGetConversation();
+  }, [business, catalogItem, user, businessId, itemId]);
 
   const handleBack = () => {
     router.push(`/businesses/${businessId}/catalog/${itemId}`);

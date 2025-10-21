@@ -5,13 +5,33 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowLeft, Star, MapPin, Clock, Phone, MessageCircle, Share2, Heart } from "lucide-react";
+import { ArrowLeft, Star, MapPin, Clock, Phone, MessageCircle, Share2, Heart, MoreVertical, Edit, Trash2, Plus, Package } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Switch } from "@/components/ui/switch";
 import type { Business, CatalogItem } from "@/types";
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/use-supabase-auth";
 import Image from "next/image";
 import { shortenAddress } from "@/lib/utils";
+import { CreateCatalogItemDialog } from "@/components/CreateCatalogItemDialog";
+import { CatalogService } from "@/lib/catalog-service";
+import { useToast } from "@/hooks/use-toast";
 
 interface BusinessDetailScreenProps {
   business: Business;
@@ -30,7 +50,11 @@ export function BusinessDetailScreen({
   const [catalogItems, setCatalogItems] = useState<CatalogItem[]>([]);
   const [reviews, setReviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showOutOfStock, setShowOutOfStock] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const { user } = useAuth();
+  const { toast } = useToast();
+  const isOwner = user?.id === business.owner_id;
 
   useEffect(() => {
     const fetchCatalogItems = async () => {
@@ -102,6 +126,62 @@ export function BusinessDetailScreen({
       navigator.clipboard.writeText(window.location.href);
     }
   };
+
+  const refreshCatalog = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('catalog_items')
+        .select('*')
+        .eq('business_id', business.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setCatalogItems(data || []);
+    } catch (error) {
+      console.error('Error refreshing catalog:', error);
+    }
+  };
+
+  const handleToggleStock = async (itemId: string, currentStock: boolean) => {
+    try {
+      await CatalogService.toggleStockStatus(itemId, business.id, !currentStock);
+      await refreshCatalog();
+      toast({
+        title: "Success",
+        description: `Item marked as ${!currentStock ? 'in stock' : 'out of stock'}`,
+      });
+    } catch (error) {
+      console.error('Error toggling stock:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update stock status",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteItem = async (itemId: string) => {
+    try {
+      await CatalogService.deleteCatalogItem(itemId, business.id);
+      await refreshCatalog();
+      setItemToDelete(null);
+      toast({
+        title: "Success",
+        description: "Item deleted successfully",
+      });
+    } catch (error) {
+      console.error('Error deleting item:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete item",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const filteredCatalogItems = showOutOfStock
+    ? catalogItems
+    : catalogItems.filter(item => item.in_stock);
 
   return (
     <div className="flex flex-col h-full bg-background">
@@ -237,6 +317,42 @@ export function BusinessDetailScreen({
 
         <div className="flex-1 overflow-y-auto">
           <TabsContent value="catalog" className="p-4 mt-0">
+            {/* Owner Controls */}
+            {isOwner && (
+              <div className="mb-4 space-y-3">
+                <CreateCatalogItemDialog
+                  businessId={business.id}
+                  onSuccess={refreshCatalog}
+                >
+                  <Button className="w-full">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Catalog Item
+                  </Button>
+                </CreateCatalogItemDialog>
+                
+                {catalogItems.length > 0 && (
+                  <div className="flex items-center justify-between p-3 border rounded-lg">
+                    <span className="text-sm font-medium">Show Out of Stock Items</span>
+                    <Switch
+                      checked={showOutOfStock}
+                      onCheckedChange={setShowOutOfStock}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Customer Controls */}
+            {!isOwner && catalogItems.some(item => !item.in_stock) && (
+              <div className="mb-4 flex items-center justify-between p-3 border rounded-lg">
+                <span className="text-sm font-medium">Show Out of Stock Items</span>
+                <Switch
+                  checked={showOutOfStock}
+                  onCheckedChange={setShowOutOfStock}
+                />
+              </div>
+            )}
+
             {loading ? (
               <div className="grid grid-cols-2 gap-3">
                 {[...Array(4)].map((_, i) => (
@@ -249,15 +365,17 @@ export function BusinessDetailScreen({
                   </Card>
                 ))}
               </div>
-            ) : catalogItems.length > 0 ? (
+            ) : filteredCatalogItems.length > 0 ? (
               <div className="grid grid-cols-2 gap-3">
-                {catalogItems.map((item) => (
+                {filteredCatalogItems.map((item) => (
                   <Card
                     key={item.id}
-                    className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow"
-                    onClick={() => onViewCatalogItem(item)}
+                    className="overflow-hidden hover:shadow-lg transition-shadow relative"
                   >
-                    <div className="relative aspect-square bg-muted">
+                    <div 
+                      className="relative aspect-square bg-muted cursor-pointer"
+                      onClick={() => !isOwner && onViewCatalogItem(item)}
+                    >
                       <Image
                         src={item.images[0] || "/placeholder.svg"}
                         alt={item.title}
@@ -272,17 +390,100 @@ export function BusinessDetailScreen({
                       )}
                     </div>
                     <div className="p-3 space-y-1">
-                      <h4 className="font-semibold text-sm text-foreground truncate">{item.title}</h4>
-                      <p className="text-lg font-bold text-primary">₦{item.price.toLocaleString()}</p>
+                      <div className="flex items-start justify-between gap-2">
+                        <div 
+                          className="flex-1 cursor-pointer"
+                          onClick={() => !isOwner && onViewCatalogItem(item)}
+                        >
+                          <h4 className="font-semibold text-sm text-foreground truncate">{item.title}</h4>
+                          <p className="text-lg font-bold text-primary">₦{item.price.toLocaleString()}</p>
+                        </div>
+                        
+                        {/* Owner Controls */}
+                        {isOwner && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <CreateCatalogItemDialog
+                                businessId={business.id}
+                                itemToEdit={item}
+                                onSuccess={refreshCatalog}
+                              >
+                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                  <Edit className="mr-2 h-4 w-4" />
+                                  Edit
+                                </DropdownMenuItem>
+                              </CreateCatalogItemDialog>
+                              <DropdownMenuItem onClick={() => setItemToDelete(item.id)}>
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
+                      </div>
+
+                      {/* Stock Toggle for Owner */}
+                      {isOwner && (
+                        <div className="flex items-center justify-between pt-2 border-t">
+                          <span className="text-xs text-muted-foreground">In Stock</span>
+                          <Switch
+                            checked={item.in_stock}
+                            onCheckedChange={() => handleToggleStock(item.id, item.in_stock)}
+                            className="scale-75"
+                          />
+                        </div>
+                      )}
                     </div>
                   </Card>
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">No catalog items available yet.</p>
+              <div className="text-center py-12">
+                <Package className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                <p className="text-muted-foreground mb-4">
+                  {isOwner 
+                    ? "No catalog items yet. Add your first item to start selling!"
+                    : "No catalog items available yet."}
+                </p>
+                {isOwner && (
+                  <CreateCatalogItemDialog
+                    businessId={business.id}
+                    onSuccess={refreshCatalog}
+                  >
+                    <Button>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add First Item
+                    </Button>
+                  </CreateCatalogItemDialog>
+                )}
               </div>
             )}
+
+            {/* Delete Confirmation Dialog */}
+            <AlertDialog open={!!itemToDelete} onOpenChange={() => setItemToDelete(null)}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete Catalog Item?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete this catalog item.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => itemToDelete && handleDeleteItem(itemToDelete)}
+                    className="bg-destructive hover:bg-destructive/90"
+                  >
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </TabsContent>
 
           <TabsContent value="about" className="p-4 mt-0 space-y-4">

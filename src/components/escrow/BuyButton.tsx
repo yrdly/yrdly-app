@@ -6,6 +6,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { DeliverySelector } from './DeliverySelector';
 import { DeliveryOption, DeliveryDetails, PaymentMethod } from '@/types/escrow';
 import { EscrowService } from '@/lib/escrow-service';
+import { FlutterwaveService } from '@/lib/flutterwave-service';
+import { ItemTrackingService } from '@/lib/item-tracking-service';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-supabase-auth';
 
@@ -56,6 +58,18 @@ export function BuyButton({ itemId, itemTitle, price, sellerId, sellerName }: Bu
     setIsLoading(true);
 
     try {
+      // Check if item is still available
+      const isAvailable = await ItemTrackingService.isItemAvailable(itemId);
+      if (!isAvailable) {
+        toast({
+          title: "Item Sold",
+          description: "This item has already been sold.",
+          variant: "destructive",
+        });
+        setIsOpen(false);
+        return;
+      }
+
       // Create escrow transaction
       const transactionId = await EscrowService.createTransaction(
         itemId,
@@ -66,16 +80,23 @@ export function BuyButton({ itemId, itemTitle, price, sellerId, sellerName }: Bu
         deliveryDetails
       );
 
+      // Initialize Flutterwave payment
+      const paymentLink = await FlutterwaveService.initializePayment({
+        transactionId,
+        amount: price,
+        buyerEmail: user.email || '',
+        buyerName: user.user_metadata?.name || user.email?.split('@')[0] || 'Buyer',
+        itemTitle,
+        sellerName,
+      });
+
       toast({
-        title: "Success",
-        description: "Transaction created successfully! Redirecting to payment...",
+        title: "Redirecting to Payment",
+        description: "You will be redirected to complete your payment.",
       });
       
-      // Here you would integrate with your payment gateway (Paystack/Flutterwave)
-      // For now, we'll just close the dialog
-      setIsOpen(false);
-      
-      // TODO: Redirect to payment gateway
+      // Redirect to Flutterwave payment page
+      window.location.href = paymentLink;
       
     } catch (error) {
       console.error('Failed to create transaction:', error);

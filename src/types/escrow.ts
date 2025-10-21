@@ -15,18 +15,13 @@ export enum PaymentMethod {
 }
 
 export enum DeliveryOption {
-  FACE_TO_FACE = 'face_to_face',
-  PARTNERED_SERVICE = 'partnered_service',
-  OWN_LOGISTICS = 'own_logistics'
+  FACE_TO_FACE = 'face_to_face',      // Buyer and seller meet in person
+  SELLER_DELIVERY = 'seller_delivery'  // Seller uses their own rider/logistics
 }
 
 export interface DeliveryDetails {
   option: DeliveryOption;
-  address?: string;
-  meetingPoint?: string;
-  estimatedDelivery?: string;
-  trackingNumber?: string;
-  notes?: string;
+  notes?: string; // Any additional notes (optional)
 }
 
 export interface EscrowTransaction {

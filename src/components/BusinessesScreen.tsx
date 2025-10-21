@@ -64,6 +64,7 @@ function BusinessCard({ business }: { business: Business }) {
   const { toast } = useToast();
   const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
+  const isOwner = user?.id === business.owner_id;
 
   const handleDelete = async () => {
     try {
@@ -164,11 +165,17 @@ function BusinessCard({ business }: { business: Business }) {
       
       <CardHeader className="flex-row items-start justify-between">
         <div className="flex-1">
-          <CardTitle className="text-lg">{business.name}</CardTitle>
+          <div className="flex items-center gap-2 mb-1">
+            <CardTitle className="text-lg">{business.name}</CardTitle>
+            {isOwner && (
+              <Badge variant="secondary" className="bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
+                Your Business
+              </Badge>
+            )}
+          </div>
           <CardDescription>{business.category}</CardDescription>
-          {/* Rating would be added to Business type in the future */}
         </div>
-        {user?.id === business.owner_id && (
+        {isOwner && (
           <AlertDialog>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

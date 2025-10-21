@@ -40,7 +40,6 @@ import { useToast } from "@/hooks/use-toast";
 import { CommentSection } from "./CommentSection";
 import { timeAgo, formatPrice } from "@/lib/utils";
 import { useRouter } from "next/navigation";
-import { useHaptics } from "@/hooks/use-haptics";
 import { ImageSwiper } from "./ImageSwiper";
 
 
@@ -54,7 +53,6 @@ export function PostCard({ post, onDelete, onCreatePost }: PostCardProps) {
   const { user: currentUser } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
-  const { triggerHaptic } = useHaptics();
   const [author, setAuthor] = useState<User | null>(null);
   const [loadingAuthor, setLoadingAuthor] = useState(true);
   const [likes, setLikes] = useState(post.liked_by?.length || 0);
@@ -178,9 +176,6 @@ export function PostCard({ post, onDelete, onCreatePost }: PostCardProps) {
 
   const handleLike = async () => {
     if (!currentUser || !post.id) return;
-    
-    // Trigger haptic feedback
-    triggerHaptic('light');
     
     try {
       // Get current post data
@@ -308,9 +303,6 @@ export function PostCard({ post, onDelete, onCreatePost }: PostCardProps) {
   }
 
   const handleShare = async () => {
-    // Trigger haptic feedback
-    triggerHaptic('light');
-    
     const postUrl = `${window.location.origin}/posts/${post.id}`;
     const shareData = {
       title: `Post by ${author?.name || 'a user'} on Yrdly`,
@@ -337,9 +329,6 @@ export function PostCard({ post, onDelete, onCreatePost }: PostCardProps) {
   
     const handleMessageSeller = async () => {
         if (!currentUser || !author || currentUser.id === author.id) return;
-
-        // Trigger haptic feedback
-        triggerHaptic('medium');
 
         const sortedParticipantIds = [currentUser.id, author.id].sort();
         

@@ -158,7 +158,12 @@ export function MessagesScreen({ onOpenChat, selectedConversationId }: MessagesS
               isOnline: false,
               context: {
                 businessName: conv.business_name,
-                businessLogo: conv.business_logo
+                businessLogo: conv.business_logo,
+                // Include catalog item context if present
+                itemId: conv.item_id,
+                itemTitle: conv.item_title,
+                itemImage: conv.item_image,
+                itemPrice: conv.item_price
               }
             };
           }
@@ -463,7 +468,7 @@ export function MessagesScreen({ onOpenChat, selectedConversationId }: MessagesS
                           src={
                             conversation.type === "marketplace" 
                               ? (conversation.context?.itemImage || "/placeholder.svg")
-                              : (conversation.context?.businessLogo || "/placeholder.svg")
+                              : (conversation.context?.itemImage || conversation.context?.businessLogo || "/placeholder.svg")
                           }
                           alt=""
                           width={40}
@@ -474,10 +479,10 @@ export function MessagesScreen({ onOpenChat, selectedConversationId }: MessagesS
                           <p className="text-xs font-medium text-foreground truncate">
                             {conversation.type === "marketplace" 
                               ? (conversation.context?.itemTitle || "Item")
-                              : (conversation.context?.businessName || "Business")
+                              : (conversation.context?.itemTitle || conversation.context?.businessName || "Business")
                             }
                           </p>
-                          {conversation.type === "marketplace" && conversation.context?.itemPrice && (
+                          {(conversation.type === "marketplace" || (conversation.type === "business" && conversation.context?.itemPrice)) && conversation.context?.itemPrice && (
                             <p className="text-xs font-semibold text-primary">
                               ₦{conversation.context.itemPrice.toLocaleString()}
                             </p>

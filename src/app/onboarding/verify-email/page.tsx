@@ -16,7 +16,6 @@ import { onboardingAnalytics } from '@/lib/onboarding-analytics';
 import { supabase } from '@/lib/supabase';
 import { OnboardingProgress } from '@/components/onboarding/OnboardingProgress';
 import { LoadingState } from '@/components/onboarding/LoadingState';
-import { useHaptics } from '@/hooks/use-haptics';
 
 function VerifyEmailContent() {
   const { user, profile, loading } = useAuth();
@@ -24,7 +23,6 @@ function VerifyEmailContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
-  const { triggerHaptic } = useHaptics();
   
   const [isResending, setIsResending] = useState(false);
   const [lastSentTime, setLastSentTime] = useState<number | null>(null);
@@ -177,7 +175,6 @@ function VerifyEmailContent() {
       setCheckRetryCount(0);
     }
     
-    triggerHaptic('light');
     setIsChecking(true);
     setLastCheckTime(now);
     setCheckRetryCount(prev => prev + 1);
@@ -213,7 +210,7 @@ function VerifyEmailContent() {
     } finally {
       setIsChecking(false);
     }
-  }, [user, loading, triggerHaptic, updateOnboardingStatus, toast, router, checkRetryCount, lastCheckTime]);
+  }, [user, loading, updateOnboardingStatus, toast, router, checkRetryCount, lastCheckTime]);
 
   // Visibility detection for auto-check (with debounce)
   useEffect(() => {
@@ -251,7 +248,6 @@ function VerifyEmailContent() {
   const handleResendVerification = async () => {
     if (!user || cooldownTime > 0 || loading) return;
 
-    triggerHaptic('medium');
     setIsResending(true);
     setError(null);
     
@@ -313,14 +309,12 @@ function VerifyEmailContent() {
   };
 
   const handleRetry = () => {
-    triggerHaptic('light');
     setError(null);
     setRetryCount(0);
     handleResendVerification();
   };
 
   const handleContactSupport = () => {
-    triggerHaptic('light');
     // Open support contact (could be email, chat, etc.)
     window.open('mailto:support@yrdly.com?subject=Email Verification Issue', '_blank');
   };

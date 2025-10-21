@@ -91,6 +91,7 @@ export function MarketplaceScreen({ onItemClick, onMessageSeller }: MarketplaceS
             )
           `)
           .eq('category', 'For Sale')
+          .eq('is_sold', false)
           .order('timestamp', { ascending: false });
 
         if (error) {

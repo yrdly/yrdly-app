@@ -9,7 +9,6 @@ import Image from 'next/image';
 import { APIProvider } from '@vis.gl/react-google-maps';
 import { UserProfileDialog } from '@/components/UserProfileDialog';
 import type { User } from '@/types';
-import { useDeepLinking } from '@/hooks/use-deep-linking';
 import { ServiceWorkerRegistration } from '@/components/ServiceWorkerRegistration';
 import { OfflineStatus } from '@/components/OfflineStatus';
 import { OnboardingGuard } from '@/components/OnboardingGuard';
@@ -22,9 +21,6 @@ function ProtectedLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [profileUser, setProfileUser] = useState<User | null>(null);
   
-  // Initialize deep linking
-  useDeepLinking();
-
   // Initialize activity tracking
   useActivityTracking();
 

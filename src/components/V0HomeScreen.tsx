@@ -5,7 +5,6 @@ import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/use-supabase-auth";
 import { usePosts } from "@/hooks/use-posts";
-import { useHaptics } from "@/hooks/use-haptics";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyFeed } from "@/components/EmptyFeed";
 import { CreatePostDialog } from "@/components/CreatePostDialog";
@@ -17,7 +16,6 @@ interface V0HomeScreenProps {
 
 export function V0HomeScreen({ onViewProfile }: V0HomeScreenProps) {
   const { user, profile } = useAuth();
-  const { triggerHaptic } = useHaptics();
   const { posts, loading, refreshPosts, deletePost, createPost } = usePosts();
 
 

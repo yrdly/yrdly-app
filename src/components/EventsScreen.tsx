@@ -20,7 +20,6 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-supabase-auth";
 import { useToast } from "@/hooks/use-toast";
-import { useHaptics } from "@/hooks/use-haptics";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Image from "next/image";
@@ -210,7 +209,6 @@ function EventCard({ event, onLike, onComment, onShare, onClick, onRSVP, isRSVPL
 export function EventsScreen({ className }: EventsScreenProps) {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { triggerHaptic } = useHaptics();
   const router = useRouter();
   const [events, setEvents] = useState<PostType[]>([]);
   const [loading, setLoading] = useState(true);
@@ -229,7 +227,6 @@ export function EventsScreen({ className }: EventsScreenProps) {
     }
 
     setRsvpLoading(prev => new Set(prev).add(eventId));
-    triggerHaptic('light');
 
     try {
       // Get current event data
@@ -432,11 +429,9 @@ export function EventsScreen({ className }: EventsScreenProps) {
 
   // Handle like functionality
   const handleLike = async (eventId: string) => {
-    if (!user) return;
-    
-    triggerHaptic('light');
-    
-    try {
+  if (!user) return;
+  
+  try {
       // Get current event data
       const { data: eventData, error: fetchError } = await supabase
         .from('posts')

@@ -225,30 +225,14 @@ export default function TransactionsPage() {
                       <div>
                         <h4 className="font-medium text-gray-900 mb-2">Delivery Information</h4>
                         <div className="space-y-2 text-sm">
-                          {transaction.deliveryDetails.address && (
-                            <div>
-                              <span className="text-gray-600">Address:</span>
-                              <p className="text-gray-900">{transaction.deliveryDetails.address}</p>
-                            </div>
-                          )}
-                          {transaction.deliveryDetails.meetingPoint && (
-                            <div>
-                              <span className="text-gray-600">Meeting Point:</span>
-                              <p className="text-gray-900">{transaction.deliveryDetails.meetingPoint}</p>
-                            </div>
-                          )}
-                          {transaction.deliveryDetails.estimatedDelivery && (
-                            <div>
-                              <span className="text-gray-600">Estimated Delivery:</span>
-                              <p className="text-gray-900">{transaction.deliveryDetails.estimatedDelivery}</p>
-                            </div>
-                          )}
-                          {transaction.deliveryDetails.trackingNumber && (
-                            <div>
-                              <span className="text-gray-600">Tracking:</span>
-                              <p className="text-gray-900">{transaction.deliveryDetails.trackingNumber}</p>
-                            </div>
-                          )}
+                          <div>
+                            <span className="text-gray-600">Method:</span>
+                            <p className="text-gray-900">
+                              {transaction.deliveryDetails.option === 'face_to_face' 
+                                ? 'Face-to-Face Meetup' 
+                                : 'Seller Delivery'}
+                            </p>
+                          </div>
                           {transaction.deliveryDetails.notes && (
                             <div>
                               <span className="text-gray-600">Notes:</span>
