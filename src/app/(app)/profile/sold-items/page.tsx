@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/use-supabase-auth';
 import { ItemTrackingService, SoldItemHistory } from '@/lib/item-tracking-service';
 import { useToast } from '@/hooks/use-toast';
@@ -30,15 +30,6 @@ export default function SoldItemsPage() {
   const [loading, setLoading] = useState(true);
   const [totalEarnings, setTotalEarnings] = useState(0);
 
-  useEffect(() => {
-    if (!user) {
-      router.push('/signin');
-      return;
-    }
-
-    fetchSoldItems();
-  }, [user, router, fetchSoldItems]);
-
   const fetchSoldItems = useCallback(async () => {
     try {
       const data = await ItemTrackingService.getUserSoldItems(user!.id);
@@ -58,6 +49,15 @@ export default function SoldItemsPage() {
       setLoading(false);
     }
   }, [user, toast]);
+
+  useEffect(() => {
+    if (!user) {
+      router.push('/signin');
+      return;
+    }
+
+    fetchSoldItems();
+  }, [user, router, fetchSoldItems]);
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {

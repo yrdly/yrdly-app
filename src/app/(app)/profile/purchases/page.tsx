@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/use-supabase-auth';
 import { ItemTrackingService, PurchaseHistory } from '@/lib/item-tracking-service';
 import { useToast } from '@/hooks/use-toast';
@@ -28,15 +28,6 @@ export default function PurchaseHistoryPage() {
   const [purchases, setPurchases] = useState<PurchaseHistory[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!user) {
-      router.push('/signin');
-      return;
-    }
-
-    fetchPurchases();
-  }, [user, router, fetchPurchases]);
-
   const fetchPurchases = useCallback(async () => {
     try {
       const data = await ItemTrackingService.getUserPurchases(user!.id);
@@ -52,6 +43,15 @@ export default function PurchaseHistoryPage() {
       setLoading(false);
     }
   }, [user, toast]);
+
+  useEffect(() => {
+    if (!user) {
+      router.push('/signin');
+      return;
+    }
+
+    fetchPurchases();
+  }, [user, router, fetchPurchases]);
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {

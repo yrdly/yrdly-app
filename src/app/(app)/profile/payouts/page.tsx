@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/use-supabase-auth';
 import { PayoutService, PayoutRequest } from '@/lib/payout-service';
 import { useToast } from '@/hooks/use-toast';
@@ -28,15 +28,6 @@ export default function PayoutHistoryPage() {
   const [payouts, setPayouts] = useState<PayoutRequest[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!user) {
-      router.push('/signin');
-      return;
-    }
-
-    fetchPayouts();
-  }, [user, router, fetchPayouts]);
-
   const fetchPayouts = useCallback(async () => {
     try {
       const data = await PayoutService.getSellerPayoutHistory(user!.id);
@@ -52,6 +43,15 @@ export default function PayoutHistoryPage() {
       setLoading(false);
     }
   }, [user, toast]);
+
+  useEffect(() => {
+    if (!user) {
+      router.push('/signin');
+      return;
+    }
+
+    fetchPayouts();
+  }, [user, router, fetchPayouts]);
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {

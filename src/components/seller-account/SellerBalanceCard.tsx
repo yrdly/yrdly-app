@@ -26,12 +26,6 @@ export function SellerBalanceCard() {
   const [balance, setBalance] = useState<SellerBalance | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!user) return;
-
-    fetchBalance();
-  }, [user, fetchBalance]);
-
   const fetchBalance = useCallback(async () => {
     try {
       const data = await PayoutService.getSellerBalance(user!.id);
@@ -47,6 +41,12 @@ export function SellerBalanceCard() {
       setLoading(false);
     }
   }, [user, toast]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    fetchBalance();
+  }, [user, fetchBalance]);
 
   const handleViewPayouts = () => {
     router.push('/profile/payouts');

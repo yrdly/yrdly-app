@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/use-supabase-auth';
 import { useToast } from '@/hooks/use-toast';
@@ -22,21 +22,6 @@ export default function PaymentVerificationPage() {
 
   const txRef = searchParams.get('tx_ref');
   const transactionRef = searchParams.get('transaction_id');
-
-  useEffect(() => {
-    if (!user) {
-      router.push('/signin');
-      return;
-    }
-
-    if (!txRef && !transactionRef) {
-      setVerificationStatus('error');
-      setErrorMessage('Missing transaction reference');
-      return;
-    }
-
-    verifyPayment();
-  }, [user, txRef, transactionRef, router, verifyPayment]);
 
   const verifyPayment = useCallback(async () => {
     try {
@@ -88,6 +73,21 @@ export default function PaymentVerificationPage() {
       setErrorMessage('An unexpected error occurred during verification');
     }
   }, [transactionRef, txRef, toast, router]);
+
+  useEffect(() => {
+    if (!user) {
+      router.push('/signin');
+      return;
+    }
+
+    if (!txRef && !transactionRef) {
+      setVerificationStatus('error');
+      setErrorMessage('Missing transaction reference');
+      return;
+    }
+
+    verifyPayment();
+  }, [user, txRef, transactionRef, router, verifyPayment]);
 
   const handleRetry = async () => {
     setIsRetrying(true);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-supabase-auth';
 import { TransactionStatusService } from '@/lib/transaction-status-service';
@@ -81,15 +81,6 @@ export default function TransactionDetailsPage() {
 
   const transactionId = params.transactionId as string;
 
-  useEffect(() => {
-    if (!user) {
-      router.push('/signin');
-      return;
-    }
-
-    fetchTransactionDetails();
-  }, [user, transactionId, router, fetchTransactionDetails]);
-
   const fetchTransactionDetails = useCallback(async () => {
     try {
       const data = await TransactionStatusService.getTransactionDetails(transactionId);
@@ -116,6 +107,15 @@ export default function TransactionDetailsPage() {
       setLoading(false);
     }
   }, [transactionId, user, toast]);
+
+  useEffect(() => {
+    if (!user) {
+      router.push('/signin');
+      return;
+    }
+
+    fetchTransactionDetails();
+  }, [user, transactionId, router, fetchTransactionDetails]);
 
   const handleStatusUpdate = async (action: 'shipped' | 'delivered' | 'completed') => {
     if (!user || !transaction) return;

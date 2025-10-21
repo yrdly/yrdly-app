@@ -322,19 +322,20 @@ export class DisputeService {
           .single();
 
         if (disputeDetails?.transaction) {
-          const itemTitle = disputeDetails.transaction.item?.[0]?.title || disputeDetails.transaction.item?.[0]?.text || 'Item';
+          const transaction = Array.isArray(disputeDetails.transaction) ? disputeDetails.transaction[0] : disputeDetails.transaction;
+          const itemTitle = transaction?.item?.[0]?.title || transaction?.item?.[0]?.text || 'Item';
 
           // Notify both buyer and seller
           await Promise.all([
             NotificationService.createDisputeResolvedNotification(
-              disputeDetails.transaction.buyer_id,
+              transaction.buyer_id,
               itemTitle,
               resolution,
               disputeId,
               disputeDetails.transaction_id
             ),
             NotificationService.createDisputeResolvedNotification(
-              disputeDetails.transaction.seller_id,
+              transaction.seller_id,
               itemTitle,
               resolution,
               disputeId,

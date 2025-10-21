@@ -30,12 +30,12 @@ export async function POST(request: NextRequest) {
       );
 
       // Mark item as sold
-      const { data: transaction } = await EscrowService.getTransaction(verificationResult.transactionReference!);
+      const transaction = await EscrowService.getTransaction(verificationResult.transactionReference!);
       if (transaction) {
         await ItemTrackingService.markItemAsSold(
-          transaction.item_id,
+          transaction.itemId,
           transaction.id,
-          transaction.buyer_id
+          transaction.buyerId
         );
       }
 
