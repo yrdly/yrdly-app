@@ -434,50 +434,6 @@ export function PostCard({ post, onDelete, onCreatePost }: PostCardProps) {
     }
   };
 
-  const renderMarketplaceContent = () => (
-    <CardContent className="p-4 pt-2">
-        <h2 className="text-3xl font-bold text-primary dark:text-primary">{formatPrice(post.price)}</h2>
-        <h3 className="text-xl font-semibold mt-2 text-foreground">{post.text}</h3>
-        
-        <div className="mt-6">
-            <h4 className="font-semibold text-md mb-2">Description</h4>
-            <p className="text-muted-foreground whitespace-pre-wrap">{post.description || "No description provided."}</p>
-        </div>
-        
-        <div className="mt-6 border-t pt-4">
-            <h4 className="font-semibold text-md mb-2">Seller Information</h4>
-            <button onClick={openProfile} className="flex items-center gap-3 hover:bg-muted p-2 rounded-lg w-full text-left">
-                <Avatar>
-                    <AvatarImage src={author?.avatar_url} alt={author?.name} />
-                    <AvatarFallback>{author?.name?.charAt(0)}</AvatarFallback>
-                </Avatar>
-                <div>
-                    <p className="font-semibold">{author?.name}</p>
-                    <p className="text-xs text-muted-foreground">Joined {timeAgo(author?.timestamp ? new Date(author.timestamp) : null)}</p>
-                </div>
-            </button>
-        </div>
-
-        {currentUser?.id !== post.user_id && (
-            <Button className="w-full mt-4" onClick={handleMessageSeller}>
-                <MessageCircle className="mr-2 h-4 w-4" /> Message Seller
-            </Button>
-        )}
-
-    </CardContent>
-  );
-
-  const renderDefaultContent = () => (
-     <CardContent className="p-4 pt-0">
-        <p className="whitespace-pre-wrap">{post.text}</p>
-        {post.event_location && (
-            <div className="flex items-center text-sm text-muted-foreground mt-2">
-                <MapPin className="h-4 w-4 mr-1"/>
-                <span>{post.event_location.address}</span>
-            </div>
-        )}
-    </CardContent>
-  );
 
   const handleEventEdit = () => {
     setIsEventEditDialogOpen(true);
