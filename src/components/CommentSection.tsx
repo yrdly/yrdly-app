@@ -102,7 +102,7 @@ export function CommentSection({ postId, post, author, onCommentCountChange, onC
                     timestamp: comment.timestamp,
                     parentId: comment.parent_id,
                     reactions: comment.reactions || {},
-                    likedBy: comment.reactions?.❤️ || []
+                    likedBy: comment.reactions?.['❤️'] || []
                 }));
                 setComments(mappedComments);
                 
@@ -139,7 +139,7 @@ export function CommentSection({ postId, post, author, onCommentCountChange, onC
                         timestamp: dbComment.timestamp,
                         parentId: dbComment.parent_id,
                         reactions: dbComment.reactions || {},
-                        likedBy: dbComment.reactions?.❤️ || []
+                        likedBy: dbComment.reactions?.['❤️'] || []
                     };
                     
                     setComments(prev => {
@@ -162,7 +162,7 @@ export function CommentSection({ postId, post, author, onCommentCountChange, onC
                                     ...c,
                                     text: dbComment.text,
                                     reactions: dbComment.reactions || {},
-                                    likedBy: dbComment.reactions?.❤️ || []
+                                    likedBy: dbComment.reactions?.['❤️'] || []
                                 }
                                 : c
                         )
@@ -246,7 +246,7 @@ export function CommentSection({ postId, post, author, onCommentCountChange, onC
                             timestamp: data.timestamp,
                             parentId: data.parent_id,
                             reactions: data.reactions || {},
-                            likedBy: data.reactions?.❤️ || []
+                            likedBy: data.reactions?.['❤️'] || []
                         }
                         : c
                 )
