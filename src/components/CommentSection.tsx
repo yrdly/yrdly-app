@@ -498,23 +498,22 @@ export function CommentSection({ postId, post, author, onCommentCountChange, onC
                                 )}
                             </div>
                         </div>
-                        <button
-                            onClick={() => handleLikeComment(comment.id)}
-                            className="flex-shrink-0 mt-1"
-                        >
-                            <Heart 
-                                className={cn(
-                                    "h-4 w-4 transition-colors",
-                                    isLiked ? "text-red-500 fill-current" : "text-muted-foreground"
-                                )} 
-                            />
-                        </button>
-                    </div>
-                    {likeCount > 0 && (
-                        <div className="mt-1">
-                            <span className="text-xs font-semibold text-foreground">{likeCount}</span>
+                        <div className="flex items-center flex-shrink-0 mt-1">
+                            <button
+                                onClick={() => handleLikeComment(comment.id)}
+                            >
+                                <Heart 
+                                    className={cn(
+                                        "h-4 w-4 transition-colors",
+                                        isLiked ? "text-red-500 fill-current" : "text-muted-foreground"
+                                    )} 
+                                />
+                            </button>
+                            {likeCount > 0 && (
+                                <span className="text-xs font-semibold text-foreground ml-0.5">{likeCount}</span>
+                            )}
                         </div>
-                    )}
+                    </div>
                     {hasReplies && !isReply && (
                         <button
                             onClick={() => toggleReplies(comment.id)}

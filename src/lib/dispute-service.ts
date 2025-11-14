@@ -489,10 +489,6 @@ export class DisputeService {
       return null;
     }
   }
-
-  /**
-   * Add admin notes to dispute
-   */
   static async addAdminNotes(disputeId: string, notes: string): Promise<void> {
     try {
       const { error } = await supabase

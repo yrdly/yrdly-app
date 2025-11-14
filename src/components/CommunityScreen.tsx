@@ -27,7 +27,7 @@ import { supabase } from "@/lib/supabase";
 import type { Post } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { CommentSection } from "./CommentSection";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import Image from "next/image";
 
 interface CommunityScreenProps {
@@ -68,7 +68,7 @@ export function CommunityScreen({ className }: CommunityScreenProps) {
   const [showUserSearch, setShowUserSearch] = useState(false);
   const [users, setUsers] = useState<any[]>([]);
   const [userSearchLoading, setUserSearchLoading] = useState(false);
-  const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set());
+  const [openCommentPostId, setOpenCommentPostId] = useState<string | null>(null);
   const [friendshipStatus, setFriendshipStatus] = useState<Record<string, 'friends' | 'request_sent' | 'request_received' | 'none'>>({});
   const [pendingFriendRequests, setPendingFriendRequests] = useState<any[]>([]);
   const [friendRequestsLoading, setFriendRequestsLoading] = useState(true);
@@ -721,17 +721,8 @@ export function CommunityScreen({ className }: CommunityScreenProps) {
     }
   };
 
-  const handleComment = async (postId: string) => {
-    // For now, just show a toast - comment functionality would need a modal or expanded view
-    setExpandedComments(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(postId)) {
-        newSet.delete(postId);
-      } else {
-        newSet.add(postId);
-      }
-      return newSet;
-    });
+  const handleComment = (postId: string) => {
+    setOpenCommentPostId(postId);
   };
 
   const handleShare = async (postId: string) => {
@@ -1111,29 +1102,41 @@ export function CommunityScreen({ className }: CommunityScreenProps) {
                   <span className="text-sm">Share</span>
                 </Button>
               </div>
-
-              {/* Comments Section */}
-              <Collapsible 
-                open={expandedComments.has(post.id)}
-                onOpenChange={() => handleComment(post.id)}
-              >
-                <CollapsibleContent>
-                  <div className="pt-3 border-t border-border">
-                    <CommentSection 
-                        postId={post.id} 
-                        onClose={() => setExpandedComments(prev => {
-                            const newSet = new Set(prev);
-                            newSet.delete(post.id);
-                            return newSet;
-                        })}
-                    />
-                  </div>
-                </CollapsibleContent>
-              </Collapsible>
             </Card>
           ))
         )}
       </div>
+
+      {/* Instagram-style Comment Modal */}
+      {openCommentPostId && (() => {
+        const post = posts.find(p => p.id === openCommentPostId);
+        if (!post) return null;
+        
+        // Create author object from post data
+        const author = {
+          id: post.user_id,
+          uid: post.user_id,
+          name: post.author_name || 'Unknown User',
+          avatar_url: post.author_image || '',
+          timestamp: post.timestamp
+        };
+
+        return (
+          <Sheet open={!!openCommentPostId} onOpenChange={(open) => !open && setOpenCommentPostId(null)}>
+            <SheetContent side="bottom" className="p-0 flex flex-col h-[90vh] max-h-screen rounded-t-2xl">
+              <SheetHeader className="p-4 border-b flex-shrink-0">
+                <SheetTitle className="text-center">Comments</SheetTitle>
+              </SheetHeader>
+              <CommentSection 
+                postId={openCommentPostId}
+                post={post}
+                author={author}
+                onClose={() => setOpenCommentPostId(null)}
+              />
+            </SheetContent>
+          </Sheet>
+        );
+      })()}
     </div>
   );
 }

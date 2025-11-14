@@ -658,36 +658,36 @@ export function ProfileScreen({ onBack, user, isOwnProfile = true, targetUserId,
 
       {actualIsOwnProfile && (
         <Tabs defaultValue="posts" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 bg-background border border-border rounded-xl p-0.5 gap-0.1">
+          <TabsList className="grid w-full grid-cols-4 bg-background border border-border rounded-xl p-1 gap-1 h-auto">
             <TabsTrigger
               value="posts"
-              className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg transition-all duration-200 hover:bg-muted/50 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm text-sm"
+              className="flex items-center justify-center gap-1.5 px-2 py-2.5 rounded-lg transition-all duration-200 hover:bg-muted/50 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm text-sm w-full min-h-[44px] overflow-hidden relative"
             >
-              <Heart className="w-4 h-4" />
+              <Heart className="w-4 h-4 flex-shrink-0" />
               <span className="font-medium">Posts</span>
               <span className="text-xs opacity-70">({userPosts.length})</span>
             </TabsTrigger>
             <TabsTrigger
               value="items"
-              className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg transition-all duration-200 hover:bg-muted/50 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm text-sm"
+              className="flex items-center justify-center gap-1.5 px-2 py-2.5 rounded-lg transition-all duration-200 hover:bg-muted/50 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm text-sm w-full min-h-[44px] overflow-hidden relative"
             >
-              <ShoppingBag className="w-4 h-4" />
+              <ShoppingBag className="w-4 h-4 flex-shrink-0" />
               <span className="font-medium">Items</span>
               <span className="text-xs opacity-70">({userItems.length})</span>
             </TabsTrigger>
             <TabsTrigger
               value="businesses"
-              className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg transition-all duration-200 hover:bg-muted/50 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm text-sm"
+              className="flex items-center justify-center gap-1.5 px-2 py-2.5 rounded-lg transition-all duration-200 hover:bg-muted/50 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm text-sm w-full min-h-[44px] overflow-hidden relative"
             >
-              <Briefcase className="w-4 h-4" />
+              <Briefcase className="w-4 h-4 flex-shrink-0" />
               <span className="font-medium">Business</span>
               <span className="text-xs opacity-70">({userBusinesses.length})</span>
             </TabsTrigger>
             <TabsTrigger
               value="events"
-              className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg transition-all duration-200 hover:bg-muted/50 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm text-sm"
+              className="flex items-center justify-center gap-1.5 px-2 py-2.5 rounded-lg transition-all duration-200 hover:bg-muted/50 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm text-sm w-full min-h-[44px] overflow-hidden relative"
             >
-              <CalendarDays className="w-4 h-4" />
+              <CalendarDays className="w-4 h-4 flex-shrink-0" />
               <span className="font-medium">Events</span>
               <span className="text-xs opacity-70">({userEvents.length})</span>
             </TabsTrigger>

@@ -63,13 +63,26 @@ export function EventDetail({
     
     setLoadingAttending(true);
     try {
-      const currentAttendees = event.attendees || [];
+      // Fetch current attendees from database to avoid race conditions
+      const { data: eventData, error: fetchError } = await supabase
+        .from('posts')
+        .select('attendees')
+        .eq('id', event.id)
+        .single();
+
+      if (fetchError) {
+        throw fetchError;
+      }
+
+      const currentAttendees = eventData.attendees || [];
       const userIsAttending = currentAttendees.includes(user.id);
       
       let newAttendees;
       if (userIsAttending) {
-        newAttendees = currentAttendees.filter(id => id !== user.id);
+        // Remove user from attendees array
+        newAttendees = currentAttendees.filter((id: string) => id !== user.id);
       } else {
+        // Add user to attendees array
         newAttendees = [...currentAttendees, user.id];
       }
 
@@ -83,7 +96,7 @@ export function EventDetail({
       setIsAttending(!userIsAttending);
       setAttendeeCount(newAttendees.length);
 
-      // Send confirmation email if user is now attending
+      // Send confirmation email if user just RSVP'd (not cancelled)
       if (!userIsAttending && user.email) {
         try {
           await sendEventConfirmationEmail({

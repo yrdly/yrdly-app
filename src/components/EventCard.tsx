@@ -84,32 +84,38 @@ export function EventCard({ event }: EventCardProps) {
     setLoadingAttending(true);
 
     try {
-      if (isAttending) {
-        const { error } = await supabase
-          .from('posts')
-          .update({ 
-            attendees: event.attendees?.filter(id => id !== user.id) || []
-          })
-          .eq('id', event.id);
-        
-        if (error) throw error;
-        
-        toast({
-          title: "Removed from event",
-          description: "You're no longer interested in this event.",
-        });
+      // Fetch current attendees from database to avoid race conditions
+      const { data: eventData, error: fetchError } = await supabase
+        .from('posts')
+        .select('attendees')
+        .eq('id', event.id)
+        .single();
+
+      if (fetchError) {
+        throw fetchError;
+      }
+
+      const currentAttendees = eventData.attendees || [];
+      const userHasRSVPed = currentAttendees.includes(user.id);
+
+      let newAttendees;
+      if (userHasRSVPed) {
+        // Remove user from attendees array
+        newAttendees = currentAttendees.filter((id: string) => id !== user.id);
       } else {
-        const { error } = await supabase
-          .from('posts')
-          .update({ 
-            attendees: [...(event.attendees || []), user.id]
-          })
-          .eq('id', event.id);
+        // Add user to attendees array
+        newAttendees = [...currentAttendees, user.id];
+      }
+
+      const { error } = await supabase
+        .from('posts')
+        .update({ attendees: newAttendees })
+        .eq('id', event.id);
         
-        if (error) throw error;
+      if (error) throw error;
         
-        // Send them a nice confirmation email
-        if (user.email) {
+        // Send them a nice confirmation email if user just RSVP'd (not cancelled)
+        if (!userHasRSVPed && user.email) {
           const emailResult = await sendEventConfirmationEmail({
             attendeeEmail: user.email,
             attendeeName: user.user_metadata?.name || user.email?.split('@')[0] || 'User',

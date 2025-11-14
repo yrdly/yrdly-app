@@ -574,27 +574,6 @@ export function PostCard({ post, onDelete, onCreatePost }: PostCardProps) {
               )}
             </div>
         )}
-        
-        {/* Compact Interaction Row */}
-        <div className="px-3 py-2">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon" className="h-8 w-8 p-0" onClick={handleLike}>
-                <Heart className={`h-6 w-6 ${isLiked ? "text-red-500 fill-current" : ""}`} />
-              </Button>
-              {likes > 0 && <span className="text-sm font-semibold text-foreground">{likes}</span>}
-            </div>
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon" className="h-8 w-8 p-0" onClick={() => setIsCommentsOpen(true)}>
-                <MessageCircle className="h-6 w-6" />
-              </Button>
-              {commentCount > 0 && <span className="text-sm font-semibold text-foreground">{commentCount}</span>}
-            </div>
-            <Button variant="ghost" size="icon" className="h-8 w-8 p-0" onClick={handleShare}>
-              <Share2 className="h-6 w-6" />
-            </Button>
-          </div>
-        </div>
 
         {/* Caption Section */}
         <div className="px-3 pb-3">
@@ -667,6 +646,27 @@ export function PostCard({ post, onDelete, onCreatePost }: PostCardProps) {
               <p className="text-xs text-muted-foreground mt-1">{timeAgo(post.timestamp ? new Date(post.timestamp) : null)}</p>
             </div>
           )}
+        </div>
+
+        {/* Compact Interaction Row */}
+        <div className="px-3 py-2">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="icon" className="h-8 w-8 p-0" onClick={handleLike}>
+                <Heart className={`h-6 w-6 ${isLiked ? "text-red-500 fill-current" : ""}`} />
+              </Button>
+              {likes > 0 && <span className="text-sm font-semibold text-foreground">{likes}</span>}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="icon" className="h-8 w-8 p-0" onClick={() => setIsCommentsOpen(true)}>
+                <MessageCircle className="h-6 w-6" />
+              </Button>
+              {commentCount > 0 && <span className="text-sm font-semibold text-foreground">{commentCount}</span>}
+            </div>
+            <Button variant="ghost" size="icon" className="h-8 w-8 p-0" onClick={handleShare}>
+              <Share2 className="h-6 w-6" />
+            </Button>
+          </div>
         </div>
 
       {/* Instagram-style Comment Modal */}
