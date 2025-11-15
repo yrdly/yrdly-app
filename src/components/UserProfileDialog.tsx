@@ -86,6 +86,44 @@ export function UserProfileDialog({ user: profileUser, open, onOpenChange }: Use
 
         checkFriendshipStatus();
     }, [profileUser, currentUser, userDetails, open, onOpenChange]);
+    
+    // Listen for profile refresh events (e.g., after accepting friend request from another component)
+    useEffect(() => {
+        if (!open) return;
+        
+        const handleRefresh = () => {
+            if (profileUser && currentUser && userDetails) {
+                // Re-check friendship status when profile is refreshed
+                const recheckFriendship = async () => {
+                    setIsBlocked(userDetails.blocked_users?.includes(profileUser.id) ?? false);
+
+                    if (userDetails.friends?.includes(profileUser.id)) {
+                        setFriendshipStatus('friends');
+                    } else {
+                        const { data: requestsData, error } = await supabase
+                            .from('friend_requests')
+                            .select('*')
+                            .or(`from_user_id.eq.${currentUser.id},to_user_id.eq.${currentUser.id}`)
+                            .or(`from_user_id.eq.${profileUser.id},to_user_id.eq.${profileUser.id}`)
+                            .eq('status', 'pending');
+                        
+                        if (!error && requestsData && requestsData.length > 0) {
+                            const request = requestsData[0] as FriendRequest;
+                            setFriendRequest(request);
+                            setFriendshipStatus(request.from_user_id === currentUser.id ? 'request_sent' : 'request_received');
+                        } else {
+                            setFriendRequest(null);
+                            setFriendshipStatus('none');
+                        }
+                    }
+                };
+                recheckFriendship();
+            }
+        };
+        
+        window.addEventListener('refresh-profile', handleRefresh);
+        return () => window.removeEventListener('refresh-profile', handleRefresh);
+    }, [open, profileUser, currentUser, userDetails]);
 
 
     const handleAddFriend = async () => {
@@ -174,6 +212,28 @@ export function UserProfileDialog({ user: profileUser, open, onOpenChange }: Use
                 .eq('id', friendRequest.from_user_id);
             
             if (addFriendError2) throw addFriendError2;
+            
+            // Refresh friendship status and current user profile
+            setFriendshipStatus('friends');
+            
+            // Refresh current user's profile data to update friends list
+            if (currentUser) {
+              try {
+                const { data: refreshedProfile } = await supabase
+                  .from('users')
+                  .select('friends')
+                  .eq('id', currentUser.id)
+                  .single();
+                
+                if (refreshedProfile) {
+                  // Update the profile in the auth context by triggering a refresh
+                  // The real-time subscription should handle this, but we'll also manually refresh
+                  window.dispatchEvent(new CustomEvent('refresh-profile'));
+                }
+              } catch (error) {
+                console.error('Error refreshing profile after accepting friend request:', error);
+              }
+            }
             
             toast({ title: "Friend request accepted!" });
         } catch {
@@ -354,26 +414,43 @@ export function UserProfileDialog({ user: profileUser, open, onOpenChange }: Use
             return (
                 <div className="flex flex-col items-center text-center">
                     <p className="text-sm text-destructive font-semibold">You have blocked this user.</p>
-                    <Button onClick={handleUnblockUser} variant="outline" className="mt-2">Unblock</Button>
+                    <Button onClick={handleUnblockUser} variant="outline" className="mt-2 rounded-lg">Unblock</Button>
                 </div>
             );
         }
 
         switch (friendshipStatus) {
             case 'friends':
-                return <Button onClick={handleMessageClick}><MessageSquare className="mr-2 h-4 w-4" /> Message</Button>;
+                return (
+                    <div className="flex gap-2 w-full">
+                        <Button 
+                            variant="destructive"
+                            onClick={handleUnfriend}
+                            className="flex-1 rounded-lg"
+                        >
+                            <UserMinus className="mr-2 h-4 w-4" /> Remove Friend
+                        </Button>
+                        <Button 
+                            variant="outline"
+                            onClick={handleMessageClick}
+                            className="flex-1 rounded-lg"
+                        >
+                            <MessageSquare className="mr-2 h-4 w-4" /> Message
+                        </Button>
+                    </div>
+                );
             case 'request_sent':
-                return <Button disabled><Clock className="mr-2 h-4 w-4" /> Request Sent</Button>;
+                return <Button disabled className="rounded-lg w-full"><Clock className="mr-2 h-4 w-4" /> Request Sent</Button>;
             case 'request_received':
                 return (
-                    <div className="flex gap-2">
-                        <Button onClick={handleAcceptRequest}><Check className="mr-2 h-4 w-4" /> Accept Request</Button>
-                        <Button variant="outline" onClick={handleDeclineRequest}><X className="mr-2 h-4 w-4" /> Decline</Button>
+                    <div className="flex gap-2 w-full">
+                        <Button onClick={handleAcceptRequest} className="flex-1 rounded-lg"><Check className="mr-2 h-4 w-4" /> Accept Request</Button>
+                        <Button variant="outline" onClick={handleDeclineRequest} className="flex-1 rounded-lg"><X className="mr-2 h-4 w-4" /> Decline</Button>
                     </div>
                 );
             case 'none':
             default:
-                return <Button onClick={handleAddFriend}><UserPlus className="mr-2 h-4 w-4" /> Add Friend</Button>;
+                return <Button onClick={handleAddFriend} className="rounded-lg w-full"><UserPlus className="mr-2 h-4 w-4" /> Add Friend</Button>;
         }
     };
 

@@ -308,6 +308,14 @@ export function ProfileScreen({ onBack, user, isOwnProfile = true, targetUserId,
     };
 
     checkFriendship();
+    
+    // Listen for profile refresh events (e.g., after accepting friend request)
+    const handleRefresh = () => {
+      checkFriendship();
+    };
+    
+    window.addEventListener('refresh-profile', handleRefresh);
+    return () => window.removeEventListener('refresh-profile', handleRefresh);
   }, [currentUser, targetUser, actualIsOwnProfile]);
 
   const handleAddFriend = async () => {
@@ -563,9 +571,9 @@ export function ProfileScreen({ onBack, user, isOwnProfile = true, targetUserId,
 
             {/* Action Buttons for Other Users */}
             {!actualIsOwnProfile && (
-              <div className="flex items-center gap-4 px-4 py-2">
+              <div className="flex items-center gap-2 px-4 py-2">
                 <Button 
-                  className={`flex-1 ${isFriend ? "bg-red-500 hover:bg-red-600 text-white" : "bg-blue-600 hover:bg-blue-700 text-white"} px-6 py-2`}
+                  className={`flex-1 ${isFriend ? "bg-red-500 hover:bg-red-600 text-white" : "bg-blue-600 hover:bg-blue-700 text-white"} px-6 py-2 rounded-lg`}
                   onClick={handleAddFriend}
                 >
                   <Users className="w-4 h-4 mr-2" />
@@ -574,7 +582,7 @@ export function ProfileScreen({ onBack, user, isOwnProfile = true, targetUserId,
                 {isFriend && (
                   <Button 
                     variant="outline" 
-                    className="flex-1 border-white/30 bg-white/10 text-white hover:bg-white/20 px-6 py-2"
+                    className="flex-1 border-white/30 bg-white/10 text-white hover:bg-white/20 px-6 py-2 rounded-lg"
                     onClick={handleMessageUser}
                   >
                     <MessageCircle className="w-4 h-4 mr-2" />
