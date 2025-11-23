@@ -11,6 +11,8 @@ const PrivacyPolicyPage = () => {
       <h1 className="text-3xl font-bold mb-4">Yrdly Privacy Policy</h1>
       <p className="mb-4">Last updated: [Insert Date]</p>
 
+      
+
       <p className="mb-4">At Yrdly, your privacy is important to us. This Privacy Policy explains how we collect, use, and protect your personal information when you use our platform.</p>
 
       <h2 className="text-2xl font-bold mt-6 mb-2">1. Information We Collect</h2>
