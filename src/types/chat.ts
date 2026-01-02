@@ -5,8 +5,11 @@ export interface ChatMessage {
   senderName: string;
   content: string;
   timestamp: Date;
+  // Note: isRead is computed/derived - not stored in chat_messages table
   isRead: boolean;
-  messageType: 'text' | 'image' | 'offer' | 'system';
+  // Database constraint allows: 'text' | 'image' | 'system'
+  // 'offer' type should be stored as 'text' with offer data in metadata
+  messageType: 'text' | 'image' | 'system';
   metadata?: {
     offerAmount?: number;
     offerStatus?: 'pending' | 'accepted' | 'rejected';

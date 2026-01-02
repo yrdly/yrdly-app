@@ -412,7 +412,7 @@ export function EventsScreen({ className }: EventsScreenProps) {
           const newEvent = payload.new as PostType;
           
           // Check if event matches location filter
-          const eventState = newEvent.state;
+          const eventState = newEvent.state ?? null;
           const shouldInclude = LocationScopeService.shouldIncludeContent(eventState, filterState);
           if (!shouldInclude) {
             return;

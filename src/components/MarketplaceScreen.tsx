@@ -139,7 +139,7 @@ export function MarketplaceScreen({ onItemClick, onMessageSeller }: MarketplaceS
         if (payload.eventType === 'INSERT') {
           const newItem = payload.new as PostType;
           // Check if item matches location filter
-          const itemState = newItem.state;
+          const itemState = newItem.state ?? null;
           const shouldInclude = LocationScopeService.shouldIncludeContent(itemState, filterState);
           if (!shouldInclude) {
             return;

@@ -382,7 +382,7 @@ export function BusinessesScreen({ className }: BusinessesScreenProps) {
           const newBusiness = payload.new as Business;
           
           // Check if business matches location filter
-          const businessState = newBusiness.state;
+          const businessState = newBusiness.state ?? null;
           const shouldInclude = LocationScopeService.shouldIncludeContent(businessState, filterState);
           if (!shouldInclude) {
             return;

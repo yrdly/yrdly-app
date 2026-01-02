@@ -62,7 +62,7 @@ export class ChatService {
       sender_id: senderId,
       sender_name: senderName,
       content,
-      is_read: true, // Mark as read for the sender
+      // Note: is_read is not stored in chat_messages table - it's computed/derived
       message_type: messageType,
       metadata: metadata || null,
       timestamp: new Date().toISOString()
@@ -217,12 +217,13 @@ export class ChatService {
     senderName: string,
     offerAmount: number
   ): Promise<string> {
+    // Store offer as 'text' type with offer data in metadata (database constraint doesn't allow 'offer' type)
     return this.sendMessage(
       chatId,
       senderId,
       senderName,
       `Offering ₦${offerAmount.toLocaleString()} for this item`,
-      'offer',
+      'text',
       {
         offerAmount,
         offerStatus: 'pending'

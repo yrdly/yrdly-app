@@ -74,6 +74,8 @@ export interface BusinessReview {
   rating: number;
   comment: string;
   created_at: string;
+  transaction_id?: string;
+  verified_purchase?: boolean;
 }
 
 export type PostCategory = 'General' | 'Event' | 'For Sale' | 'Business';

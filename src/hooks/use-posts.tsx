@@ -81,7 +81,7 @@ export const usePosts = (options?: UsePostsOptions) => {
           const newPost = payload.new as Post;
           
           // Check if post matches current location filter
-          const postState = newPost.state;
+          const postState = newPost.state ?? null;
           const shouldInclude = LocationScopeService.shouldIncludeContent(postState, filterState);
           
           if (!shouldInclude) {
@@ -389,7 +389,7 @@ export const usePosts = (options?: UsePostsOptions) => {
         toast({ variant: 'destructive', title: 'Error', description: 'Failed to save business.' });
       }
     },
-    [user, toast, uploadImages]
+    [user, profile, toast, uploadImages]
   );
 
   const deletePost = useCallback(

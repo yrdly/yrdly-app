@@ -51,6 +51,8 @@ export interface SellerAccount {
   updatedAt: Date;
   verifiedAt?: Date;
   rejectedReason?: string;
+  flutterwaveSubaccountId?: string;
+  payoutEnabled?: boolean;
   
   // Verification data
   verificationData?: {

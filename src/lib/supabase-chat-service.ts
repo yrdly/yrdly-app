@@ -173,16 +173,17 @@ export class SupabaseChatService {
         throw error;
       }
 
-      return (messages || []).map(message => ({
+      return (messages || []).map((message: any) => ({
         id: message.id,
         chatId: message.chat_id,
         senderId: message.sender_id,
         senderName: message.sender_name,
         content: message.content,
-        timestamp: new Date(message.created_at),
-        isRead: message.is_read || false,
-        messageType: message.image_url ? 'image' as const : 'text' as const,
-        metadata: message.image_url ? { imageUrl: message.image_url } : undefined,
+        timestamp: new Date(message.created_at || message.timestamp),
+        // Note: isRead is computed - chat_messages table doesn't have is_read column
+        isRead: false,
+        messageType: (message.message_type || 'text') as 'text' | 'image' | 'system',
+        metadata: message.metadata || (message.message_type === 'image' ? { imageUrl: message.content } : undefined),
       }));
     } catch (error) {
       console.error('Error in getChatMessages:', error);
@@ -200,17 +201,21 @@ export class SupabaseChatService {
   ): Promise<void> {
     try {
       // Insert the message
+      // Note: chat_messages table doesn't have is_read or image_url columns
+      // image_url should be stored in metadata if needed
+      const messageData: any = {
+        chat_id: chatId,
+        sender_id: senderId,
+        sender_name: senderName,
+        content: content,
+        message_type: imageUrl ? 'image' : 'text',
+        metadata: imageUrl ? { imageUrl } : {},
+        created_at: new Date().toISOString(),
+      };
+      
       const { error: messageError } = await supabase
         .from('chat_messages')
-        .insert({
-          chat_id: chatId,
-          sender_id: senderId,
-          sender_name: senderName,
-          content: content,
-          image_url: imageUrl,
-          created_at: new Date().toISOString(),
-          is_read: true, // Mark as read for the sender
-        });
+        .insert(messageData);
 
       if (messageError) {
         console.error('Error sending message:', messageError);
@@ -283,18 +288,15 @@ export class SupabaseChatService {
   }
 
   // Mark messages as read
+  // Note: chat_messages table doesn't have is_read column
+  // This functionality would need to be implemented differently (e.g., using a separate read_receipts table)
+  // For now, this is a no-op to maintain API compatibility
   static async markMessagesAsRead(chatId: string, userId: string): Promise<void> {
     try {
-      const { error } = await supabase
-        .from('chat_messages')
-        .update({ is_read: true })
-        .eq('chat_id', chatId)
-        .neq('sender_id', userId);
-
-      if (error) {
-        console.error('Error marking messages as read:', error);
-        throw error;
-      }
+      // TODO: Implement read receipts if needed
+      // The chat_messages table doesn't have an is_read column
+      // Consider using a separate read_receipts table or storing in metadata
+      console.warn('markMessagesAsRead called but chat_messages table does not have is_read column');
     } catch (error) {
       console.error('Error in markMessagesAsRead:', error);
       throw error;
