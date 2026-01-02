@@ -19,6 +19,10 @@ export interface Business {
   location: Location;
   image_urls?: string[];
   created_at: string;
+  // Location-based filtering fields
+  state?: string | null;
+  lga?: string | null;
+  ward?: string | null;
   // Additional fields needed for v0 design
   rating?: number;
   review_count?: number;
@@ -86,6 +90,11 @@ export interface Post {
   timestamp: string; // Supabase returns ISO string
   comment_count: number;
   category: PostCategory;
+  
+  // Location-based filtering fields
+  state?: string | null;
+  lga?: string | null;
+  ward?: string | null;
   
   // Event-specific fields
   title?: string;
@@ -201,4 +210,10 @@ export interface NotificationSettings {
   comments: boolean;
   postLikes: boolean;
   eventInvites: boolean;
+}
+
+export interface LocationScope {
+  state: string | null;
+  lga?: string | null;
+  ward?: string | null;
 }

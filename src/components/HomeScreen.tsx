@@ -4,7 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/use-supabase-auth";
+import { useLocationFilter } from "@/hooks/use-location-filter";
 import { usePosts } from "@/hooks/use-posts";
+import { LocationFilter } from "@/components/LocationFilter";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyFeed } from "@/components/EmptyFeed";
 import { CreatePostDialog } from "@/components/CreatePostDialog";
@@ -16,7 +18,12 @@ interface HomeScreenProps {
 
 export function HomeScreen({ onViewProfile }: HomeScreenProps) {
   const { user, profile } = useAuth();
-  const { posts, loading, refreshPosts, deletePost, createPost } = usePosts();
+  const locationFilter = useLocationFilter();
+  const { posts, loading, refreshPosts, deletePost, createPost } = usePosts({
+    state: locationFilter.state,
+    lga: locationFilter.lga,
+    ward: locationFilter.ward,
+  });
 
 
 
@@ -42,6 +49,18 @@ export function HomeScreen({ onViewProfile }: HomeScreenProps) {
             </CreatePostDialog>
           </div>
         </Card>
+        
+        {/* Location Filter */}
+        <div className="px-3 py-2 border-t border-border">
+          <LocationFilter
+            state={locationFilter.state}
+            lga={locationFilter.lga}
+            ward={locationFilter.ward}
+            onFilterChange={locationFilter.setFilter}
+            showReset={!locationFilter.isDefault}
+            showIndicator={true}
+          />
+        </div>
       </div>
 
       {/* Feed Posts - Full Width */}

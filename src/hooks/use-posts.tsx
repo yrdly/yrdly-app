@@ -5,19 +5,31 @@ import { useAuth } from '@/hooks/use-supabase-auth';
 import { supabase } from '@/lib/supabase';
 import { StorageService } from '@/lib/storage-service';
 import { UserActivityService } from '@/lib/user-activity-service';
+import { LocationScopeService } from '@/lib/location-scope-service';
 import { Post, Business } from '@/types';
 import { useToast } from './use-toast';
 
-export const usePosts = () => {
+export interface UsePostsOptions {
+  state?: string | null;
+  lga?: string | null;
+  ward?: string | null;
+}
+
+export const usePosts = (options?: UsePostsOptions) => {
   const { user, profile } = useAuth();
   const { toast } = useToast();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Determine the state to filter by (override or user's state)
+  const filterState = options?.state !== undefined 
+    ? options.state 
+    : LocationScopeService.getUserState(profile);
+
   useEffect(() => {
     const fetchPosts = async () => {
       try {
-        const { data, error } = await supabase
+        let query = supabase
           .from('posts')
           .select(`
             *,
@@ -27,8 +39,17 @@ export const usePosts = () => {
               avatar_url,
               created_at
             )
-          `)
-          .order('timestamp', { ascending: false });
+          `);
+
+        // Apply location filter if state is specified
+        if (filterState) {
+          query = query.or(LocationScopeService.buildLocationOrFilter(filterState));
+        } else {
+          // If no state, only show grandfathered content (state IS NULL)
+          query = query.is('state', null);
+        }
+
+        const { data, error } = await query.order('timestamp', { ascending: false });
 
         if (error) {
           return;
@@ -43,17 +64,29 @@ export const usePosts = () => {
 
     fetchPosts();
 
-    // Set up real-time subscription
+    // Set up real-time subscription with location filter
+    const channelName = `posts-${filterState || 'null'}`;
     const channel = supabase
-      .channel('posts')
+      .channel(channelName)
       .on('postgres_changes', { 
         event: '*', 
         schema: 'public', 
-        table: 'posts' 
+        table: 'posts',
+        filter: filterState 
+          ? LocationScopeService.buildLocationOrFilter(filterState)
+          : 'state=is.null'
       }, (payload) => {
         if (payload.eventType === 'INSERT') {
           // Add new post to the beginning of the list
           const newPost = payload.new as Post;
+          
+          // Check if post matches current location filter
+          const postState = newPost.state;
+          const shouldInclude = LocationScopeService.shouldIncludeContent(postState, filterState);
+          
+          if (!shouldInclude) {
+            return; // Don't add post if it doesn't match filter
+          }
           
           // Fetch user data for the new post
           const fetchUserData = async () => {
@@ -134,7 +167,7 @@ export const usePosts = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [filterState]);
 
   // Listen for profile changes to refresh posts with updated user data
   useEffect(() => {
@@ -233,6 +266,19 @@ export const usePosts = () => {
           )
         );
 
+        // Extract state from user's location or event location
+        let postState = LocationScopeService.getUserState(profile);
+        let postLga = LocationScopeService.getUserLga(profile);
+        let postWard = LocationScopeService.getUserWard(profile);
+
+        // For events, try to extract state from event_location if available
+        if (postData.category === 'Event' && postData.event_location) {
+          const eventState = LocationScopeService.extractStateFromEventLocation(postData.event_location);
+          if (eventState) {
+            postState = eventState;
+          }
+        }
+
         const finalPostData = {
           ...cleanedPostData,
           user_id: user.id,
@@ -241,6 +287,9 @@ export const usePosts = () => {
           image_urls: imageUrls.length > 0 ? imageUrls : [],
           timestamp: postIdToUpdate ? postData.timestamp : new Date().toISOString(),
           category: postData.category || 'General', // Ensure category is always provided
+          state: postState,
+          lga: postLga,
+          ward: postWard,
         };
 
         if (postIdToUpdate) {
@@ -293,10 +342,23 @@ export const usePosts = () => {
             imageUrls = businessIdToUpdate ? [...imageUrls, ...uploadedUrls] : uploadedUrls;
         }
 
+        // Extract state from business location or user's location
+        let businessState = LocationScopeService.extractStateFromBusinessLocation(businessData.location);
+        let businessLga = LocationScopeService.getUserLga(profile);
+        let businessWard = LocationScopeService.getUserWard(profile);
+
+        // If state not found in location, use user's state
+        if (!businessState) {
+          businessState = LocationScopeService.getUserState(profile);
+        }
+
         const finalBusinessData = {
             ...businessData,
             owner_id: user.id,
             image_urls: imageUrls,
+            state: businessState,
+            lga: businessLga,
+            ward: businessWard,
         }
 
         if (businessIdToUpdate) {
@@ -412,10 +474,19 @@ export const usePosts = () => {
 
   const refreshPosts = useCallback(async () => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('posts')
-        .select('*')
-        .order('timestamp', { ascending: false });
+        .select('*');
+
+      // Apply location filter if state is specified
+      if (filterState) {
+        query = query.or(LocationScopeService.buildLocationOrFilter(filterState));
+      } else {
+        // If no state, only show grandfathered content (state IS NULL)
+        query = query.is('state', null);
+      }
+
+      const { data, error } = await query.order('timestamp', { ascending: false });
 
       if (error) {
         return;
@@ -425,7 +496,7 @@ export const usePosts = () => {
     } catch (error) {
       // Error fetching posts
     }
-  }, []);
+  }, [filterState]);
 
   return { posts, loading, createPost, createBusiness, deletePost, deleteBusiness, refreshPosts };
 };

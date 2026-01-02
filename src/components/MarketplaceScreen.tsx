@@ -12,8 +12,11 @@ import { EnhancedItemCard } from "@/components/marketplace/EnhancedItemCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-supabase-auth";
+import { useLocationFilter } from "@/hooks/use-location-filter";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { LocationScopeService } from "@/lib/location-scope-service";
+import { LocationFilter } from "@/components/LocationFilter";
 import type { Post as PostType } from "@/types";
 import Image from "next/image";
 
@@ -76,11 +79,15 @@ export function MarketplaceScreen({ onItemClick, onMessageSeller }: MarketplaceS
     }
   };
 
+  // Get location filter
+  const locationFilter = useLocationFilter();
+  const filterState = locationFilter.state;
+
   // Fetch items from Supabase
   useEffect(() => {
     const fetchItems = async () => {
       try {
-        const { data, error } = await supabase
+        let query = supabase
           .from('posts')
           .select(`
             *,
@@ -91,8 +98,16 @@ export function MarketplaceScreen({ onItemClick, onMessageSeller }: MarketplaceS
             )
           `)
           .eq('category', 'For Sale')
-          .eq('is_sold', false)
-          .order('timestamp', { ascending: false });
+          .eq('is_sold', false);
+
+        // Apply location filter
+        if (filterState) {
+          query = query.or(LocationScopeService.buildLocationOrFilter(filterState));
+        } else {
+          query = query.is('state', null);
+        }
+
+        const { data, error } = await query.order('timestamp', { ascending: false });
 
         if (error) {
           console.error('Error fetching marketplace items:', error);
@@ -109,17 +124,26 @@ export function MarketplaceScreen({ onItemClick, onMessageSeller }: MarketplaceS
 
     fetchItems();
 
-    // Set up real-time subscription
+    // Set up real-time subscription with location filter
+    const channelName = `marketplace-items-${filterState || 'null'}`;
     const channel = supabase
-      .channel('marketplace-items')
+      .channel(channelName)
       .on('postgres_changes', { 
         event: '*', 
         schema: 'public', 
         table: 'posts',
-        filter: 'category=eq.For Sale'
+        filter: filterState
+          ? `category=eq.For Sale.and(${LocationScopeService.buildLocationOrFilter(filterState)})`
+          : 'category=eq.For Sale.and(state=is.null)'
       }, (payload) => {
         if (payload.eventType === 'INSERT') {
           const newItem = payload.new as PostType;
+          // Check if item matches location filter
+          const itemState = newItem.state;
+          const shouldInclude = LocationScopeService.shouldIncludeContent(itemState, filterState);
+          if (!shouldInclude) {
+            return;
+          }
           setItems(prevItems => [newItem, ...prevItems]);
         } else if (payload.eventType === 'UPDATE') {
           const updatedItem = payload.new as PostType;
@@ -140,7 +164,7 @@ export function MarketplaceScreen({ onItemClick, onMessageSeller }: MarketplaceS
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [filterState]);
 
   // Filter items based on search term
   const filteredItems = useMemo(() => {
@@ -201,6 +225,15 @@ export function MarketplaceScreen({ onItemClick, onMessageSeller }: MarketplaceS
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
+
+        {/* Location Filter */}
+        <LocationFilter
+          state={locationFilter.state}
+          lga={locationFilter.lga}
+          ward={locationFilter.ward}
+          onFilterChange={locationFilter.setFilter}
+          showReset={!locationFilter.isDefault}
+        />
       </div>
 
       {/* Items Grid */}
